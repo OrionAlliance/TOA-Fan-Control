@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctrl="clr-namespace:FanControlApp.Controls"
         Title="TOA - Fan Control"
-        Height="860" Width="920"
-        MinHeight="740" MinWidth="800"
+        Width="920" MinWidth="800"
+        SizeToContent="Height"
         Background="{StaticResource Bg}"
         Foreground="{StaticResource Text}"
         FontFamily="Segoe UI"
@@ -15,7 +15,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -29,8 +29,39 @@
                        Text="BIOS has the fans" />
         </DockPanel>
 
+        <!-- Mode -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12">
+            <DockPanel>
+                <TextBlock Text="MODE" Foreground="{StaticResource TextDim}" FontSize="11"
+                           VerticalAlignment="Center" Margin="0,0,14,0" />
+
+                <RadioButton x:Name="ManualRadio" Content="Manual - I draw the curve"
+                             Foreground="{StaticResource Text}" VerticalAlignment="Center"
+                             Margin="0,0,20,0" GroupName="Mode"
+                             Checked="OnModeChanged" />
+
+                <RadioButton x:Name="AutoRadio" Content="Auto - app holds a target temp"
+                             Foreground="{StaticResource Text}" VerticalAlignment="Center"
+                             GroupName="Mode" Checked="OnModeChanged" />
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="Fans react to:" Foreground="{StaticResource TextDim}"
+                               FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <!-- Black on the ComboBox's own light chrome. The app-wide implicit
+                         style no longer forces a colour, so this inherits down into the
+                         selection box and the popup items. -->
+                    <ComboBox x:Name="SourceCombo" Width="140" VerticalAlignment="Center"
+                              Foreground="Black" SelectionChanged="OnSourceChanged">
+                        <ComboBoxItem Content="CPU temperature" Foreground="Black" />
+                        <ComboBoxItem Content="GPU temperature" Foreground="Black" />
+                        <ComboBoxItem Content="Whichever is hotter" Foreground="Black" />
+                    </ComboBox>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
         <!-- The dash -->
-        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8">
+        <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8">
             <UniformGrid Columns="4" Height="200">
                 <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C"
                             Minimum="0" Maximum="100" MajorTick="20"
@@ -48,77 +79,8 @@
             </UniformGrid>
         </Border>
 
-        <!-- Mode -->
-        <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,12">
-            <DockPanel>
-                <TextBlock Text="MODE" Foreground="{StaticResource TextDim}" FontSize="11"
-                           VerticalAlignment="Center" Margin="0,0,14,0" />
-
-                <RadioButton x:Name="ManualRadio" Content="Manual - I draw the curve"
-                             Foreground="{StaticResource Text}" VerticalAlignment="Center"
-                             Margin="0,0,20,0" GroupName="Mode"
-                             Checked="OnModeChanged" />
-
-                <RadioButton x:Name="AutoRadio" Content="Auto - app holds a target temp"
-                             Foreground="{StaticResource Text}" VerticalAlignment="Center"
-                             GroupName="Mode" Checked="OnModeChanged" />
-
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock Text="Fans react to:" Foreground="{StaticResource TextDim}"
-                               FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <!-- Black on the ComboBox's own light chrome. Now that the app-wide
-                         implicit style no longer forces a colour, this inherits down into
-                         the selection box and the popup items. -->
-                    <ComboBox x:Name="SourceCombo" Width="140" VerticalAlignment="Center"
-                              Foreground="Black" SelectionChanged="OnSourceChanged">
-                        <ComboBoxItem Content="CPU temperature" Foreground="Black" />
-                        <ComboBoxItem Content="GPU temperature" Foreground="Black" />
-                        <ComboBoxItem Content="Whichever is hotter" Foreground="Black" />
-                    </ComboBox>
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <!-- Manual: the curve -->
-        <Border x:Name="ManualPanel" Grid.Row="3" Style="{StaticResource Card}" Margin="0,0,0,12">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Foreground="{StaticResource TextDim}" FontSize="11"
-                           Margin="0,0,0,8"
-                           Text="Drag a dot to move it  ·  double-click empty space to add one  ·  right-click a dot to delete" />
-                <ctrl:CurveEditor x:Name="Curve" />
-            </DockPanel>
-        </Border>
-
-        <!-- Auto: the target -->
-        <Border x:Name="AutoPanel" Grid.Row="3" Style="{StaticResource Card}"
-                Margin="0,0,0,12" Visibility="Collapsed">
-            <StackPanel VerticalAlignment="Center" MaxWidth="520">
-                <TextBlock Text="Hold this temperature" FontSize="15" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" />
-                <TextBlock Foreground="{StaticResource TextDim}" FontSize="12" TextWrapping="Wrap"
-                           TextAlignment="Center" Margin="0,8,0,14"
-                           Text="The app watches the temperature and adjusts the case fans on its own to settle here. Runs hotter than this and the fans climb; cooler and they ease back off." />
-
-                <TextBlock x:Name="TargetText" Text="85 C" FontSize="40" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" />
-
-                <Slider x:Name="TargetSlider" Minimum="45" Maximum="85" TickFrequency="5"
-                        IsSnapToTickEnabled="True" Margin="0,8,0,0"
-                        ValueChanged="OnTargetChanged" />
-
-                <DockPanel Margin="0,2,0,0">
-                    <TextBlock Text="45 C (loud, cold)" Foreground="{StaticResource TextDim}" FontSize="10" />
-                    <TextBlock Text="85 C (quiet, hot)" Foreground="{StaticResource TextDim}" FontSize="10"
-                               HorizontalAlignment="Right" />
-                </DockPanel>
-
-                <TextBlock x:Name="AutoStateText" Margin="0,18,0,0" FontSize="12"
-                           HorizontalAlignment="Center" Foreground="{StaticResource TextDim}" />
-            </StackPanel>
-        </Border>
-
         <!-- Every other fan, for reference -->
-        <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,0,0,12">
+        <Border Grid.Row="3" Style="{StaticResource Card}" Margin="0,0,0,12">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="OTHER FANS (BIOS controlled)"
                            Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,0,0,8" />
@@ -139,6 +101,44 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+            </DockPanel>
+        </Border>
+
+        <!-- Auto: one line. It's a slider, not a manifesto. -->
+        <Border x:Name="AutoPanel" Grid.Row="4" Style="{StaticResource Card}" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
+                            Margin="0,0,14,0">
+                    <TextBlock Text="HOLD CPU AT" Foreground="{StaticResource TextDim}"
+                               FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock x:Name="TargetText" Text="85 C" FontSize="22"
+                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Slider Grid.Column="1" x:Name="TargetSlider" Minimum="45" Maximum="85"
+                        TickFrequency="5" IsSnapToTickEnabled="True"
+                        VerticalAlignment="Center" ValueChanged="OnTargetChanged" />
+
+                <TextBlock Grid.Column="2" x:Name="AutoStateText" Foreground="{StaticResource TextDim}"
+                           FontSize="11" VerticalAlignment="Center" Margin="14,0,0,0"
+                           MaxWidth="240" TextWrapping="Wrap" TextAlignment="Right" />
+            </Grid>
+        </Border>
+
+        <!-- Manual: the curve -->
+        <Border x:Name="ManualPanel" Grid.Row="4" Style="{StaticResource Card}"
+                Margin="0,0,0,12" Visibility="Collapsed">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Foreground="{StaticResource TextDim}" FontSize="11"
+                           Margin="0,0,0,8"
+                           Text="Drag a dot to move it  ·  double-click empty space to add one  ·  right-click a dot to delete" />
+                <ctrl:CurveEditor x:Name="Curve" MinHeight="260" />
             </DockPanel>
         </Border>
 
