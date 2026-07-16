@@ -44,18 +44,65 @@
             <Setter Property="FontSize" Value="12" />
         </Style>
 
+        <!-- Raised panel, lit from above so it agrees with the gauges.
+             The face lightens toward the top; the 1px border runs from a bright
+             highlight on the top edge to near-black on the bottom, which is what
+             actually reads as a bevel.
+
+             No DropShadowEffect on purpose: an Effect renders the border AND its
+             whole subtree through an intermediate surface, which disables ClearType
+             and softens every label inside the card. A shadow isn't worth blurring
+             all the text. -->
         <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Panel}" />
-            <Setter Property="BorderBrush" Value="{StaticResource PanelEdge}" />
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#232834" Offset="0" />
+                        <GradientStop Color="#1A1D26" Offset="0.5" />
+                        <GradientStop Color="#15181F" Offset="1" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#454E63" Offset="0" />
+                        <GradientStop Color="#2A2F3D" Offset="0.5" />
+                        <GradientStop Color="#0E1116" Offset="1" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="14,12" />
         </Style>
 
+        <!-- Raised keycap, same light source as the cards and gauges. Pressing it
+             flips the gradient so the button reads as pushed in. -->
+        <LinearGradientBrush x:Key="BtnFace" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#333A4C" Offset="0" />
+            <GradientStop Color="#242938" Offset="1" />
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="BtnFaceHover" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#414A61" Offset="0" />
+            <GradientStop Color="#2F3549" Offset="1" />
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="BtnFacePressed" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#1C2130" Offset="0" />
+            <GradientStop Color="#2A3042" Offset="1" />
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="BtnEdge" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#4E576E" Offset="0" />
+            <GradientStop Color="#11141B" Offset="1" />
+        </LinearGradientBrush>
+
         <Style TargetType="Button">
-            <Setter Property="Background" Value="#242938" />
+            <Setter Property="Background" Value="{StaticResource BtnFace}" />
             <Setter Property="Foreground" Value="{StaticResource Text}" />
-            <Setter Property="BorderBrush" Value="{StaticResource PanelEdge}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BtnEdge}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="14,7" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -71,7 +118,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#2F3549" />
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource BtnFaceHover}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource BtnFacePressed}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
