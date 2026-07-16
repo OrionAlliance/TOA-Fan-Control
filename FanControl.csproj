@@ -10,7 +10,20 @@
     <AssemblyName>TOA - Fan Control</AssemblyName>
     <RootNamespace>FanControlApp</RootNamespace>
     <Version>0.1.0</Version>
+    <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Window/taskbar icon. ApplicationIcon above only covers the exe in Explorer. -->
+    <Resource Include="Icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- IconGen\ is the source that draws Icon.ico - a separate little exe, run by
+         hand when the icon changes. It has its own Main, so keep it out of the app's
+         compile or the build breaks on two entry points. -->
+    <Compile Remove="IconGen\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- PINNED. Do not bump without re-testing on the actual board.
