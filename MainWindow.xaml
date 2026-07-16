@@ -6,6 +6,8 @@
         Height="860" Width="920"
         MinHeight="740" MinWidth="800"
         Background="{StaticResource Bg}"
+        Foreground="{StaticResource Text}"
+        FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen">
 
     <Grid Margin="16">
@@ -64,20 +66,14 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                     <TextBlock Text="Fans react to:" Foreground="{StaticResource TextDim}"
                                FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <!-- Black on the ComboBox's own light chrome. Now that the app-wide
+                         implicit style no longer forces a colour, this inherits down into
+                         the selection box and the popup items. -->
                     <ComboBox x:Name="SourceCombo" Width="140" VerticalAlignment="Center"
                               Foreground="Black" SelectionChanged="OnSourceChanged">
-                        <ComboBox.Resources>
-                            <!-- The app-wide TextBlock style paints text near-white for the
-                                 dark chrome, but a ComboBox popup is light - so the items
-                                 render white-on-white and vanish. Scope it back to black
-                                 for everything inside the combo. -->
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="Black" />
-                            </Style>
-                        </ComboBox.Resources>
-                        <ComboBoxItem Content="CPU temperature" />
-                        <ComboBoxItem Content="GPU temperature" />
-                        <ComboBoxItem Content="Whichever is hotter" />
+                        <ComboBoxItem Content="CPU temperature" Foreground="Black" />
+                        <ComboBoxItem Content="GPU temperature" Foreground="Black" />
+                        <ComboBoxItem Content="Whichever is hotter" Foreground="Black" />
                     </ComboBox>
                 </StackPanel>
             </DockPanel>

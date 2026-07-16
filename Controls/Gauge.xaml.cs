@@ -3,14 +3,15 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 
 namespace FanControlApp.Controls;
 
 /// <summary>
-/// A car-dash gauge: swept dial, white needle, an optional green safe band and
-/// red danger band, and a yellow mark that sticks at the highest value seen so
-/// far this run.
+/// A car-dash gauge: machined bezel, dished face, glass, a white needle floating
+/// above it, an optional green safe band and red danger band, and a yellow mark
+/// that sticks at the highest value seen so far this run.
 /// </summary>
 public partial class Gauge : UserControl
 {
@@ -27,6 +28,13 @@ public partial class Gauge : UserControl
     private TextBlock? _valueText;
 
     private double _cx, _cy, _r;
+
+    // Radii, outside in. Everything is derived from the bezel so the dial scales.
+    private double FaceR => _r - 5;
+    private double BandR => _r - 13;
+    private double TickOuter => _r - 14;
+    private double NumberR => _r - 34;
+    private double NeedleLen => _r - 24;
 
     public Gauge()
     {
@@ -101,7 +109,16 @@ public partial class Gauge : UserControl
         return new Point(_cx + radius * Math.Cos(rad), _cy + radius * Math.Sin(rad));
     }
 
-    private static Brush B(string hex) => (Brush)new BrushConverter().ConvertFromString(hex)!;
+    private static Color C(string hex) => (Color)ColorConverter.ConvertFromString(hex)!;
+    private static Brush B(string hex) => new SolidColorBrush(C(hex));
+
+    private void PlaceCentered(FrameworkElement e, double radius)
+    {
+        e.Width = radius * 2;
+        e.Height = radius * 2;
+        Canvas.SetLeft(e, _cx - radius);
+        Canvas.SetTop(e, _cy - radius);
+    }
 
     private Path Arc(double a0, double a1, double radius, Brush stroke, double thickness)
     {
@@ -141,47 +158,126 @@ public partial class Gauge : UserControl
         _cy = ActualHeight / 2;
         _r = Math.Min(ActualWidth, ActualHeight) / 2 - 6;
 
-        DrawFace();
+        DrawBezel();
+        DrawBands();
+        DrawTicks();
+        DrawGloss();
+        DrawText();
         BuildMoving();
         UpdateMoving();
     }
 
-    private void DrawFace()
+    /// <summary>Machined ring, dished face, and the shadow the rim casts inward.</summary>
+    private void DrawBezel()
     {
-        double bandR = _r - 5;
-
-        // Base sweep
-        Face.Children.Add(Arc(StartAngle, EndAngle, bandR, B("#2A2F3D"), 7));
-
-        // Green safe band
-        if (!double.IsNaN(GreenTo) && GreenTo > Minimum)
-            Face.Children.Add(Arc(StartAngle, AngleFor(GreenTo), bandR, B("#3FB950"), 7));
-
-        // Red danger band
-        if (!double.IsNaN(RedFrom) && RedFrom < Maximum)
-            Face.Children.Add(Arc(AngleFor(RedFrom), EndAngle, bandR, B("#F85149"), 7));
-
-        // The redline itself - a hard mark at where trouble starts
-        if (!double.IsNaN(RedFrom))
+        // Lit from the top-left, like everything else on the dial.
+        var bezel = new Ellipse
         {
-            double a = AngleFor(RedFrom);
-            Face.Children.Add(new Line
+            Fill = new LinearGradientBrush
             {
-                X1 = PointAt(a, _r - 14).X, Y1 = PointAt(a, _r - 14).Y,
-                X2 = PointAt(a, _r + 1).X, Y2 = PointAt(a, _r + 1).Y,
-                Stroke = B("#F85149"), StrokeThickness = 2.5,
-            });
+                StartPoint = new Point(0.15, 0),
+                EndPoint = new Point(0.85, 1),
+                GradientStops =
+                {
+                    new GradientStop(C("#4A5266"), 0),
+                    new GradientStop(C("#232735"), 0.45),
+                    new GradientStop(C("#171A23"), 0.7),
+                    new GradientStop(C("#39405044"), 1),
+                },
+            },
+            Effect = new DropShadowEffect
+            {
+                Color = Colors.Black,
+                BlurRadius = 14,
+                ShadowDepth = 4,
+                Direction = 270,
+                Opacity = 0.55,
+            },
+        };
+        PlaceCentered(bezel, _r);
+        Face.Children.Add(bezel);
+
+        // Dished face: light pools toward the upper-left, falls away to the rim.
+        var face = new Ellipse
+        {
+            Fill = new RadialGradientBrush
+            {
+                GradientOrigin = new Point(0.36, 0.3),
+                Center = new Point(0.5, 0.5),
+                RadiusX = 0.78,
+                RadiusY = 0.78,
+                GradientStops =
+                {
+                    new GradientStop(C("#2B3140"), 0),
+                    new GradientStop(C("#191D27"), 0.6),
+                    new GradientStop(C("#0C0E13"), 1),
+                },
+            },
+        };
+        PlaceCentered(face, FaceR);
+        Face.Children.Add(face);
+
+        // Inner shadow - sells the idea that the face sits below the rim.
+        var innerShadow = new Ellipse
+        {
+            Fill = new RadialGradientBrush
+            {
+                GradientStops =
+                {
+                    new GradientStop(Colors.Transparent, 0.72),
+                    new GradientStop(Color.FromArgb(90, 0, 0, 0), 0.93),
+                    new GradientStop(Color.FromArgb(150, 0, 0, 0), 1),
+                },
+            },
+            IsHitTestVisible = false,
+        };
+        PlaceCentered(innerShadow, FaceR);
+        Face.Children.Add(innerShadow);
+    }
+
+    private void DrawBands()
+    {
+        // Base sweep, recessed
+        Face.Children.Add(Arc(StartAngle, EndAngle, BandR, B("#323848"), 7));
+
+        if (!double.IsNaN(GreenTo) && GreenTo > Minimum)
+        {
+            Path green = Arc(StartAngle, AngleFor(GreenTo), BandR, B("#3FB950"), 7);
+            green.Effect = new DropShadowEffect
+            {
+                Color = C("#3FB950"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.5,
+            };
+            Face.Children.Add(green);
         }
 
-        DrawTicks();
-        DrawText();
+        if (!double.IsNaN(RedFrom) && RedFrom < Maximum)
+        {
+            Path red = Arc(AngleFor(RedFrom), EndAngle, BandR, B("#F85149"), 7);
+            red.Effect = new DropShadowEffect
+            {
+                Color = C("#F85149"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.55,
+            };
+            Face.Children.Add(red);
+        }
+
+        // The redline itself - a hard mark at where trouble starts
+        if (double.IsNaN(RedFrom)) return;
+
+        double a = AngleFor(RedFrom);
+        Face.Children.Add(new Line
+        {
+            X1 = PointAt(a, BandR - 9).X, Y1 = PointAt(a, BandR - 9).Y,
+            X2 = PointAt(a, BandR + 6).X, Y2 = PointAt(a, BandR + 6).Y,
+            Stroke = B("#F85149"),
+            StrokeThickness = 2.5,
+        });
     }
 
     private void DrawTicks()
     {
         if (MajorTick <= 0) return;
 
-        Brush tick = B("#8A92A6");
+        Brush tick = B("#9AA3B8");
         Brush num = B("#E6E9F0");
         double minor = MajorTick / 2;
 
@@ -190,15 +286,15 @@ public partial class Gauge : UserControl
             double a = AngleFor(v);
             bool isMajor = Math.Abs(v / MajorTick - Math.Round(v / MajorTick)) < 0.001;
 
-            Point p1 = PointAt(a, _r - (isMajor ? 14 : 10));
-            Point p2 = PointAt(a, _r - 6);
+            Point p1 = PointAt(a, TickOuter - (isMajor ? 9 : 5));
+            Point p2 = PointAt(a, TickOuter);
 
             Face.Children.Add(new Line
             {
                 X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y,
                 Stroke = tick,
                 StrokeThickness = isMajor ? 2 : 1,
-                Opacity = isMajor ? 1 : 0.6,
+                Opacity = isMajor ? 1 : 0.55,
             });
 
             if (!isMajor) continue;
@@ -210,25 +306,65 @@ public partial class Gauge : UserControl
 
             var tb = new TextBlock { Text = text, Foreground = num, FontSize = 9 };
             tb.Measure(new Size(100, 100));
-            Point np = PointAt(a, _r - 26);
+            Point np = PointAt(a, NumberR);
             Canvas.SetLeft(tb, np.X - tb.DesiredSize.Width / 2);
             Canvas.SetTop(tb, np.Y - tb.DesiredSize.Height / 2);
             Face.Children.Add(tb);
         }
     }
 
+    /// <summary>The glass: a soft highlight across the upper face, clipped to the dial.</summary>
+    private void DrawGloss()
+    {
+        double gw = FaceR * 1.75;
+        double gh = FaceR * 1.15;
+        double left = _cx - gw / 2;
+        double top = _cy - FaceR * 1.02;
+
+        var gloss = new Ellipse
+        {
+            Width = gw,
+            Height = gh,
+            Fill = new LinearGradientBrush
+            {
+                StartPoint = new Point(0.5, 0),
+                EndPoint = new Point(0.5, 1),
+                GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(30, 255, 255, 255), 0),
+                    new GradientStop(Color.FromArgb(12, 255, 255, 255), 0.55),
+                    new GradientStop(Colors.Transparent, 1),
+                },
+            },
+            // Clip in the gloss's own coordinate space, so it can't spill past the rim.
+            Clip = new EllipseGeometry(new Point(_cx - left, _cy - top), FaceR, FaceR),
+            IsHitTestVisible = false,
+        };
+
+        Canvas.SetLeft(gloss, left);
+        Canvas.SetTop(gloss, top);
+        Face.Children.Add(gloss);
+    }
+
     private void DrawText()
     {
+        double size = Math.Max(15, _r * 0.26);
+
         _valueText = new TextBlock
         {
             Foreground = B("#E6E9F0"),
-            FontSize = Math.Max(15, _r * 0.26),
+            FontSize = size,
             FontWeight = FontWeights.SemiBold,
             TextAlignment = TextAlignment.Center,
             Width = _r * 1.6,
+            Effect = new DropShadowEffect
+            {
+                Color = Colors.Black, BlurRadius = 4, ShadowDepth = 1.5,
+                Direction = 270, Opacity = 0.8,
+            },
         };
         Canvas.SetLeft(_valueText, _cx - _r * 0.8);
-        Canvas.SetTop(_valueText, _cy + _r * 0.14);
+        Canvas.SetTop(_valueText, _cy + _r * 0.16);
         Face.Children.Add(_valueText);
 
         var lab = new TextBlock
@@ -240,7 +376,7 @@ public partial class Gauge : UserControl
             Width = _r * 1.6,
         };
         Canvas.SetLeft(lab, _cx - _r * 0.8);
-        Canvas.SetTop(lab, _cy + _r * 0.14 + Math.Max(15, _r * 0.26) + 2);
+        Canvas.SetTop(lab, _cy + _r * 0.16 + size + 2);
         Face.Children.Add(lab);
     }
 
@@ -248,12 +384,12 @@ public partial class Gauge : UserControl
 
     private void BuildMoving()
     {
-        double len = _r - 16;
+        double len = NeedleLen;
 
         // Yellow peak mark - drawn under the needle so the needle wins on overlap.
         _peakRotate = new RotateTransform(StartAngle);
-        var peakFig = new PathFigure { StartPoint = new Point(len - 12, 0) };
-        peakFig.Segments.Add(new LineSegment(new Point(len + 4, 0), true));
+        var peakFig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
+        peakFig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
         var peakGeo = new PathGeometry();
         peakGeo.Figures.Add(peakFig);
 
@@ -262,6 +398,10 @@ public partial class Gauge : UserControl
             Data = peakGeo,
             Stroke = B("#E3B341"),
             StrokeThickness = 3,
+            Effect = new DropShadowEffect
+            {
+                Color = C("#E3B341"), BlurRadius = 7, ShadowDepth = 0, Opacity = 0.85,
+            },
             RenderTransform = new TransformGroup
             {
                 Children = { _peakRotate, new TranslateTransform(_cx, _cy) },
@@ -269,17 +409,33 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_peakMark);
 
-        // White needle
+        // White needle. The gradient across its width reads as a rounded edge;
+        // the shadow lifts it off the face.
         _needleRotate = new RotateTransform(StartAngle);
         _needle = new Polygon
         {
-            Fill = B("#FFFFFF"),
+            Fill = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(0, 1),
+                GradientStops =
+                {
+                    new GradientStop(C("#FFFFFF"), 0),
+                    new GradientStop(C("#F2F5FA"), 0.5),
+                    new GradientStop(C("#AEB6C6"), 1),
+                },
+            },
             Points = new PointCollection
             {
                 new Point(len, 0),
-                new Point(0, -3.2),
-                new Point(-10, 0),
-                new Point(0, 3.2),
+                new Point(0, -3.4),
+                new Point(-11, 0),
+                new Point(0, 3.4),
+            },
+            Effect = new DropShadowEffect
+            {
+                Color = Colors.Black, BlurRadius = 9, ShadowDepth = 3.5,
+                Direction = 300, Opacity = 0.65,
             },
             RenderTransform = new TransformGroup
             {
@@ -288,15 +444,29 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_needle);
 
+        // Raised hub, capping the needle's pivot.
         var hub = new Ellipse
         {
-            Width = 11, Height = 11,
-            Fill = B("#1A1D26"),
-            Stroke = B("#8A92A6"),
-            StrokeThickness = 1.5,
+            Width = 15,
+            Height = 15,
+            Fill = new RadialGradientBrush
+            {
+                GradientOrigin = new Point(0.35, 0.3),
+                GradientStops =
+                {
+                    new GradientStop(C("#5A6478"), 0),
+                    new GradientStop(C("#2A3040"), 0.65),
+                    new GradientStop(C("#14171F"), 1),
+                },
+            },
+            Effect = new DropShadowEffect
+            {
+                Color = Colors.Black, BlurRadius = 6, ShadowDepth = 2,
+                Direction = 300, Opacity = 0.7,
+            },
         };
-        Canvas.SetLeft(hub, _cx - 5.5);
-        Canvas.SetTop(hub, _cy - 5.5);
+        Canvas.SetLeft(hub, _cx - 7.5);
+        Canvas.SetTop(hub, _cy - 7.5);
         Moving.Children.Add(hub);
     }
 
@@ -308,7 +478,7 @@ public partial class Gauge : UserControl
         bool has = !double.IsNaN(v);
 
         _valueText.Text = has
-            ? v.ToString(Maximum >= 1000 ? "0" : "0", CultureInfo.InvariantCulture) +
+            ? v.ToString("0", CultureInfo.InvariantCulture) +
               (string.IsNullOrEmpty(Unit) ? "" : " " + Unit)
             : "--";
 

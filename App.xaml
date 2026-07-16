@@ -17,8 +17,18 @@
         <SolidColorBrush x:Key="Warm" Color="#D29922" />
         <SolidColorBrush x:Key="Hot"  Color="#F85149" />
 
+        <!-- Deliberately does NOT set Foreground.
+
+             An implicit TextBlock style reaches inside control templates -
+             including a ComboBox's popup, which is light - so a global
+             "everything is near-white" setter paints those items white-on-white.
+             Worse, a local override on the ComboBox does NOT win: implicit
+             styles for template-generated elements resolve against
+             Application.Resources, not the element's own resources.
+
+             So text colour is inherited from the Window instead. Inheritance is
+             overridable at any level; an implicit style setter isn't. -->
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
         </Style>
 
