@@ -31,6 +31,19 @@
             <Setter Property="FontFamily" Value="Segoe UI" />
         </Style>
 
+        <!-- Explicit colours, not inherited ones. A ToolTip's content sits in a popup
+             but still inherits Foreground down the logical tree from the Window - which
+             is near-white here. Left alone, tooltips render white on a light default
+             background and disappear, exactly like the ComboBox did. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="{StaticResource Panel}" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="BorderBrush" Value="{StaticResource PanelEdge}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="9,6" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource Panel}" />
             <Setter Property="BorderBrush" Value="{StaticResource PanelEdge}" />

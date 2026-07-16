@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
@@ -24,6 +25,7 @@ public partial class Gauge : UserControl
     private Polygon? _needle;
     private RotateTransform? _needleRotate;
     private Path? _peakMark;
+    private Path? _peakHit;
     private RotateTransform? _peakRotate;
     private TextBlock? _valueText;
 
@@ -150,7 +152,15 @@ public partial class Gauge : UserControl
     {
         Face.Children.Clear();
         Moving.Children.Clear();
+
+        // Drop the old parts too - if we bail out below, UpdateMoving must not
+        // animate orphans that are no longer in the tree.
         _needle = null;
+        _needleRotate = null;
+        _peakMark = null;
+        _peakHit = null;
+        _peakRotate = null;
+        _valueText = null;
 
         if (ActualWidth <= 20 || ActualHeight <= 20) return;
 
@@ -393,19 +403,36 @@ public partial class Gauge : UserControl
         var peakGeo = new PathGeometry();
         peakGeo.Figures.Add(peakFig);
 
+        // Shared, so the mark and its hit area can never drift apart.
+        var peakTransform = new TransformGroup
+        {
+            Children = { _peakRotate, new TranslateTransform(_cx, _cy) },
+        };
+
+        // A fat invisible copy of the mark, purely to catch the mouse. The visible
+        // line is 3px on a rotated dial - nobody is landing on that. Transparent
+        // still hit-tests; null wouldn't.
+        _peakHit = new Path
+        {
+            Data = peakGeo,
+            Stroke = Brushes.Transparent,
+            StrokeThickness = 18,
+            RenderTransform = peakTransform,
+            Cursor = Cursors.Hand,
+        };
+        Moving.Children.Add(_peakHit);
+
         _peakMark = new Path
         {
             Data = peakGeo,
             Stroke = B("#E3B341"),
             StrokeThickness = 3,
+            IsHitTestVisible = false,
             Effect = new DropShadowEffect
             {
                 Color = C("#E3B341"), BlurRadius = 7, ShadowDepth = 0, Opacity = 0.85,
             },
-            RenderTransform = new TransformGroup
-            {
-                Children = { _peakRotate, new TranslateTransform(_cx, _cy) },
-            },
+            RenderTransform = peakTransform,
         };
         Moving.Children.Add(_peakMark);
 
@@ -497,15 +524,22 @@ public partial class Gauge : UserControl
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
         });
 
-        if (_peakMark == null || _peakRotate == null) return;
+        if (_peakMark == null || _peakRotate == null || _peakHit == null) return;
 
         bool hasPeak = !double.IsNaN(Peak);
-        _peakMark.Visibility = hasPeak ? Visibility.Visible : Visibility.Collapsed;
-        if (hasPeak)
-            _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
-            {
-                To = AngleFor(Peak),
-                Duration = TimeSpan.FromMilliseconds(350),
-            });
+        Visibility peakVis = hasPeak ? Visibility.Visible : Visibility.Collapsed;
+        _peakMark.Visibility = peakVis;
+        _peakHit.Visibility = peakVis;
+
+        if (!hasPeak) return;
+
+        string unit = string.IsNullOrEmpty(Unit) ? "" : " " + Unit;
+        _peakHit.ToolTip = $"{Label} peak this run: {Peak:0}{unit}";
+
+        _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
+        {
+            To = AngleFor(Peak),
+            Duration = TimeSpan.FromMilliseconds(350),
+        });
     }
 }
