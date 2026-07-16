@@ -1,0 +1,12 @@
+<UserControl x:Class="FanControlApp.Controls.Gauge"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Grid>
+        <!-- Face: dial, zones, ticks, numbers. Rebuilt only when the size changes. -->
+        <Canvas x:Name="Face" />
+
+        <!-- Moving parts: needle and the yellow peak mark. Built once, rotated. -->
+        <Canvas x:Name="Moving" />
+    </Grid>
+</UserControl>

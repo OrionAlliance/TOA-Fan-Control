@@ -5,7 +5,7 @@ using FanControlApp.Helpers;
 
 namespace FanControlApp;
 
-/// <summary>One fan row in the FANS strip. Display shape only.</summary>
+/// <summary>One row in the "other fans" strip. Display shape only.</summary>
 public sealed class FanRow
 {
     public required string Name { get; init; }
@@ -20,6 +20,9 @@ public sealed class FanRow
 /// </summary>
 public partial class MainWindow : Window
 {
+    private const string Fan2 = "Chassis Fan #2";
+    private const string Fan3 = "Chassis Fan #3";
+
     private readonly FanController _controller = App.Controller;
     private bool _ready;
 
@@ -38,10 +41,15 @@ public partial class MainWindow : Window
         TargetText.Text = $"{s.TargetTemp:F0} C";
         SourceCombo.SelectedIndex = s.Source switch
         {
-            TempSource.Cpu => 1,
-            TempSource.Gpu => 2,
-            _ => 0,
+            TempSource.Cpu => 0,
+            TempSource.Gpu => 1,
+            _ => 2,
         };
+
+        // The redline on the temp gauges is the real one: the 5800X throttles at
+        // 90C. Nothing below that is damage.
+        CpuGauge.RedFrom = 90;
+        GpuGauge.RedFrom = 90;
 
         ApplyModeVisibility(s.Mode);
 
@@ -55,28 +63,19 @@ public partial class MainWindow : Window
         _ready = true;
     }
 
-    private void OnUpdated(object? sender, FanReadings r)
-    {
-        Dispatcher.BeginInvoke(() => Render(r));
-    }
+    private void OnUpdated(object? sender, FanReadings r) => Dispatcher.BeginInvoke(() => Render(r));
 
     private void Render(FanReadings r)
     {
-        CpuTempText.Text = Fmt(r.CpuTemp);
-        CpuTempText.Foreground = TempBrush(r.CpuTemp);
-        CpuTempName.Text = _controller.Hardware.CpuTempName;
-
-        GpuTempText.Text = Fmt(r.GpuTemp);
-        GpuTempText.Foreground = TempBrush(r.GpuTemp);
-        GpuTempName.Text = _controller.Hardware.GpuTempName;
-
-        OutputText.Text = $"{r.OutputPercent:F0}%";
-        SourceText.Text = r.SourceTemp is { } t ? $"driving from {t:F1} C" : "no reading";
+        CpuGauge.Value = r.CpuTemp ?? double.NaN;
+        GpuGauge.Value = r.GpuTemp ?? double.NaN;
+        Fan2Gauge.Value = RpmOf(r, Fan2);
+        Fan3Gauge.Value = RpmOf(r, Fan3);
 
         EngagedBadge.Text = r.Engaged ? "App is driving the case fans" : "BIOS has the fans";
         EngagedBadge.Foreground = r.Engaged ? Res("Accent") : Res("TextDim");
 
-        StatusText.Text = r.Status;
+        StatusText.Text = $"Fans at {r.OutputPercent:F0}%  ·  {r.Status}";
         StatusText.Foreground = r.Panic || r.NoControllableFans ? Res("Hot") : Res("TextDim");
 
         Curve.SetLive(r.SourceTemp, r.OutputPercent);
@@ -91,25 +90,31 @@ public partial class MainWindow : Window
                     : $"{-delta:F1} C under target - easing off (now {r.OutputPercent:F0}%).";
         }
 
-        RenderFans(r);
+        RenderOtherFans(r);
     }
 
-    private void RenderFans(FanReadings r)
+    private static double RpmOf(FanReadings r, string name)
     {
-        List<string> driven = _controller.Settings.ControlledFans;
+        FanChannel? f = r.Fans.FirstOrDefault(x =>
+            string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+        return f?.Rpm ?? double.NaN;
+    }
 
+    /// <summary>Everything the app is NOT driving - the two it does drive have gauges.</summary>
+    private void RenderOtherFans(FanReadings r)
+    {
         FanList.ItemsSource = r.Fans
             .Where(f => f.RpmSensor != null)
+            .Where(f => !string.Equals(f.Name, Fan2, StringComparison.OrdinalIgnoreCase)
+                     && !string.Equals(f.Name, Fan3, StringComparison.OrdinalIgnoreCase))
             .Select(f =>
             {
-                bool isDriven = driven.Contains(f.Name, StringComparer.OrdinalIgnoreCase);
                 bool dead = f.Rpm is null or < 1;
-
                 return new FanRow
                 {
-                    Name = isDriven ? f.Name + "  (app)" : f.Name,
+                    Name = f.Name,
                     Reading = dead ? "--" : $"{f.Rpm:F0} rpm",
-                    NameBrush = isDriven ? Res("Accent") : Res("TextDim"),
+                    NameBrush = Res("TextDim"),
                     ValueBrush = dead ? Res("TextDim") : Res("Text"),
                 };
             })
@@ -140,8 +145,8 @@ public partial class MainWindow : Window
 
         TempSource src = SourceCombo.SelectedIndex switch
         {
-            1 => TempSource.Cpu,
-            2 => TempSource.Gpu,
+            0 => TempSource.Cpu,
+            1 => TempSource.Gpu,
             _ => TempSource.Hotter,
         };
         _controller.UpdateSettings(s => s.Source = src);
@@ -168,17 +173,13 @@ public partial class MainWindow : Window
         StatusText.Text = "Released - the BIOS curve has the fans back.";
     }
 
-    // ---- display helpers ----------------------------------------------------
-
-    private static string Fmt(float? v) => v is { } f ? $"{f:F0} C" : "--";
+    private void OnResetPeaksClick(object sender, RoutedEventArgs e)
+    {
+        CpuGauge.ResetPeak();
+        GpuGauge.ResetPeak();
+        Fan2Gauge.ResetPeak();
+        Fan3Gauge.ResetPeak();
+    }
 
     private Brush Res(string key) => (Brush)FindResource(key);
-
-    private Brush TempBrush(float? v) => v switch
-    {
-        null => Res("TextDim"),
-        < 60 => Res("Cool"),
-        < 78 => Res("Warm"),
-        _ => Res("Hot"),
-    };
 }

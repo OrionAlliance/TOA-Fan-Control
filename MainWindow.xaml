@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctrl="clr-namespace:FanControlApp.Controls"
         Title="TOA - Fan Control"
-        Height="720" Width="900"
-        MinHeight="620" MinWidth="760"
+        Height="860" Width="920"
+        MinHeight="740" MinWidth="800"
         Background="{StaticResource Bg}"
         WindowStartupLocation="CenterScreen">
 
@@ -19,7 +19,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+        <DockPanel Grid.Row="0" Margin="0,0,0,10">
             <TextBlock Text="TOA - Fan Control" FontSize="20" FontWeight="SemiBold" />
             <TextBlock x:Name="EngagedBadge" DockPanel.Dock="Right"
                        HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -27,32 +27,24 @@
                        Text="BIOS has the fans" />
         </DockPanel>
 
-        <!-- Live readouts -->
-        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,14">
-            <Border Style="{StaticResource Card}" Margin="0,0,6,0">
-                <StackPanel>
-                    <TextBlock Text="CPU" Foreground="{StaticResource TextDim}" FontSize="11" />
-                    <TextBlock x:Name="CpuTempText" Text="--" FontSize="30" FontWeight="SemiBold" />
-                    <TextBlock x:Name="CpuTempName" Text="" Foreground="{StaticResource TextDim}" FontSize="10" />
-                </StackPanel>
-            </Border>
+        <!-- The dash -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8">
+            <UniformGrid Columns="4" Height="200">
+                <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C"
+                            Minimum="0" Maximum="100" MajorTick="20"
+                            GreenTo="70" RedFrom="90" />
 
-            <Border Style="{StaticResource Card}" Margin="6,0">
-                <StackPanel>
-                    <TextBlock Text="GPU" Foreground="{StaticResource TextDim}" FontSize="11" />
-                    <TextBlock x:Name="GpuTempText" Text="--" FontSize="30" FontWeight="SemiBold" />
-                    <TextBlock x:Name="GpuTempName" Text="" Foreground="{StaticResource TextDim}" FontSize="10" />
-                </StackPanel>
-            </Border>
+                <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C"
+                            Minimum="0" Maximum="100" MajorTick="20"
+                            GreenTo="70" RedFrom="90" />
 
-            <Border Style="{StaticResource Card}" Margin="6,0,0,0">
-                <StackPanel>
-                    <TextBlock Text="FAN OUTPUT" Foreground="{StaticResource TextDim}" FontSize="11" />
-                    <TextBlock x:Name="OutputText" Text="--" FontSize="30" FontWeight="SemiBold" />
-                    <TextBlock x:Name="SourceText" Text="" Foreground="{StaticResource TextDim}" FontSize="10" />
-                </StackPanel>
-            </Border>
-        </UniformGrid>
+                <ctrl:Gauge x:Name="Fan2Gauge" Label="CHASSIS FAN #2" Unit=""
+                            Minimum="0" Maximum="2000" MajorTick="500" />
+
+                <ctrl:Gauge x:Name="Fan3Gauge" Label="CHASSIS FAN #3" Unit=""
+                            Minimum="0" Maximum="2000" MajorTick="500" />
+            </UniformGrid>
+        </Border>
 
         <!-- Mode -->
         <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,12">
@@ -74,9 +66,9 @@
                                FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ComboBox x:Name="SourceCombo" Width="130" VerticalAlignment="Center"
                               SelectionChanged="OnSourceChanged">
-                        <ComboBoxItem Content="Hotter of the two" />
                         <ComboBoxItem Content="CPU only" />
                         <ComboBoxItem Content="GPU only" />
+                        <ComboBoxItem Content="Hotter of the two" />
                     </ComboBox>
                 </StackPanel>
             </DockPanel>
@@ -99,14 +91,14 @@
                 <TextBlock Text="Hold this temperature" FontSize="15" FontWeight="SemiBold"
                            HorizontalAlignment="Center" />
                 <TextBlock Foreground="{StaticResource TextDim}" FontSize="12" TextWrapping="Wrap"
-                           TextAlignment="Center" Margin="0,8,0,18"
+                           TextAlignment="Center" Margin="0,8,0,14"
                            Text="The app watches the temperature and adjusts the case fans on its own to settle here. Runs hotter than this and the fans climb; cooler and they ease back off." />
 
-                <TextBlock x:Name="TargetText" Text="65 C" FontSize="42" FontWeight="SemiBold"
+                <TextBlock x:Name="TargetText" Text="85 C" FontSize="40" FontWeight="SemiBold"
                            HorizontalAlignment="Center" />
 
                 <Slider x:Name="TargetSlider" Minimum="45" Maximum="85" TickFrequency="5"
-                        IsSnapToTickEnabled="True" Margin="0,10,0,0"
+                        IsSnapToTickEnabled="True" Margin="0,8,0,0"
                         ValueChanged="OnTargetChanged" />
 
                 <DockPanel Margin="0,2,0,0">
@@ -115,28 +107,28 @@
                                HorizontalAlignment="Right" />
                 </DockPanel>
 
-                <TextBlock x:Name="AutoStateText" Margin="0,22,0,0" FontSize="12"
+                <TextBlock x:Name="AutoStateText" Margin="0,18,0,0" FontSize="12"
                            HorizontalAlignment="Center" Foreground="{StaticResource TextDim}" />
             </StackPanel>
         </Border>
 
-        <!-- Fans -->
+        <!-- Every other fan, for reference -->
         <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,0,0,12">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="FANS" Foreground="{StaticResource TextDim}"
-                           FontSize="11" Margin="0,0,0,8" />
+                <TextBlock DockPanel.Dock="Top" Text="OTHER FANS (BIOS controlled)"
+                           Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,0,0,8" />
                 <ItemsControl x:Name="FanList">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <UniformGrid Columns="4" />
+                            <UniformGrid Columns="6" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="0,0,10,6">
-                                <TextBlock Text="{Binding Name}" FontSize="11"
+                            <StackPanel Margin="0,0,10,2">
+                                <TextBlock Text="{Binding Name}" FontSize="10"
                                            Foreground="{Binding NameBrush}" />
-                                <TextBlock Text="{Binding Reading}" FontSize="16" FontWeight="SemiBold"
+                                <TextBlock Text="{Binding Reading}" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{Binding ValueBrush}" />
                             </StackPanel>
                         </DataTemplate>
@@ -148,7 +140,9 @@
         <!-- Status -->
         <DockPanel Grid.Row="5">
             <Button x:Name="ReleaseButton" DockPanel.Dock="Right" Content="Release to BIOS"
-                    Click="OnReleaseClick" />
+                    Click="OnReleaseClick" Margin="8,0,0,0" />
+            <Button x:Name="ResetPeaksButton" DockPanel.Dock="Right" Content="Reset peaks"
+                    Click="OnResetPeaksClick" />
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="12"
                        Foreground="{StaticResource TextDim}" Text="Starting..." />
         </DockPanel>
