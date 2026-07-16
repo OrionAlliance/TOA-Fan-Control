@@ -1,0 +1,7 @@
+bin/
+obj/
+
+# Runtime artifacts - the app is portable, these live next to the exe
+Settings/
+*.log
+*.log.old

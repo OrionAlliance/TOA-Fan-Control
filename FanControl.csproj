@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>TOA - Fan Control</AssemblyName>
+    <RootNamespace>FanControlApp</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PINNED. Do not bump without re-testing on the actual board.
+         0.9.6 fails to detect the Nuvoton NCT6798D on this X570 entirely: the
+         Motherboard node comes back with zero sub-hardware, so every fan except
+         the GPU's disappears and the app silently drives nothing. 0.9.4 finds
+         all 7 headers and reads/writes them correctly. Verified A/B on this
+         machine 2026-07-16. -->
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4" />
+  </ItemGroup>
+
+</Project>

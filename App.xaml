@@ -1,0 +1,61 @@
+<Application x:Class="FanControlApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+
+        <!-- Dark chrome -->
+        <SolidColorBrush x:Key="Bg"        Color="#12141A" />
+        <SolidColorBrush x:Key="Panel"     Color="#1A1D26" />
+        <SolidColorBrush x:Key="PanelEdge" Color="#2A2F3D" />
+        <SolidColorBrush x:Key="Text"      Color="#E6E9F0" />
+        <SolidColorBrush x:Key="TextDim"   Color="#8A92A6" />
+        <SolidColorBrush x:Key="Accent"    Color="#4C8DFF" />
+
+        <!-- Semantic temperature colours: fixed, never themed -->
+        <SolidColorBrush x:Key="Cool" Color="#3FB950" />
+        <SolidColorBrush x:Key="Warm" Color="#D29922" />
+        <SolidColorBrush x:Key="Hot"  Color="#F85149" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+        </Style>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Panel}" />
+            <Setter Property="BorderBrush" Value="{StaticResource PanelEdge}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,12" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#242938" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="BorderBrush" Value="{StaticResource PanelEdge}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#2F3549" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Application.Resources>
+</Application>
