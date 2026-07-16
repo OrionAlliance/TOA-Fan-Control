@@ -53,6 +53,14 @@ public partial class MainWindow : Window
 
         ApplyModeVisibility(s.Mode);
 
+        // The title bar is the one bit of chrome Windows owns. Paint it to match
+        // the cards once the HWND exists.
+        SourceInitialized += (_, _) => TitleBarColor.Apply(
+            this,
+            caption: ResColor("Panel"),
+            text: ResColor("Text"),
+            border: ResColor("PanelEdge"));
+
         _controller.Updated += OnUpdated;
         Closing += (_, _) =>
         {
@@ -193,4 +201,6 @@ public partial class MainWindow : Window
     }
 
     private Brush Res(string key) => (Brush)FindResource(key);
+
+    private Color ResColor(string key) => ((SolidColorBrush)FindResource(key)).Color;
 }
