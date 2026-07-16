@@ -24,10 +24,13 @@ public sealed class FanReadings
 /// <summary>
 /// Polls temps once a second and drives the controlled fan headers.
 ///
-/// The invariant that matters: this class must never leave a fan header seized
-/// by software when it can't see what the temperature is. Any doubt - sensor
-/// read fails, an exception escapes, the app shuts down - and the headers go
-/// straight back to the BIOS curve, which is always a safe fallback.
+/// Releasing is NOT this class's job when a watchdog is attached. The fan chip
+/// has no "hand back to BIOS" command - the library restores a header by writing
+/// back what it read the first time it took that header, so only the first
+/// grabber holds the real BIOS settings. The watchdog grabs them before we do,
+/// which makes it the only thing that can truly hand them back. We just ask.
+///
+/// Without a watchdog we're the first grabber, so we own the release ourselves.
 /// </summary>
 public sealed class FanController : IDisposable
 {
@@ -51,9 +54,11 @@ public sealed class FanController : IDisposable
     private readonly Timer _timer = new(TickMs);
 
     private FanSettings _settings;
+    private WatchdogLink? _link;
     private List<FanChannel> _controlled = new();
     private float _currentPercent = 50f;
     private bool _engaged;
+    private bool _paused;
     private int _blindTicks;
     private bool _disposed;
 
@@ -66,6 +71,23 @@ public sealed class FanController : IDisposable
 
     public HardwareMonitor Hardware => _hw;
 
+    public bool IsPaused
+    {
+        get { lock (_gate) return _paused; }
+    }
+
+    /// <summary>True when the watchdog is holding the fans and owns handing them back.</summary>
+    public bool WatchdogOwnsRelease
+    {
+        get { lock (_gate) return _link != null; }
+    }
+
+    /// <summary>The headers we resolved and will write to - what the watchdog must guard.</summary>
+    public IReadOnlyList<string> ControlledFanNames
+    {
+        get { lock (_gate) return _controlled.Select(f => f.Name).ToList(); }
+    }
+
     public FanController(FanSettings settings)
     {
         _settings = settings;
@@ -73,10 +95,28 @@ public sealed class FanController : IDisposable
         _timer.AutoReset = true;
     }
 
-    public void Start()
+    /// <summary>
+    /// Open the hardware and work out what we can drive - but do NOT write to
+    /// anything yet. The watchdog has to take the fans before we touch them.
+    /// </summary>
+    public void OpenHardware()
     {
         _hw.Open();
         ResolveControlledFans();
+    }
+
+    public void AttachWatchdog(WatchdogLink? link)
+    {
+        lock (_gate) _link = link;
+
+        DebugLog.Write(link != null
+            ? "Watchdog attached - it owns handing the fans back."
+            : "No watchdog - this app owns handing the fans back. Graceful exits are " +
+              "covered; a force-kill would leave the fans where they are.");
+    }
+
+    public void BeginControl()
+    {
         _currentPercent = Math.Clamp(_settings.Curve.Evaluate(40f), _settings.MinPercent, _settings.MaxPercent);
         _timer.Start();
         DebugLog.Write("Controller started.");
@@ -119,6 +159,54 @@ public sealed class FanController : IDisposable
         ResolveControlledFans();
     }
 
+    // ---- pause / resume -----------------------------------------------------
+
+    /// <summary>Stop driving and put the fans back on the BIOS curve.</summary>
+    public void Pause()
+    {
+        lock (_gate) _paused = true;
+        HandBackToBios();
+        DebugLog.Write("Paused - BIOS has the fans.");
+    }
+
+    /// <summary>Start driving again. The next tick re-takes the fans.</summary>
+    public void Resume()
+    {
+        lock (_gate) _paused = false;
+        DebugLog.Write("Resuming control.");
+    }
+
+    private void HandBackToBios()
+    {
+        WatchdogLink? link;
+        List<FanChannel> controlled;
+        lock (_gate)
+        {
+            link = _link;
+            controlled = _controlled.ToList();
+        }
+
+        if (link != null)
+        {
+            // Only the watchdog knows the real BIOS settings - ask it.
+            link.Restore.Set();
+        }
+        else
+        {
+            // No watchdog, so we were the first to take these headers and our own
+            // saved defaults are the real ones.
+            foreach (FanChannel f in controlled)
+            {
+                try { f.Release(); }
+                catch (Exception ex) { DebugLog.Write($"Release failed for '{f.Name}'.", ex); }
+            }
+        }
+
+        _engaged = false;
+    }
+
+    // ---- the loop -----------------------------------------------------------
+
     private void OnTick(object? sender, ElapsedEventArgs e)
     {
         try
@@ -128,7 +216,7 @@ public sealed class FanController : IDisposable
         catch (Exception ex)
         {
             // An exception here means we can no longer trust our own readings.
-            DebugLog.Write("Tick failed - releasing fans to BIOS.", ex);
+            DebugLog.Write("Tick failed - handing the fans back to the BIOS.", ex);
             SafeRelease();
         }
     }
@@ -139,10 +227,14 @@ public sealed class FanController : IDisposable
 
         FanSettings s;
         List<FanChannel> controlled;
+        WatchdogLink? link;
+        bool paused;
         lock (_gate)
         {
             s = _settings;
             controlled = _controlled.ToList();
+            link = _link;
+            paused = _paused;
         }
 
         float? cpu = _hw.CpuTemp;
@@ -154,12 +246,17 @@ public sealed class FanController : IDisposable
             _ => Max(cpu, gpu),
         };
 
-        // If nothing resolved, the app is a thermometer with no hands. Say so
-        // loudly rather than looking busy while controlling nothing.
         if (controlled.Count == 0)
         {
             Publish(cpu, gpu, source, controlled, panic: false, noFans: true,
                     status: "No controllable fans found - the BIOS is running your fans. See fan_debug.log.");
+            return;
+        }
+
+        if (paused)
+        {
+            Publish(cpu, gpu, source, controlled, panic: false,
+                    status: "Paused - the BIOS curve has your fans.");
             return;
         }
 
@@ -169,8 +266,8 @@ public sealed class FanController : IDisposable
             _blindTicks++;
             if (_blindTicks >= MaxBlindTicks && _engaged)
             {
-                DebugLog.Write($"No temperature for {_blindTicks} ticks - releasing to BIOS.");
-                SafeRelease();
+                DebugLog.Write($"No temperature for {_blindTicks} ticks - handing the fans back.");
+                HandBackToBios();
             }
 
             Publish(cpu, gpu, null, controlled, panic: false,
@@ -179,6 +276,17 @@ public sealed class FanController : IDisposable
         }
 
         _blindTicks = 0;
+
+        // Never write before the watchdog holds these headers. If we got in first
+        // it would be left with nothing to restore, and a force-kill would strand
+        // the fans - the exact thing it exists to prevent.
+        if (link != null && !link.Ready.WaitOne(0))
+        {
+            link.Resume.Set();
+            Publish(cpu, gpu, temp, controlled, panic: false,
+                    status: "Waiting for the watchdog to take the fans...");
+            return;
+        }
 
         bool panic = temp >= s.PanicTemp;
         float desired;
@@ -208,7 +316,7 @@ public sealed class FanController : IDisposable
         foreach (FanChannel f in controlled)
             f.SetPercent(_currentPercent);
 
-        if (controlled.Count > 0) _engaged = true;
+        _engaged = true;
 
         Publish(cpu, gpu, temp, controlled, panic, status);
     }
@@ -262,28 +370,19 @@ public sealed class FanController : IDisposable
     }
 
     /// <summary>
-    /// Give every seized header back to the BIOS. Safe to call repeatedly, from
-    /// any thread, and during shutdown - it must never throw.
+    /// Get the fans back on the BIOS curve. Safe to call repeatedly, from any
+    /// thread, and during shutdown - it must never throw.
     /// </summary>
     public void SafeRelease()
     {
-        List<FanChannel> controlled;
-        lock (_gate) controlled = _controlled.ToList();
-
-        foreach (FanChannel f in controlled)
+        try
         {
-            try
-            {
-                f.Release();
-            }
-            catch (Exception ex)
-            {
-                DebugLog.Write($"Release failed for '{f.Name}'.", ex);
-            }
+            HandBackToBios();
         }
-
-        if (_engaged) DebugLog.Write("Fans released to BIOS.");
-        _engaged = false;
+        catch (Exception ex)
+        {
+            DebugLog.Write("SafeRelease failed.", ex);
+        }
     }
 
     public void Dispose()
@@ -295,9 +394,9 @@ public sealed class FanController : IDisposable
 
         SafeRelease();
 
-        // Give the Super I/O a moment to latch the default mode before the
-        // driver unloads underneath it.
-        Thread.Sleep(150);
+        // Give the watchdog (or the Super I/O) a moment to actually put the fans
+        // back before this process - and its driver handle - goes away.
+        Thread.Sleep(400);
 
         _hw.Dispose();
         DebugLog.Write("Controller disposed.");

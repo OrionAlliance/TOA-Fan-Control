@@ -74,6 +74,7 @@ public partial class MainWindow : Window
 
         EngagedBadge.Text = r.Engaged ? "App is driving the case fans" : "BIOS has the fans";
         EngagedBadge.Foreground = r.Engaged ? Res("Accent") : Res("TextDim");
+        UpdateReleaseButton();
 
         StatusText.Text = $"Fans at {r.OutputPercent:F0}%  ·  {r.Status}";
         StatusText.Foreground = r.Panic || r.NoControllableFans ? Res("Hot") : Res("TextDim");
@@ -167,11 +168,21 @@ public partial class MainWindow : Window
         _controller.UpdateSettings(s => s.Curve = Curve.Curve);
     }
 
+    /// <summary>
+    /// A real toggle. It used to be a one-shot "release" that the very next tick
+    /// silently undid by grabbing the fans straight back - it looked like it
+    /// worked and lasted under a second.
+    /// </summary>
     private void OnReleaseClick(object sender, RoutedEventArgs e)
     {
-        _controller.SafeRelease();
-        StatusText.Text = "Released - the BIOS curve has the fans back.";
+        if (_controller.IsPaused) _controller.Resume();
+        else _controller.Pause();
+
+        UpdateReleaseButton();
     }
+
+    private void UpdateReleaseButton() =>
+        ReleaseButton.Content = _controller.IsPaused ? "Take fans back" : "Hand fans to BIOS";
 
     private void OnResetPeaksClick(object sender, RoutedEventArgs e)
     {

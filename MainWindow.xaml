@@ -144,8 +144,8 @@
 
         <!-- Status -->
         <DockPanel Grid.Row="5">
-            <Button x:Name="ReleaseButton" DockPanel.Dock="Right" Content="Release to BIOS"
-                    Click="OnReleaseClick" Margin="8,0,0,0" />
+            <Button x:Name="ReleaseButton" DockPanel.Dock="Right" Content="Hand fans to BIOS"
+                    Click="OnReleaseClick" Margin="8,0,0,0" Width="150" />
             <Button x:Name="ResetPeaksButton" DockPanel.Dock="Right" Content="Reset peaks"
                     Click="OnResetPeaksClick" />
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="12"
