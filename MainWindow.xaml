@@ -62,13 +62,22 @@
                              GroupName="Mode" Checked="OnModeChanged" />
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock Text="Drive fans from:" Foreground="{StaticResource TextDim}"
+                    <TextBlock Text="Fans react to:" Foreground="{StaticResource TextDim}"
                                FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox x:Name="SourceCombo" Width="130" VerticalAlignment="Center"
-                              SelectionChanged="OnSourceChanged">
-                        <ComboBoxItem Content="CPU only" />
-                        <ComboBoxItem Content="GPU only" />
-                        <ComboBoxItem Content="Hotter of the two" />
+                    <ComboBox x:Name="SourceCombo" Width="140" VerticalAlignment="Center"
+                              Foreground="Black" SelectionChanged="OnSourceChanged">
+                        <ComboBox.Resources>
+                            <!-- The app-wide TextBlock style paints text near-white for the
+                                 dark chrome, but a ComboBox popup is light - so the items
+                                 render white-on-white and vanish. Scope it back to black
+                                 for everything inside the combo. -->
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="Black" />
+                            </Style>
+                        </ComboBox.Resources>
+                        <ComboBoxItem Content="CPU temperature" />
+                        <ComboBoxItem Content="GPU temperature" />
+                        <ComboBoxItem Content="Whichever is hotter" />
                     </ComboBox>
                 </StackPanel>
             </DockPanel>
