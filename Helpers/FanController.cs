@@ -49,6 +49,10 @@ public sealed class FanController : IDisposable
 
     private const int MaxBlindTicks = 3;
 
+    // A line every 5s. Thermals move slowly, so this is plenty to tune from, and
+    // it's ~200 lines for a 20-minute session - nothing next to the 2MB roll.
+    private const int SampleEveryTicks = 5;
+
     private readonly object _gate = new();
     private readonly HardwareMonitor _hw = new();
     private readonly Timer _timer = new(TickMs);
@@ -61,6 +65,17 @@ public sealed class FanController : IDisposable
     private bool _paused;
     private int _blindTicks;
     private bool _disposed;
+
+    // Session telemetry. Without this the log records that the app ran and
+    // nothing about what it did - useless for tuning, which is the whole reason
+    // the log exists.
+    private int _tickCount;
+    private bool _wasPanic;
+    private float _peakCpu = float.NaN;
+    private float _peakGpu = float.NaN;
+    private float _peakOut;
+    private readonly Dictionary<string, float> _peakRpm = new();
+    private readonly DateTime _startedAt = DateTime.Now;
 
     public event EventHandler<FanReadings>? Updated;
 
@@ -318,7 +333,54 @@ public sealed class FanController : IDisposable
 
         _engaged = true;
 
+        // A panic is rare and important - never let it be something you only find
+        // out about by happening to be looking at the screen.
+        if (panic && !_wasPanic)
+            DebugLog.Write($"PANIC ENTERED at {temp:F1}C (limit {s.PanicTemp:F0}C) - fans to {s.MaxPercent:F0}%.");
+        else if (!panic && _wasPanic)
+            DebugLog.Write($"Panic over at {temp:F1}C - back to normal control.");
+        _wasPanic = panic;
+
+        TrackPeaks(cpu, gpu, controlled);
+
+        if (++_tickCount % SampleEveryTicks == 0)
+            LogSample(cpu, gpu, temp, s, controlled);
+
         Publish(cpu, gpu, temp, controlled, panic, status);
+    }
+
+    private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
+    {
+        if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) _peakCpu = c;
+        if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) _peakGpu = g;
+        if (_currentPercent > _peakOut) _peakOut = _currentPercent;
+
+        foreach (FanChannel f in controlled)
+        {
+            if (f.Rpm is not { } rpm) continue;
+            if (!_peakRpm.TryGetValue(f.Name, out float best) || rpm > best)
+                _peakRpm[f.Name] = rpm;
+        }
+    }
+
+    private void LogSample(float? cpu, float? gpu, float temp, FanSettings s, List<FanChannel> controlled)
+    {
+        string rpm = string.Join(" ", controlled.Select(f => $"[{f.Name}={f.Rpm:F0}]"));
+        DebugLog.Write(
+            $"SAMPLE mode={s.Mode} src={s.Source} cpu={cpu:F1} gpu={gpu:F1} " +
+            $"driving={temp:F1} target={s.TargetTemp:F0} out={_currentPercent:F1}% {rpm}");
+    }
+
+    private void LogSessionSummary()
+    {
+        if (_tickCount == 0) return;
+
+        TimeSpan ran = DateTime.Now - _startedAt;
+        string rpm = string.Join(" ", _peakRpm.Select(kv => $"[{kv.Key}={kv.Value:F0}]"));
+
+        DebugLog.Write(
+            $"SESSION PEAKS after {ran.TotalMinutes:F1} min: " +
+            $"cpu={_peakCpu:F1}C gpu={_peakGpu:F1}C maxOut={_peakOut:F0}% {rpm}");
     }
 
     /// <summary>
@@ -391,6 +453,10 @@ public sealed class FanController : IDisposable
         _disposed = true;
 
         try { _timer.Stop(); _timer.Dispose(); } catch { /* shutting down */ }
+
+        // Before anything else - if this throws or the release hangs, the numbers
+        // from the session are still on disk.
+        try { LogSessionSummary(); } catch { /* never block shutdown */ }
 
         SafeRelease();
 
