@@ -107,14 +107,17 @@ public sealed class HardwareMonitor : IDisposable
                    ?? all.FirstOrDefault(s => s.SensorType == SensorType.Temperature
                                               && s.Hardware.HardwareType == HardwareType.Cpu);
 
-        // Hot Spot is the number that throttles an AMD card, so prefer it.
+        // Core, not Hot Spot. Hot Spot is the more alarming number and it's what
+        // throttles the card, but it runs 90-100C under a normal load - roughly
+        // 15C above Core. Feeding that into a controller tuned around CPU
+        // temperatures would peg the fans permanently. Core is the comparable one.
         ISensor[] gpuTemps = all.Where(s => s.SensorType == SensorType.Temperature
                                             && s.Hardware.HardwareType is HardwareType.GpuAmd
                                                 or HardwareType.GpuNvidia
                                                 or HardwareType.GpuIntel).ToArray();
 
-        _gpuTemp = gpuTemps.FirstOrDefault(s => s.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase))
-                   ?? gpuTemps.FirstOrDefault(s => s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
+        _gpuTemp = gpuTemps.FirstOrDefault(s => s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
+                   ?? gpuTemps.FirstOrDefault(s => s.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault();
 
         // Pair each Control sensor with the Fan sensor of the same name - that's
