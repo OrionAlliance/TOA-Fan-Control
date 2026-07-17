@@ -23,10 +23,14 @@
          compile or the build breaks on multiple entry points.
            IconGen\      draws Icon.ico, plus a proof sheet of every size
            GaugePreview\ renders the real gauge cluster offscreen to a PNG, so
-                         layout can be looked at instead of guessed at -->
+                         layout can be looked at instead of guessed at
+           GlyphSheet\   renders a labelled sheet of a symbol font, so a glyph
+                         gets picked by looking rather than by guessing a hex code -->
     <Compile Remove="IconGen\**" />
     <Compile Remove="GaugePreview\**" />
+    <Compile Remove="GlyphSheet\**" />
     <Page Remove="GaugePreview\**" />
+    <Page Remove="GlyphSheet\**" />
   </ItemGroup>
 
   <ItemGroup>
