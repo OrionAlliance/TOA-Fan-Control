@@ -174,9 +174,21 @@
         <Border x:Name="ManualPanel" Grid.Row="3" Style="{StaticResource Card}"
                 Margin="0,0,0,12" Visibility="Collapsed">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Foreground="{StaticResource TextDim}" FontSize="11"
-                           Margin="0,0,0,8"
-                           Text="Drag a dot to move it  ·  double-click empty space to add one  ·  right-click a dot to delete" />
+                <!-- Header doubles as the collapse toggle: click anywhere on it to
+                     fold the curve away. It's a lot of vertical space when you're
+                     not actively shaping the line. -->
+                <Border x:Name="CurveHeader" DockPanel.Dock="Top" Background="Transparent"
+                        Cursor="Hand" Margin="0,0,0,8" MouseLeftButtonUp="OnToggleCurve">
+                    <DockPanel>
+                        <TextBlock x:Name="CurveChevron" DockPanel.Dock="Left" Text="&#xE70D;"
+                                   FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                   Foreground="{StaticResource TextDim}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock x:Name="CurveHeaderText" Foreground="{StaticResource TextDim}"
+                                   FontSize="11" VerticalAlignment="Center"
+                                   Text="CURVE  ·  drag a dot to move  ·  double-click to add  ·  right-click to delete" />
+                    </DockPanel>
+                </Border>
                 <ctrl:CurveEditor x:Name="Curve" MinHeight="260" />
             </DockPanel>
         </Border>

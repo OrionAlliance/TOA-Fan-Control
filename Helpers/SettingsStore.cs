@@ -63,6 +63,9 @@ public sealed class FanSettings
     /// </summary>
     public double OverlayLeft { get; set; } = double.NaN;
     public double OverlayTop { get; set; } = double.NaN;
+
+    /// <summary>Manual curve folded away to save space. Remembered between runs.</summary>
+    public bool CurveCollapsed { get; set; }
 }
 
 public static class SettingsStore

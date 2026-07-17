@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using FanControlApp.Helpers;
 
@@ -53,6 +54,7 @@ public partial class MainWindow : Window
         GpuGauge.RedFrom = 90;
 
         ApplyModeVisibility(s.Mode);
+        ApplyCurveCollapsed(s.CurveCollapsed);
 
         // We draw the title bar ourselves now (DWM can't gradient one), so the
         // maximise glyph has to be kept in step by hand.
@@ -160,6 +162,25 @@ public partial class MainWindow : Window
     {
         ManualPanel.Visibility = mode == FanMode.Manual ? Visibility.Visible : Visibility.Collapsed;
         AutoPanel.Visibility = mode == FanMode.Auto ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Fold the curve editor away (header stays, so it can be reopened).</summary>
+    private void OnToggleCurve(object sender, MouseButtonEventArgs e)
+    {
+        bool collapsed = Curve.Visibility == Visibility.Visible;
+        ApplyCurveCollapsed(collapsed);
+        _controller.UpdateSettings(s => s.CurveCollapsed = collapsed);
+    }
+
+    private void ApplyCurveCollapsed(bool collapsed)
+    {
+        Curve.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+
+        // Chevron points down when there's hidden content below, up when open.
+        CurveChevron.Text = collapsed ? "" : "";  // Segoe MDL2: ChevronDown / ChevronUp
+        CurveHeaderText.Text = collapsed
+            ? "CURVE  (collapsed - click to show)"
+            : "CURVE  ·  drag a dot to move  ·  double-click to add  ·  right-click to delete";
     }
 
     private void OnSourceChanged(object sender, SelectionChangedEventArgs e)
