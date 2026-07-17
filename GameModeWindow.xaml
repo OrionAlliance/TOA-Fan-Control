@@ -65,11 +65,15 @@
             <TextBlock x:Name="RpmText" Grid.Row="1" Grid.Column="2" FontSize="9"
                        Foreground="{StaticResource TextDim}" Text="-- / --" />
 
-            <!-- Way back. Faint until you go looking for it. -->
+            <!-- Way back to the full window. E7F4 is Segoe MDL2's monitor-on-a-stand;
+                 picked by rendering the font rather than trusting a hex code from
+                 memory - the previous E73F was the "FullScreen" arrows, which read as
+                 a faint empty square at this size. -->
             <Button x:Name="RestoreButton" Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
-                    Content="&#xE73F;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                    Width="22" Height="22" VerticalAlignment="Top"
-                    Opacity="0.35" Click="OnRestoreClick"
+                    Content="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                    Foreground="#C2CAD9" Padding="0"
+                    Width="28" Height="28" VerticalAlignment="Center"
+                    Click="OnRestoreClick"
                     ToolTip="Back to the full window (or double-click anywhere)" />
         </Grid>
     </Border>
