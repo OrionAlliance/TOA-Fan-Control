@@ -72,10 +72,11 @@
                             Minimum="0" Maximum="100" MajorTick="20"
                             GreenTo="70" RedFrom="90" />
 
-                <ctrl:Gauge x:Name="Fan2Gauge" Label="CHASSIS FAN #2" Unit=""
+                <!-- &#10; is a line break: the label stacks on two lines. -->
+                <ctrl:Gauge x:Name="Fan2Gauge" Label="Chassis&#10;Fan #2" Unit=""
                             Minimum="0" Maximum="2000" MajorTick="500" />
 
-                <ctrl:Gauge x:Name="Fan3Gauge" Label="CHASSIS FAN #3" Unit=""
+                <ctrl:Gauge x:Name="Fan3Gauge" Label="Chassis&#10;Fan #3" Unit=""
                             Minimum="0" Maximum="2000" MajorTick="500" />
             </UniformGrid>
         </Border>

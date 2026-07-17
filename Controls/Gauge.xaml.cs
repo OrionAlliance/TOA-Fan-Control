@@ -384,9 +384,23 @@ public partial class Gauge : UserControl
             FontSize = 10,
             TextAlignment = TextAlignment.Center,
             Width = _r * 1.6,
+            LineHeight = 12,
+            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
         };
         Canvas.SetLeft(lab, _cx - _r * 0.8);
-        Canvas.SetTop(lab, _cy + _r * 0.16 + size + 2);
+
+        // Sit the label's BOTTOM on a fixed baseline low in the dial's dark gap,
+        // rather than its top. Anchoring the top makes a one-line "CPU" and a
+        // two-line "Chassis / Fan #2" finish at different heights, so the row
+        // doesn't line up. This way every label ends on the same line whatever
+        // its height.
+        //
+        // 0.86r puts a two-line label wholly inside the gap: the band's ends stop
+        // at ~0.58r vertically, so anything above that straddles them instead of
+        // sitting in the dark. It's also near the floor - the circle narrows fast
+        // down here and the text soon runs out of dial to sit on.
+        lab.Measure(new Size(_r * 1.6, double.PositiveInfinity));
+        Canvas.SetTop(lab, _cy + _r * 0.86 - lab.DesiredSize.Height);
         Face.Children.Add(lab);
     }
 
@@ -534,7 +548,11 @@ public partial class Gauge : UserControl
         if (!hasPeak) return;
 
         string unit = string.IsNullOrEmpty(Unit) ? "" : " " + Unit;
-        _peakHit.ToolTip = $"{Label} peak this run: {Peak:0}{unit}";
+
+        // Labels may be stacked on the dial ("Chassis\nFan #2"); flatten it here or
+        // the tooltip breaks across two lines mid-sentence.
+        string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+        _peakHit.ToolTip = $"{flat} peak this run: {Peak:0}{unit}";
 
         _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
         {

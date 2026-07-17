@@ -19,10 +19,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- IconGen\ is the source that draws Icon.ico - a separate little exe, run by
-         hand when the icon changes. It has its own Main, so keep it out of the app's
-         compile or the build breaks on two entry points. -->
+    <!-- Hand-run dev tools, each with its own Main - keep them out of the app's
+         compile or the build breaks on multiple entry points.
+           IconGen\      draws Icon.ico, plus a proof sheet of every size
+           GaugePreview\ renders the real gauge cluster offscreen to a PNG, so
+                         layout can be looked at instead of guessed at -->
     <Compile Remove="IconGen\**" />
+    <Compile Remove="GaugePreview\**" />
+    <Page Remove="GaugePreview\**" />
   </ItemGroup>
 
   <ItemGroup>
