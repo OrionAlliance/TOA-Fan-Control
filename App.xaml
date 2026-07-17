@@ -77,6 +77,68 @@
             <Setter Property="Padding" Value="14,12" />
         </Style>
 
+        <!-- Title bar face: same recipe as a card, but only bevelled along the
+             bottom edge - it's the top of the window, so there's no light coming
+             from above it. -->
+        <LinearGradientBrush x:Key="TitleFace" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#2A3040" Offset="0" />
+            <GradientStop Color="#1E222D" Offset="0.55" />
+            <GradientStop Color="#141720" Offset="1" />
+        </LinearGradientBrush>
+
+        <!-- Caption buttons: flat until hovered, so they don't compete with the
+             raised cards below. Segoe MDL2 Assets is the system glyph font - the
+             same shapes Windows' own buttons use. -->
+        <Style x:Key="CaptionButton" TargetType="Button">
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#333B4D" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#454E63" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CaptionClose" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Red on hover, like every other Windows close button. -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#C42B1C" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#8E1F14" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Raised keycap, same light source as the cards and gauges. Pressing it
              flips the gradient so the button reads as pushed in. -->
         <LinearGradientBrush x:Key="BtnFace" StartPoint="0,0" EndPoint="0,1">

@@ -50,8 +50,8 @@ internal static class Program
 
         cluster.Children.Add(Make("CPU", "C", 0, 100, 20, 37, greenTo: 70, redFrom: 90));
         cluster.Children.Add(Make("GPU", "C", 0, 100, 20, 38, greenTo: 70, redFrom: 90));
-        cluster.Children.Add(Make("Chassis\nFan #2", "", 0, 2000, 500, 418));
-        cluster.Children.Add(Make("Chassis\nFan #3", "", 0, 2000, 500, 559));
+        cluster.Children.Add(Make("Chassis\nFan #2", "", 0, 2000, 1000, 418));
+        cluster.Children.Add(Make("Chassis\nFan #3", "", 0, 2000, 1000, 559));
 
         host.Measure(new Size(w, h));
         host.Arrange(new Rect(0, 0, w, h));

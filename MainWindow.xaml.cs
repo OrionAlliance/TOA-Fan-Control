@@ -53,8 +53,12 @@ public partial class MainWindow : Window
 
         ApplyModeVisibility(s.Mode);
 
-        // The title bar is the one bit of chrome Windows owns. Paint it to match
-        // the cards once the HWND exists.
+        // We draw the title bar ourselves now (DWM can't gradient one), so the
+        // maximise glyph has to be kept in step by hand.
+        StateChanged += OnWindowStateChanged;
+
+        // Still worth doing for the window's outer border - that edge is DWM's
+        // even when the caption isn't.
         SourceInitialized += (_, _) => TitleBarColor.Apply(
             this,
             caption: ResColor("Panel"),
@@ -193,6 +197,27 @@ public partial class MainWindow : Window
 
     private void UpdateReleaseButton() =>
         ReleaseButton.Content = _controller.IsPaused ? "Take fans back" : "Hand fans to BIOS";
+
+    // ---- caption buttons ----------------------------------------------------
+    // Ours now: DWM can't gradient a title bar, so we draw it, so we own these.
+
+    private void OnMinimizeClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void OnMaximizeClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    /// <summary>Swap the glyph so it says what the button will DO, not what state it's in.</summary>
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        bool max = WindowState == WindowState.Maximized;
+        MaxButton.Content = max ? "" : "";   // Segoe MDL2: restore / maximise
+        MaxButton.ToolTip = max ? "Restore" : "Maximise";
+    }
 
     private void OnResetPeaksClick(object sender, RoutedEventArgs e)
     {

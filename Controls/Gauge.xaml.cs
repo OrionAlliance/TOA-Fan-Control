@@ -307,9 +307,12 @@ public partial class Gauge : UserControl
                 Opacity = isMajor ? 1 : 0.55,
             });
 
-            if (!isMajor) continue;
-
-            // Numbers get unreadable on a small dial, so shorten thousands (1500 -> 1.5k)
+            // Every tick gets its number - no blank markers. Majors stay longer and
+            // heavier so the scale still has a rhythm to read by.
+            //
+            // This is why the fan dials major on 1000 rather than 500: it puts their
+            // ticks on 0/500/1000/1500/2000, all of which shorten cleanly. Majoring
+            // on 500 would drop minors on 250s and label them "0.3k".
             string text = Maximum >= 1000
                 ? (v / 1000d).ToString("0.#", CultureInfo.InvariantCulture) + "k"
                 : v.ToString("0", CultureInfo.InvariantCulture);
