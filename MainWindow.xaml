@@ -172,24 +172,43 @@
 
         <!-- Manual: the curve -->
         <Border x:Name="ManualPanel" Grid.Row="3" Style="{StaticResource Card}"
-                Margin="0,0,0,12" Visibility="Collapsed">
+                Margin="0,0,0,12" Visibility="Collapsed" Padding="14,10">
             <DockPanel>
-                <!-- Header doubles as the collapse toggle: click anywhere on it to
-                     fold the curve away. It's a lot of vertical space when you're
-                     not actively shaping the line. -->
-                <Border x:Name="CurveHeader" DockPanel.Dock="Top" Background="Transparent"
-                        Cursor="Hand" Margin="0,0,0,8" MouseLeftButtonUp="OnToggleCurve">
-                    <DockPanel>
-                        <TextBlock x:Name="CurveChevron" DockPanel.Dock="Left" Text="&#xE70D;"
-                                   FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                   Foreground="{StaticResource TextDim}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <TextBlock x:Name="CurveHeaderText" Foreground="{StaticResource TextDim}"
-                                   FontSize="11" VerticalAlignment="Center"
-                                   Text="CURVE  ·  drag a dot to move  ·  double-click to add  ·  right-click to delete" />
-                    </DockPanel>
-                </Border>
-                <ctrl:CurveEditor x:Name="Curve" MinHeight="260" />
+                <!-- A centred triangle handle, docked at the bottom edge - grab it
+                     to fold the graph away. The curve is 260px you only need while
+                     shaping the line, so it's worth being able to tuck it out. -->
+                <!-- Triangle is the button's Content (not baked into the template),
+                     so the code-behind can flip it - named elements inside a
+                     ControlTemplate live in the template's namescope, not the window's. -->
+                <Button x:Name="CurveToggle" DockPanel.Dock="Bottom"
+                        HorizontalAlignment="Center" Margin="0,6,0,0"
+                        Cursor="Hand" Click="OnToggleCurve"
+                        ToolTip="Collapse / expand the curve">
+                    <Button.Content>
+                        <Path x:Name="CurveTriangle" Fill="#C2CAD9" Data="M 0,5 L 5,0 L 10,5 Z" />
+                    </Button.Content>
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="pill" Width="52" Height="18" CornerRadius="9"
+                                    Background="#242938" BorderBrush="{StaticResource PanelEdge}"
+                                    BorderThickness="1">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="pill" Property="Background" Value="#2F3549" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <StackPanel x:Name="CurveBody">
+                    <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,0,0,8"
+                               Text="Drag a dot to move it  ·  double-click empty space to add one  ·  right-click a dot to delete" />
+                    <ctrl:CurveEditor x:Name="Curve" MinHeight="260" />
+                </StackPanel>
             </DockPanel>
         </Border>
 

@@ -164,23 +164,23 @@ public partial class MainWindow : Window
         AutoPanel.Visibility = mode == FanMode.Auto ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>Fold the curve editor away (header stays, so it can be reopened).</summary>
-    private void OnToggleCurve(object sender, MouseButtonEventArgs e)
+    /// <summary>Fold the curve away, leaving just the handle to bring it back.</summary>
+    private void OnToggleCurve(object sender, RoutedEventArgs e)
     {
-        bool collapsed = Curve.Visibility == Visibility.Visible;
+        bool collapsed = CurveBody.Visibility == Visibility.Visible;
         ApplyCurveCollapsed(collapsed);
         _controller.UpdateSettings(s => s.CurveCollapsed = collapsed);
     }
 
+    // Triangle points up when the curve is open (click to fold up), down when it's
+    // hidden (click to drop it back down).
+    private const string TriangleUp = "M 0,5 L 5,0 L 10,5 Z";
+    private const string TriangleDown = "M 0,0 L 5,5 L 10,0 Z";
+
     private void ApplyCurveCollapsed(bool collapsed)
     {
-        Curve.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
-
-        // Chevron points down when there's hidden content below, up when open.
-        CurveChevron.Text = collapsed ? "" : "";  // Segoe MDL2: ChevronDown / ChevronUp
-        CurveHeaderText.Text = collapsed
-            ? "CURVE  (collapsed - click to show)"
-            : "CURVE  ·  drag a dot to move  ·  double-click to add  ·  right-click to delete";
+        CurveBody.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+        CurveTriangle.Data = Geometry.Parse(collapsed ? TriangleDown : TriangleUp);
     }
 
     private void OnSourceChanged(object sender, SelectionChangedEventArgs e)
