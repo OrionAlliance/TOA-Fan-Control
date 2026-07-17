@@ -1,0 +1,76 @@
+<Window x:Class="FanControlApp.GameModeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TOA - Fan Control (Game Mode)"
+        Width="268" SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        FontFamily="Segoe UI"
+        Foreground="{StaticResource Text}">
+
+    <!-- Card gradient and bevel, same as everything else, just small. -->
+    <Border Background="{StaticResource TitleFace}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12,8"
+            MouseLeftButtonDown="OnDragOrRestore">
+        <Border.BorderBrush>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#454E63" Offset="0" />
+                <GradientStop Color="#2A2F3D" Offset="0.5" />
+                <GradientStop Color="#0E1116" Offset="1" />
+            </LinearGradientBrush>
+        </Border.BorderBrush>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- CPU -->
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
+                <TextBlock Text="CPU" Foreground="{StaticResource TextDim}" FontSize="9"
+                           VerticalAlignment="Bottom" Margin="0,0,4,2" />
+                <TextBlock x:Name="CpuText" Text="--" FontSize="19" FontWeight="SemiBold" />
+            </StackPanel>
+            <TextBlock x:Name="CpuPeakText" Grid.Row="1" Grid.Column="0" FontSize="9"
+                       Foreground="{StaticResource TextDim}" Text="peak --" />
+
+            <!-- GPU -->
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                <TextBlock Text="GPU" Foreground="{StaticResource TextDim}" FontSize="9"
+                           VerticalAlignment="Bottom" Margin="0,0,4,2" />
+                <TextBlock x:Name="GpuText" Text="--" FontSize="19" FontWeight="SemiBold" />
+            </StackPanel>
+            <TextBlock x:Name="GpuPeakText" Grid.Row="1" Grid.Column="1" FontSize="9"
+                       Foreground="{StaticResource TextDim}" Text="peak --" />
+
+            <!-- Fans -->
+            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
+                <TextBlock Text="FAN" Foreground="{StaticResource TextDim}" FontSize="9"
+                           VerticalAlignment="Bottom" Margin="0,0,4,2" />
+                <TextBlock x:Name="FanText" Text="--" FontSize="19" FontWeight="SemiBold" />
+            </StackPanel>
+            <TextBlock x:Name="RpmText" Grid.Row="1" Grid.Column="2" FontSize="9"
+                       Foreground="{StaticResource TextDim}" Text="-- / --" />
+
+            <!-- Way back. Faint until you go looking for it. -->
+            <Button x:Name="RestoreButton" Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
+                    Content="&#xE73F;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                    Width="22" Height="22" VerticalAlignment="Top"
+                    Opacity="0.35" Click="OnRestoreClick"
+                    ToolTip="Back to the full window (or double-click anywhere)" />
+        </Grid>
+    </Border>
+</Window>

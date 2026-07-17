@@ -55,6 +55,14 @@ public sealed class FanSettings
 
     /// <summary>Only these headers are ever written to. Everything else stays on the BIOS curve.</summary>
     public List<string> ControlledFans { get; set; } = new() { "Chassis Fan #2", "Chassis Fan #3" };
+
+    /// <summary>
+    /// Where the Game Mode overlay was left. NaN = never placed, so it starts
+    /// top-centre. Worth persisting: you position it once around your HUD and
+    /// never want to think about it again.
+    /// </summary>
+    public double OverlayLeft { get; set; } = double.NaN;
+    public double OverlayTop { get; set; } = double.NaN;
 }
 
 public static class SettingsStore

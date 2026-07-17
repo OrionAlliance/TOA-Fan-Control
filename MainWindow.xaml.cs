@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private const string Fan3 = "Chassis Fan #3";
 
     private readonly FanController _controller = App.Controller;
+    private GameModeWindow? _overlay;
     private bool _ready;
 
     public MainWindow()
@@ -69,6 +70,13 @@ public partial class MainWindow : Window
         Closing += (_, _) =>
         {
             _controller.Updated -= OnUpdated;
+
+            // The overlay cancels its own Closing (so Alt+F4 there just restores),
+            // which would keep the process alive forever with no window. Tear it
+            // down explicitly when the real window goes.
+            _overlay?.ForceClose();
+            _overlay = null;
+
             _controller.Dispose();
         };
 
@@ -225,6 +233,37 @@ public partial class MainWindow : Window
         GpuGauge.ResetPeak();
         Fan2Gauge.ResetPeak();
         Fan3Gauge.ResetPeak();
+        _overlay?.ResetPeaks();
+    }
+
+    // ---- game mode ----------------------------------------------------------
+
+    /// <summary>
+    /// Shrink to a small always-on-top readout. The full window is hidden, not
+    /// closed - closing it would take the controller down with it and stop the
+    /// fans being driven at all.
+    /// </summary>
+    private void OnGameModeClick(object sender, RoutedEventArgs e)
+    {
+        if (_overlay == null)
+        {
+            _overlay = new GameModeWindow(_controller);
+            _overlay.RestoreRequested += (_, _) => LeaveGameMode();
+        }
+
+        _overlay.Show();
+        _overlay.Activate();
+        Hide();
+        DebugLog.Write("Game Mode on - main window hidden, overlay up.");
+    }
+
+    private void LeaveGameMode()
+    {
+        _overlay?.SavePlacement();
+        _overlay?.Hide();
+        Show();
+        Activate();
+        DebugLog.Write("Game Mode off.");
     }
 
     private Brush Res(string key) => (Brush)FindResource(key);
