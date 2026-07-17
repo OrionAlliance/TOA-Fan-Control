@@ -17,6 +17,9 @@ public sealed class FanReadings
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
 
+    /// <summary>The watchdog died mid-session; a clean exit can no longer restore the BIOS curve.</summary>
+    public bool SentinelLost { get; init; }
+
     public string Status { get; init; } = "";
     public IReadOnlyList<FanChannel> Fans { get; init; } = Array.Empty<FanChannel>();
 }
@@ -71,6 +74,7 @@ public sealed class FanController : IDisposable
     // the log exists.
     private int _tickCount;
     private bool _wasPanic;
+    private bool _sentinelLost;
     private float _peakCpu = float.NaN;
     private float _peakGpu = float.NaN;
     private float _peakOut;
@@ -268,6 +272,24 @@ public sealed class FanController : IDisposable
             return;
         }
 
+        // If the sentinel died, everything still LOOKS fine - the events outlive it,
+        // Ready stays signalled, Restore gets set for nobody. Left alone we'd keep
+        // driving and have no way at all to hand the fans back, which is worse than
+        // never having had a watchdog. Fall back to owning the release ourselves.
+        if (link != null && !link.SentinelAlive)
+        {
+            DebugLog.Write(
+                "!! Watchdog process is GONE. Falling back to app-owned release. " +
+                "Our own saved defaults are the state the watchdog seized (the BIOS's " +
+                "idle speed), not the live BIOS curve - so a clean exit now parks the " +
+                "fans at a fixed safe speed rather than restoring the curve. " +
+                "Reboot to get the BIOS curve back.");
+
+            lock (_gate) _link = null;
+            link = null;
+            _sentinelLost = true;
+        }
+
         if (paused)
         {
             Publish(cpu, gpu, source, controlled, panic: false,
@@ -419,7 +441,8 @@ public sealed class FanController : IDisposable
             Engaged = _engaged,
             Panic = panic,
             NoControllableFans = noFans,
-            Status = status,
+            SentinelLost = _sentinelLost,
+            Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,
             Fans = _hw.Fans,
         });
     }

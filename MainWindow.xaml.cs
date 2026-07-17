@@ -85,7 +85,9 @@ public partial class MainWindow : Window
         UpdateReleaseButton();
 
         StatusText.Text = $"Fans at {r.OutputPercent:F0}%  ·  {r.Status}";
-        StatusText.Foreground = r.Panic || r.NoControllableFans ? Res("Hot") : Res("TextDim");
+        StatusText.Foreground = r.Panic || r.NoControllableFans || r.SentinelLost
+            ? Res("Hot")
+            : Res("TextDim");
 
         Curve.SetLive(r.SourceTemp, r.OutputPercent);
 

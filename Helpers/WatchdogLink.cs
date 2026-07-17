@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading;
 
 namespace FanControlApp.Helpers;
@@ -24,6 +25,24 @@ public sealed class WatchdogLink : IDisposable
 
     /// <summary>Set by the app to ask the watchdog to take them again.</summary>
     public EventWaitHandle Resume { get; }
+
+    /// <summary>The sentinel process itself. Set by the app after launching it.</summary>
+    public Process? Sentinel { get; set; }
+
+    /// <summary>
+    /// False once the sentinel is gone. Worth checking every tick: these events
+    /// keep working after the process behind them dies - Restore would be set for
+    /// nobody, and Ready is manual-reset so it stays signalled forever. The app
+    /// would carry on driving and quietly lose any way to hand the fans back.
+    /// </summary>
+    public bool SentinelAlive
+    {
+        get
+        {
+            try { return Sentinel is { HasExited: false }; }
+            catch { return false; }
+        }
+    }
 
     private WatchdogLink(EventWaitHandle ready, EventWaitHandle restore, EventWaitHandle resume)
     {

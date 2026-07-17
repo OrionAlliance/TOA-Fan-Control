@@ -63,6 +63,7 @@ public static class Watchdog
             foreach (string f in fans) psi.ArgumentList.Add(f);
 
             Process? p = Process.Start(psi);
+            link.Sentinel = p;
             DebugLog.Write($"Watchdog starting (pid {p?.Id.ToString() ?? "?"}), guarding " +
                            $"[{string.Join(", ", fans)}]; waiting for it to take the fans.");
 
