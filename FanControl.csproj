@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>TOA - Fan Control</AssemblyName>
     <RootNamespace>FanControlApp</RootNamespace>
@@ -16,6 +17,14 @@
   <ItemGroup>
     <!-- Window/taskbar icon. ApplicationIcon above only covers the exe in Explorer. -->
     <Resource Include="Icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WinForms is enabled ONLY for the system-tray icon (NotifyIcon). Drop its
+         global usings so WPF types (Application, Brush, Color) stay unambiguous;
+         the few WinForms/Drawing types we use are fully qualified. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>

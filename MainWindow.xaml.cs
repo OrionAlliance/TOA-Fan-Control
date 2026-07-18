@@ -26,10 +26,13 @@ public partial class MainWindow : Window
 
     private readonly FanController _controller = App.Controller;
     private GameModeWindow? _overlay;
+    private System.Windows.Forms.NotifyIcon? _tray;
 
     public MainWindow()
     {
         InitializeComponent();
+
+        SetupTray();
 
         // The redline on the temp gauges is the real one: the 5800X throttles at
         // 90C. Nothing below that is damage.
@@ -56,8 +59,47 @@ public partial class MainWindow : Window
             _overlay?.ForceClose();
             _overlay = null;
 
+            // Or it lingers in the tray as a ghost until you hover it.
+            _tray?.Dispose();
+            _tray = null;
+
             _controller.Dispose();
         };
+    }
+
+    // ---- system tray --------------------------------------------------------
+
+    private void SetupTray()
+    {
+        _tray = new System.Windows.Forms.NotifyIcon
+        {
+            // The exe's own embedded icon - our dial - so the tray matches the app.
+            Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!),
+            Text = "TOA - Fan Control",
+            Visible = true,
+        };
+
+        _tray.DoubleClick += (_, _) => ShowFromTray();
+
+        var menu = new System.Windows.Forms.ContextMenuStrip();
+        menu.Items.Add("Open", null, (_, _) => ShowFromTray());
+        menu.Items.Add("Exit", null, (_, _) => Close());
+        _tray.ContextMenuStrip = menu;
+    }
+
+    private void ShowFromTray()
+    {
+        // If they're in Game Mode, bring back the full window rather than stacking
+        // it behind the overlay.
+        if (_overlay is { IsVisible: true })
+        {
+            LeaveGameMode();
+            return;
+        }
+
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
     }
 
     private void OnUpdated(object? sender, FanReadings r) => Dispatcher.BeginInvoke(() => Render(r));
@@ -71,6 +113,14 @@ public partial class MainWindow : Window
 
         StatusText.Text = r.Status;
         StatusText.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
+
+        // Live tray tooltip, so you can hover it while minimised and see the state
+        // without reopening. NotifyIcon.Text caps at 63 chars - keep it short.
+        if (_tray != null)
+        {
+            string hot = r.SourceTemp is { } t ? $"{t:F0}°C" : "--";
+            _tray.Text = $"TOA Fan Control  ·  {hot}  ·  fans {r.OutputPercent:F0}%";
+        }
 
         UpdateReleaseButton();
         RenderOtherFans(r);
@@ -159,8 +209,9 @@ public partial class MainWindow : Window
 
     // ---- caption buttons (ours, since we draw the title bar) -----------------
 
-    private void OnMinimizeClick(object sender, RoutedEventArgs e) =>
-        WindowState = WindowState.Minimized;
+    // Minimise goes to the tray, not the taskbar - this is a set-and-forget
+    // background app. Hide() drops the taskbar button; the tray icon brings it back.
+    private void OnMinimizeClick(object sender, RoutedEventArgs e) => Hide();
 
     private void OnMaximizeClick(object sender, RoutedEventArgs e) =>
         WindowState = WindowState == WindowState.Maximized
