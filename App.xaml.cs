@@ -25,6 +25,26 @@ public partial class App : Application
         DebugLog.Write("TOA - Fan Control starting.");
 
         FanSettings settings = SettingsStore.Load();
+
+        // Without PawnIO the app is blind to every fan, so offer to set it up
+        // before we open the hardware. Declining just opens the app read-only.
+        if (!PawnIoSetup.IsInstalled())
+        {
+            DebugLog.Write("PawnIO not installed - showing first-run setup.");
+            var setup = new PawnIoSetupWindow();
+            setup.ShowDialog();
+
+            if (setup.Installed && setup.RebootRequired)
+            {
+                MessageBox.Show(
+                    "PawnIO is installed, but Windows needs a reboot to finish loading it.\n\n" +
+                    "Reboot, then open TOA - Fan Control again.",
+                    "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Information);
+                Shutdown();
+                return;
+            }
+        }
+
         Controller = new FanController(settings);
 
         // Every path out of this process must give the fans back to the BIOS.
