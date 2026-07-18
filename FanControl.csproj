@@ -34,13 +34,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- PINNED. Do not bump without re-testing on the actual board.
-         0.9.6 fails to detect the Nuvoton NCT6798D on this X570 entirely: the
-         Motherboard node comes back with zero sub-hardware, so every fan except
-         the GPU's disappears and the app silently drives nothing. 0.9.4 finds
-         all 7 headers and reads/writes them correctly. Verified A/B on this
-         machine 2026-07-16. -->
-    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4" />
+    <!-- 0.9.6 uses PawnIO, NOT WinRing0. This matters a lot:
+         WinRing0 (used by <=0.9.4) is on Microsoft's vulnerable-driver blocklist
+         (CVE-2020-14979) and Defender now flags + stops it as
+         VulnerableDriver:WinNT/Winring0, which kills the app. 0.9.5+ swapped to
+         PawnIO - a signed, un-flagged kernel driver - so the flag is gone.
+
+         REQUIRES PawnIO installed system-wide (winget install namazso.PawnIO).
+         Without it, LHM finds ZERO motherboard sensors and the app drives
+         nothing - which is exactly why 0.9.6 looked "broken" on 2026-07-16 (that
+         test just had no PawnIO). With PawnIO 2.2.0 present, 0.9.6 detects the
+         Nuvoton NCT6798D and all 8 headers, writable - verified 2026-07-17.
+
+         Stable 0.9.6 chosen over 0.9.7-pre* on purpose; both work with PawnIO. -->
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
   </ItemGroup>
 
 </Project>
