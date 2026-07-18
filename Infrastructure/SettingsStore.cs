@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Infrastructure;
 
 /// <summary>
 /// What little there is to remember. The behaviour isn't configurable - the app

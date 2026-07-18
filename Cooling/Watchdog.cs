@@ -1,6 +1,7 @@
 using System.Diagnostics;
+using FanControlApp.Infrastructure;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Cooling;
 
 /// <summary>
 /// A second copy of this exe whose only job is to make sure the fans always end

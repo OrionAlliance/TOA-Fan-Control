@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Infrastructure;
 
 /// <summary>
 /// Every file this app writes lives next to the exe. Nothing goes to AppData -

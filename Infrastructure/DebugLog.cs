@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Infrastructure;
 
 /// <summary>
 /// Append-only log written next to the exe. Ships with every build - when the

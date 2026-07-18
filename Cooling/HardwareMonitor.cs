@@ -1,6 +1,7 @@
+using FanControlApp.Infrastructure;
 using LibreHardwareMonitor.Hardware;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Cooling;
 
 /// <summary>A single fan header: its RPM reading and (if writable) its PWM control.</summary>
 public sealed class FanChannel

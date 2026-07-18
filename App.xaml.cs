@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
-using FanControlApp.Helpers;
+using FanControlApp.Cooling;
+using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
 
@@ -19,9 +20,6 @@ public partial class App : Application
             StartAsWatchdog(e.Args);
             return;
         }
-
-        // Belt and braces: if the process is torn down before the watchdog is up,
-        // there's nothing to release, so this is safe either way.
 
         DebugLog.Write(new string('=', 60));
         DebugLog.Write("TOA - Fan Control starting.");

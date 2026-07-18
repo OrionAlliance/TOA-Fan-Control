@@ -9,7 +9,6 @@
         <SolidColorBrush x:Key="PanelEdge" Color="#2A2F3D" />
         <SolidColorBrush x:Key="Text"      Color="#E6E9F0" />
         <SolidColorBrush x:Key="TextDim"   Color="#8A92A6" />
-        <SolidColorBrush x:Key="Accent"    Color="#4C8DFF" />
 
         <!-- Semantic temperature colours: fixed, never themed -->
         <SolidColorBrush x:Key="Cool" Color="#3FB950" />
@@ -19,9 +18,9 @@
         <!-- Deliberately does NOT set Foreground.
 
              An implicit TextBlock style reaches inside control templates -
-             including a ComboBox's popup, which is light - so a global
-             "everything is near-white" setter paints those items white-on-white.
-             Worse, a local override on the ComboBox does NOT win: implicit
+             including a ToolTip's popup, which is light - so a global
+             "everything is near-white" setter paints that text white-on-white.
+             Worse, a local override on the element does NOT win: implicit
              styles for template-generated elements resolve against
              Application.Resources, not the element's own resources.
 

@@ -1,7 +1,7 @@
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
-using FanControlApp.Helpers;
+using FanControlApp.Cooling;
+using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
 

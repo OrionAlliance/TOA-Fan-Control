@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Threading;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Cooling;
 
 /// <summary>
 /// The three signals between the app and its watchdog.

@@ -1,7 +1,8 @@
 using System.Timers;
+using FanControlApp.Infrastructure;
 using Timer = System.Timers.Timer;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Cooling;
 
 /// <summary>A snapshot of one poll, handed to the UI to display.</summary>
 public sealed class FanReadings
@@ -92,17 +93,9 @@ public sealed class FanController : IDisposable
         get { lock (_gate) return _settings; }
     }
 
-    public HardwareMonitor Hardware => _hw;
-
     public bool IsPaused
     {
         get { lock (_gate) return _paused; }
-    }
-
-    /// <summary>True when the watchdog is holding the fans and owns handing them back.</summary>
-    public bool WatchdogOwnsRelease
-    {
-        get { lock (_gate) return _link != null; }
     }
 
     /// <summary>The headers we resolved and will write to - what the watchdog must guard.</summary>

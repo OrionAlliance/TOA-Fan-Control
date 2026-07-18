@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace FanControlApp.Helpers;
+namespace FanControlApp.Infrastructure;
 
 /// <summary>
 /// Paints the real Windows title bar to match the app instead of faking one with
