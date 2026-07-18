@@ -8,11 +8,11 @@ public sealed class FanReadings
 {
     public float? CpuTemp { get; init; }
     public float? GpuTemp { get; init; }
+
+    /// <summary>The hotter of CPU/GPU - the number the fans are matching.</summary>
     public float? SourceTemp { get; init; }
     public float OutputPercent { get; init; }
-    public FanMode Mode { get; init; }
     public bool Engaged { get; init; }
-    public bool Panic { get; init; }
 
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
@@ -25,7 +25,10 @@ public sealed class FanReadings
 }
 
 /// <summary>
-/// Polls temps once a second and drives the controlled fan headers.
+/// The whole engine, in one sentence: every second, take the hotter of the CPU
+/// and GPU and set the fans to that percent. 78C -> 78%. That's it. No modes, no
+/// target, no curve - the rule is its own safety, because hot automatically means
+/// fast.
 ///
 /// Releasing is NOT this class's job when a watchdog is attached. The fan chip
 /// has no "hand back to BIOS" command - the library restores a header by writing
@@ -39,16 +42,18 @@ public sealed class FanController : IDisposable
 {
     private const double TickMs = 1000;
 
+    // The one hard rule, and it is NOT a setting. 30% is the floor for every fan,
+    // always: below it Chassis Fan #2 stalls to 0 RPM (measured), and a stalled
+    // fan means no airflow. Making it a constant means no config edit or bug can
+    // ever drop a fan below its stall point - the exact mistake that stalled #2
+    // during testing when the floor was briefly a tunable 20%.
+    public const float FloorPercent = 30f;
+    public const float CeilingPercent = 100f;
+
     // Ramp up eagerly, coast down gently. Fast down-ramps are what make fan
     // control audibly "pulse", and being slow to quieten costs nothing.
     private const float SlewUpPerTick = 8f;
     private const float SlewDownPerTick = 3f;
-
-    // Auto mode: don't chase noise within this band of the target.
-    private const float AutoDeadbandC = 1.5f;
-    private const float AutoGain = 1.5f;
-    private const float AutoMaxStepUp = 6f;
-    private const float AutoMaxStepDown = 3f;
 
     private const int MaxBlindTicks = 3;
 
@@ -63,7 +68,7 @@ public sealed class FanController : IDisposable
     private FanSettings _settings;
     private WatchdogLink? _link;
     private List<FanChannel> _controlled = new();
-    private float _currentPercent = 50f;
+    private float _currentPercent = FloorPercent;
     private bool _engaged;
     private bool _paused;
     private int _blindTicks;
@@ -73,7 +78,6 @@ public sealed class FanController : IDisposable
     // nothing about what it did - useless for tuning, which is the whole reason
     // the log exists.
     private int _tickCount;
-    private bool _wasPanic;
     private bool _sentinelLost;
     private float _peakCpu = float.NaN;
     private float _peakGpu = float.NaN;
@@ -136,7 +140,7 @@ public sealed class FanController : IDisposable
 
     public void BeginControl()
     {
-        _currentPercent = Math.Clamp(_settings.Curve.Evaluate(40f), _settings.MinPercent, _settings.MaxPercent);
+        _currentPercent = FloorPercent;
         _timer.Start();
         DebugLog.Write("Controller started.");
     }
@@ -244,13 +248,11 @@ public sealed class FanController : IDisposable
     {
         _hw.Refresh();
 
-        FanSettings s;
         List<FanChannel> controlled;
         WatchdogLink? link;
         bool paused;
         lock (_gate)
         {
-            s = _settings;
             controlled = _controlled.ToList();
             link = _link;
             paused = _paused;
@@ -258,16 +260,13 @@ public sealed class FanController : IDisposable
 
         float? cpu = _hw.CpuTemp;
         float? gpu = _hw.GpuTemp;
-        float? source = s.Source switch
-        {
-            TempSource.Cpu => cpu,
-            TempSource.Gpu => gpu,
-            _ => Max(cpu, gpu),
-        };
+
+        // The whole decision: whichever is hotter.
+        float? source = Max(cpu, gpu);
 
         if (controlled.Count == 0)
         {
-            Publish(cpu, gpu, source, controlled, panic: false, noFans: true,
+            Publish(cpu, gpu, source, controlled, noFans: true,
                     status: "No controllable fans found - the BIOS is running your fans. See fan_debug.log.");
             return;
         }
@@ -292,7 +291,7 @@ public sealed class FanController : IDisposable
 
         if (paused)
         {
-            Publish(cpu, gpu, source, controlled, panic: false,
+            Publish(cpu, gpu, source, controlled,
                     status: "Paused - the BIOS curve has your fans.");
             return;
         }
@@ -307,7 +306,7 @@ public sealed class FanController : IDisposable
                 HandBackToBios();
             }
 
-            Publish(cpu, gpu, null, controlled, panic: false,
+            Publish(cpu, gpu, null, controlled,
                     status: "No temperature reading - BIOS has the fans.");
             return;
         }
@@ -320,55 +319,29 @@ public sealed class FanController : IDisposable
         if (link != null && !link.Ready.WaitOne(0))
         {
             link.Resume.Set();
-            Publish(cpu, gpu, temp, controlled, panic: false,
+            Publish(cpu, gpu, temp, controlled,
                     status: "Waiting for the watchdog to take the fans...");
             return;
         }
 
-        bool panic = temp >= s.PanicTemp;
-        float desired;
-        string status;
-
-        if (panic)
-        {
-            // Safety overrides both modes, and skips the slew limiter entirely.
-            desired = s.MaxPercent;
-            _currentPercent = desired;
-            status = $"PANIC - {temp:F0}C is at or over {s.PanicTemp:F0}C. Fans at full.";
-        }
-        else
-        {
-            desired = s.Mode switch
-            {
-                FanMode.Auto => ComputeAuto(temp, s),
-                _ => Math.Clamp(s.Curve.Evaluate(temp), s.MinPercent, s.MaxPercent),
-            };
-
-            _currentPercent = Slew(_currentPercent, desired);
-            status = s.Mode == FanMode.Auto
-                ? $"Auto - holding {s.TargetTemp:F0}C (now {temp:F1}C)"
-                : $"Manual - following the curve at {temp:F1}C";
-        }
+        // fan % = temperature, floored so no fan stalls and capped at full.
+        float desired = Math.Clamp(temp, FloorPercent, CeilingPercent);
+        _currentPercent = Slew(_currentPercent, desired);
 
         foreach (FanChannel f in controlled)
             f.SetPercent(_currentPercent);
 
         _engaged = true;
 
-        // A panic is rare and important - never let it be something you only find
-        // out about by happening to be looking at the screen.
-        if (panic && !_wasPanic)
-            DebugLog.Write($"PANIC ENTERED at {temp:F1}C (limit {s.PanicTemp:F0}C) - fans to {s.MaxPercent:F0}%.");
-        else if (!panic && _wasPanic)
-            DebugLog.Write($"Panic over at {temp:F1}C - back to normal control.");
-        _wasPanic = panic;
+        string hotter = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
+        string status = $"Matching {hotter} {temp:F0}C -> fans {_currentPercent:F0}%";
 
         TrackPeaks(cpu, gpu, controlled);
 
         if (++_tickCount % SampleEveryTicks == 0)
-            LogSample(cpu, gpu, temp, s, controlled);
+            LogSample(cpu, gpu, temp, controlled);
 
-        Publish(cpu, gpu, temp, controlled, panic, status);
+        Publish(cpu, gpu, temp, controlled, status: status);
     }
 
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
@@ -385,12 +358,12 @@ public sealed class FanController : IDisposable
         }
     }
 
-    private void LogSample(float? cpu, float? gpu, float temp, FanSettings s, List<FanChannel> controlled)
+    private void LogSample(float? cpu, float? gpu, float hotter, List<FanChannel> controlled)
     {
         string rpm = string.Join(" ", controlled.Select(f => $"[{f.Name}={f.Rpm:F0}]"));
         DebugLog.Write(
-            $"SAMPLE mode={s.Mode} src={s.Source} cpu={cpu:F1} gpu={gpu:F1} " +
-            $"driving={temp:F1} target={s.TargetTemp:F0} out={_currentPercent:F1}% {rpm}");
+            $"SAMPLE cpu={cpu:F1} gpu={gpu:F1} hotter={hotter:F1} " +
+            $"out={_currentPercent:F1}% {rpm}");
     }
 
     private void LogSessionSummary()
@@ -405,21 +378,6 @@ public sealed class FanController : IDisposable
             $"cpu={_peakCpu:F1}C gpu={_peakGpu:F1}C maxOut={_peakOut:F0}% {rpm}");
     }
 
-    /// <summary>
-    /// Auto mode: nudge the fans until the temp settles at the target. Above the
-    /// target it climbs, below it eases off, and inside the deadband it holds
-    /// still so the fans don't hunt.
-    /// </summary>
-    private float ComputeAuto(float temp, FanSettings s)
-    {
-        float error = temp - s.TargetTemp;
-        if (MathF.Abs(error) < AutoDeadbandC)
-            return _currentPercent;
-
-        float step = Math.Clamp(error * AutoGain, -AutoMaxStepDown, AutoMaxStepUp);
-        return Math.Clamp(_currentPercent + step, s.MinPercent, s.MaxPercent);
-    }
-
     private static float Slew(float current, float desired)
     {
         float delta = desired - current;
@@ -429,7 +387,7 @@ public sealed class FanController : IDisposable
     }
 
     private void Publish(float? cpu, float? gpu, float? source, IReadOnlyList<FanChannel> fans,
-                         bool panic, string status, bool noFans = false)
+                         string status, bool noFans = false)
     {
         Updated?.Invoke(this, new FanReadings
         {
@@ -437,9 +395,7 @@ public sealed class FanController : IDisposable
             GpuTemp = gpu,
             SourceTemp = source,
             OutputPercent = _currentPercent,
-            Mode = _settings.Mode,
             Engaged = _engaged,
-            Panic = panic,
             NoControllableFans = noFans,
             SentinelLost = _sentinelLost,
             Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,

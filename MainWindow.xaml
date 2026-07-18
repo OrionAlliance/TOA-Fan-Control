@@ -13,10 +13,6 @@
         FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen">
 
-    <!-- DWM only takes ONE solid colour for the caption - no gradient, no bevel.
-         So the title bar is drawn here instead. WindowChrome is the important bit:
-         it keeps dragging, Aero snap, double-click-to-maximize and the resize
-         borders working, which a plain WindowStyle="None" would throw away. -->
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="36"
                             ResizeBorderThickness="6"
@@ -31,8 +27,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Title bar. Bevelled along the bottom only: nothing is lit from above
-             the top of the window. -->
+        <!-- Title bar (drawn here because DWM can't gradient a caption). -->
         <Border Grid.Row="0" Height="36"
                 Background="{StaticResource TitleFace}"
                 BorderBrush="#0B0D12" BorderThickness="0,0,0,1">
@@ -41,8 +36,6 @@
                        Margin="10,0,9,0" DockPanel.Dock="Left" VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality" />
 
-                <!-- IsHitTestVisibleInChrome: without this the caption swallows the
-                     clicks and the buttons do nothing. -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button x:Name="MinButton" Style="{StaticResource CaptionButton}"
@@ -59,175 +52,75 @@
         </Border>
 
         <Grid Grid.Row="1" Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <!-- Mode -->
-        <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,12">
-            <DockPanel>
-                <TextBlock Text="MODE" Foreground="{StaticResource TextDim}" FontSize="11"
-                           VerticalAlignment="Center" Margin="0,0,14,0" />
+            <!-- The one line that describes the whole app. -->
+            <TextBlock Grid.Row="0" Margin="2,0,2,12" FontSize="12"
+                       Foreground="{StaticResource TextDim}"
+                       Text="Case fans follow your hottest part — fan speed matches the temperature, 1-to-1. Nothing to set." />
 
-                <RadioButton x:Name="ManualRadio" Content="Manual - I draw the curve"
-                             Foreground="{StaticResource Text}" VerticalAlignment="Center"
-                             Margin="0,0,20,0" GroupName="Mode"
-                             Checked="OnModeChanged" />
+            <!-- The dash -->
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8">
+                <UniformGrid Columns="4" Height="200">
+                    <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C"
+                                Minimum="0" Maximum="100" MajorTick="20"
+                                GreenTo="70" RedFrom="90" />
 
-                <RadioButton x:Name="AutoRadio" Content="Auto - app holds a target temp"
-                             Foreground="{StaticResource Text}" VerticalAlignment="Center"
-                             GroupName="Mode" Checked="OnModeChanged" />
+                    <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C"
+                                Minimum="0" Maximum="100" MajorTick="20"
+                                GreenTo="70" RedFrom="90" />
 
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock Text="Fans react to:" Foreground="{StaticResource TextDim}"
-                               FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <!-- Black on the ComboBox's own light chrome. The app-wide implicit
-                         style no longer forces a colour, so this inherits down into the
-                         selection box and the popup items. -->
-                    <ComboBox x:Name="SourceCombo" Width="140" VerticalAlignment="Center"
-                              Foreground="Black" SelectionChanged="OnSourceChanged">
-                        <ComboBoxItem Content="CPU temperature" Foreground="Black" />
-                        <ComboBoxItem Content="GPU temperature" Foreground="Black" />
-                        <ComboBoxItem Content="Whichever is hotter" Foreground="Black" />
-                    </ComboBox>
-                </StackPanel>
+                    <!-- &#10; is a line break: the label stacks on two lines. -->
+                    <ctrl:Gauge x:Name="Fan2Gauge" Label="Chassis&#10;Fan #2" Unit=""
+                                Minimum="0" Maximum="2000" MajorTick="1000" />
+
+                    <ctrl:Gauge x:Name="Fan3Gauge" Label="Chassis&#10;Fan #3" Unit=""
+                                Minimum="0" Maximum="2000" MajorTick="1000" />
+                </UniformGrid>
+            </Border>
+
+            <!-- Every other fan, for reference -->
+            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,12">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="OTHER FANS (BIOS controlled)"
+                               Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,0,0,8" />
+                    <ItemsControl x:Name="FanList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,10,2">
+                                    <TextBlock Text="{Binding Name}" FontSize="10"
+                                               Foreground="{Binding NameBrush}" />
+                                    <TextBlock Text="{Binding Reading}" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{Binding ValueBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </Border>
+
+            <!-- Status + actions -->
+            <DockPanel Grid.Row="3">
+                <Button x:Name="ReleaseButton" DockPanel.Dock="Right" Content="Hand fans to BIOS"
+                        Click="OnReleaseClick" Margin="8,0,0,0" Width="150" />
+                <Button x:Name="ResetPeaksButton" DockPanel.Dock="Right" Content="Reset peaks"
+                        Click="OnResetPeaksClick" Margin="8,0,0,0" />
+                <Button x:Name="GameModeButton" DockPanel.Dock="Right" Content="Game Mode"
+                        Click="OnGameModeClick"
+                        ToolTip="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{StaticResource TextDim}" Text="Starting..." />
             </DockPanel>
-        </Border>
-
-        <!-- The dash -->
-        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8">
-            <UniformGrid Columns="4" Height="200">
-                <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C"
-                            Minimum="0" Maximum="100" MajorTick="20"
-                            GreenTo="70" RedFrom="90" />
-
-                <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C"
-                            Minimum="0" Maximum="100" MajorTick="20"
-                            GreenTo="70" RedFrom="90" />
-
-                <!-- &#10; is a line break: the label stacks on two lines. -->
-                <ctrl:Gauge x:Name="Fan2Gauge" Label="Chassis&#10;Fan #2" Unit=""
-                            Minimum="0" Maximum="2000" MajorTick="1000" />
-
-                <ctrl:Gauge x:Name="Fan3Gauge" Label="Chassis&#10;Fan #3" Unit=""
-                            Minimum="0" Maximum="2000" MajorTick="1000" />
-            </UniformGrid>
-        </Border>
-
-        <!-- Every other fan, for reference -->
-        <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,12">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="OTHER FANS (BIOS controlled)"
-                           Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,0,0,8" />
-                <ItemsControl x:Name="FanList">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Columns="6" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,0,10,2">
-                                <TextBlock Text="{Binding Name}" FontSize="10"
-                                           Foreground="{Binding NameBrush}" />
-                                <TextBlock Text="{Binding Reading}" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{Binding ValueBrush}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </DockPanel>
-        </Border>
-
-        <!-- Auto: one line. It's a slider, not a manifesto. -->
-        <Border x:Name="AutoPanel" Grid.Row="3" Style="{StaticResource Card}" Margin="0,0,0,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
-                            Margin="0,0,14,0">
-                    <TextBlock x:Name="HoldLabel" Text="HOLD CPU AT" Foreground="{StaticResource TextDim}"
-                               FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock x:Name="TargetText" Text="85 C" FontSize="22"
-                               FontWeight="SemiBold" VerticalAlignment="Center" />
-                </StackPanel>
-
-                <Slider Grid.Column="1" x:Name="TargetSlider" Minimum="45" Maximum="85"
-                        TickFrequency="5" IsSnapToTickEnabled="True"
-                        VerticalAlignment="Center" ValueChanged="OnTargetChanged" />
-
-                <TextBlock Grid.Column="2" x:Name="AutoStateText" Foreground="{StaticResource TextDim}"
-                           FontSize="11" VerticalAlignment="Center" Margin="14,0,0,0"
-                           MaxWidth="240" TextWrapping="Wrap" TextAlignment="Right" />
-            </Grid>
-        </Border>
-
-        <!-- Manual: the curve -->
-        <Border x:Name="ManualPanel" Grid.Row="3" Style="{StaticResource Card}"
-                Margin="0,0,0,12" Visibility="Collapsed" Padding="14,10">
-            <DockPanel>
-                <!-- A centred triangle handle, docked at the bottom edge - grab it
-                     to fold the graph away. The curve is 260px you only need while
-                     shaping the line, so it's worth being able to tuck it out. -->
-                <!-- Triangle is the button's Content (not baked into the template),
-                     so the code-behind can flip it - named elements inside a
-                     ControlTemplate live in the template's namescope, not the window's. -->
-                <Button x:Name="CurveToggle" DockPanel.Dock="Bottom"
-                        HorizontalAlignment="Center" Margin="0,6,0,0"
-                        Cursor="Hand" Click="OnToggleCurve"
-                        ToolTip="Collapse / expand the curve">
-                    <Button.Content>
-                        <Path x:Name="CurveTriangle" Fill="#C2CAD9" Data="M 0,5 L 5,0 L 10,5 Z" />
-                    </Button.Content>
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="pill" Width="52" Height="18" CornerRadius="9"
-                                    Background="#242938" BorderBrush="{StaticResource PanelEdge}"
-                                    BorderThickness="1">
-                                <ContentPresenter HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center" />
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="pill" Property="Background" Value="#2F3549" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
-
-                <StackPanel x:Name="CurveBody">
-                    <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,0,0,8"
-                               Text="Drag a dot to move it  ·  double-click empty space to add one  ·  right-click a dot to delete" />
-                    <ctrl:CurveEditor x:Name="Curve" MinHeight="260" />
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <!-- Status: who's driving, what it's doing, and the two actions -->
-        <DockPanel Grid.Row="4">
-            <Button x:Name="ReleaseButton" DockPanel.Dock="Right" Content="Hand fans to BIOS"
-                    Click="OnReleaseClick" Margin="8,0,0,0" Width="150" />
-            <Button x:Name="ResetPeaksButton" DockPanel.Dock="Right" Content="Reset peaks"
-                    Click="OnResetPeaksClick" Margin="8,0,0,0" />
-            <Button x:Name="GameModeButton" DockPanel.Dock="Right" Content="Game Mode"
-                    Click="OnGameModeClick"
-                    ToolTip="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
-            <TextBlock x:Name="EngagedBadge" DockPanel.Dock="Right" VerticalAlignment="Center"
-                       FontSize="12" Margin="0,0,16,0"
-                       Foreground="{StaticResource TextDim}" Text="BIOS has the fans" />
-            <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="12"
-                       Foreground="{StaticResource TextDim}" Text="Starting..." />
-        </DockPanel>
-
         </Grid>
     </Grid>
 </Window>

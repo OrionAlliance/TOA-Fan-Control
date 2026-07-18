@@ -1,58 +1,15 @@
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace FanControlApp.Helpers;
 
-public enum FanMode
-{
-    /// <summary>Follow the curve the user drew.</summary>
-    Manual,
-
-    /// <summary>Watch the temp and adapt the fans to hold a target.</summary>
-    Auto,
-}
-
-public enum TempSource
-{
-    Cpu,
-    Gpu,
-
-    /// <summary>Whichever of CPU/GPU is hotter right now. Case fans clear heat from both.</summary>
-    Hotter,
-}
-
+/// <summary>
+/// What little there is to remember. The behaviour isn't configurable - the app
+/// is "fans match the hottest of CPU/GPU, floored at 30%" and that's fixed. All
+/// that persists is which fans to drive and where the Game Mode overlay sits.
+/// </summary>
 public sealed class FanSettings
 {
-    public FanMode Mode { get; set; } = FanMode.Auto;
-
-    /// <summary>
-    /// CPU, deliberately. "Hotter of the two" looks sensible but isn't: an AMD
-    /// GPU's Hot Spot normally runs 90-100C under load, which is fine for the
-    /// card but would sit above the CPU's panic line permanently and peg the
-    /// fans forever. The two numbers aren't on the same scale.
-    /// </summary>
-    public TempSource Source { get; set; } = TempSource.Cpu;
-
-    public FanCurve Curve { get; set; } = FanCurve.Default();
-
-    /// <summary>
-    /// Auto mode holds the source temp at (or below) this. 85C is the user's
-    /// call: the 5800X throttles at 90, so this keeps a few degrees of headroom
-    /// while leaving the fans quiet until the heat actually matters.
-    /// </summary>
-    public float TargetTemp { get; set; } = 85f;
-
-    public float MinPercent { get; set; } = 30f;
-    public float MaxPercent { get; set; } = 100f;
-
-    /// <summary>
-    /// Above this, everything goes to full regardless of mode. Sits just under
-    /// the 5800X's 90C throttle point, and far enough above the 85C target that
-    /// a normal transient spike doesn't slam the fans to full mid-game.
-    /// </summary>
-    public float PanicTemp { get; set; } = 89f;
-
     /// <summary>Only these headers are ever written to. Everything else stays on the BIOS curve.</summary>
     public List<string> ControlledFans { get; set; } = new() { "Chassis Fan #2", "Chassis Fan #3" };
 
@@ -63,9 +20,6 @@ public sealed class FanSettings
     /// </summary>
     public double OverlayLeft { get; set; } = double.NaN;
     public double OverlayTop { get; set; } = double.NaN;
-
-    /// <summary>Manual curve folded away to save space. Remembered between runs.</summary>
-    public bool CurveCollapsed { get; set; }
 }
 
 public static class SettingsStore
@@ -73,7 +27,6 @@ public static class SettingsStore
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
     };
 
     public static FanSettings Load()
@@ -94,8 +47,7 @@ public static class SettingsStore
                 return new FanSettings();
             }
 
-            if (s.Curve.Points.Count == 0) s.Curve = FanCurve.Default();
-            DebugLog.Write($"Settings loaded: mode={s.Mode} source={s.Source} target={s.TargetTemp}");
+            DebugLog.Write($"Settings loaded: driving [{string.Join(", ", s.ControlledFans)}].");
             return s;
         }
         catch (Exception ex)

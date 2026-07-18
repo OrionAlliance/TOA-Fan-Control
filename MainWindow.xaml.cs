@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using FanControlApp.Helpers;
 
@@ -16,8 +15,9 @@ public sealed class FanRow
 }
 
 /// <summary>
-/// Display only - it renders what the controller reports and forwards the user's
-/// choices straight back to it. No fan logic lives here.
+/// Display only - it renders what the controller reports and forwards the two
+/// actions (pause, Game Mode) back to it. No fan logic lives here, and there's
+/// nothing to configure: the app just matches the fans to the hottest part.
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -26,43 +26,19 @@ public partial class MainWindow : Window
 
     private readonly FanController _controller = App.Controller;
     private GameModeWindow? _overlay;
-    private bool _ready;
 
     public MainWindow()
     {
         InitializeComponent();
-
-        FanSettings s = _controller.Settings;
-
-        Curve.Curve = s.Curve;
-        Curve.CurveChanged += OnCurveChanged;
-
-        ManualRadio.IsChecked = s.Mode == FanMode.Manual;
-        AutoRadio.IsChecked = s.Mode == FanMode.Auto;
-        TargetSlider.Value = s.TargetTemp;
-        TargetText.Text = $"{s.TargetTemp:F0} C";
-        SourceCombo.SelectedIndex = s.Source switch
-        {
-            TempSource.Cpu => 0,
-            TempSource.Gpu => 1,
-            _ => 2,
-        };
-        ApplyHoldLabel(s.Source);
 
         // The redline on the temp gauges is the real one: the 5800X throttles at
         // 90C. Nothing below that is damage.
         CpuGauge.RedFrom = 90;
         GpuGauge.RedFrom = 90;
 
-        ApplyModeVisibility(s.Mode);
-        ApplyCurveCollapsed(s.CurveCollapsed);
-
-        // We draw the title bar ourselves now (DWM can't gradient one), so the
-        // maximise glyph has to be kept in step by hand.
+        // We draw the title bar ourselves, so the maximise glyph is kept in step
+        // by hand. The DWM call still colours the window's outer border.
         StateChanged += OnWindowStateChanged;
-
-        // Still worth doing for the window's outer border - that edge is DWM's
-        // even when the caption isn't.
         SourceInitialized += (_, _) => TitleBarColor.Apply(
             this,
             caption: ResColor("Panel"),
@@ -82,8 +58,6 @@ public partial class MainWindow : Window
 
             _controller.Dispose();
         };
-
-        _ready = true;
     }
 
     private void OnUpdated(object? sender, FanReadings r) => Dispatcher.BeginInvoke(() => Render(r));
@@ -95,27 +69,10 @@ public partial class MainWindow : Window
         Fan2Gauge.Value = RpmOf(r, Fan2);
         Fan3Gauge.Value = RpmOf(r, Fan3);
 
-        EngagedBadge.Text = r.Engaged ? "App is driving the case fans" : "BIOS has the fans";
-        EngagedBadge.Foreground = r.Engaged ? Res("Accent") : Res("TextDim");
+        StatusText.Text = r.Status;
+        StatusText.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
+
         UpdateReleaseButton();
-
-        StatusText.Text = $"Fans at {r.OutputPercent:F0}%  ·  {r.Status}";
-        StatusText.Foreground = r.Panic || r.NoControllableFans || r.SentinelLost
-            ? Res("Hot")
-            : Res("TextDim");
-
-        Curve.SetLive(r.SourceTemp, r.OutputPercent);
-
-        if (r.Mode == FanMode.Auto && r.SourceTemp is { } temp)
-        {
-            float delta = temp - _controller.Settings.TargetTemp;
-            AutoStateText.Text = MathF.Abs(delta) < 1.5f
-                ? $"Settled - holding at {temp:F1} C with the fans at {r.OutputPercent:F0}%."
-                : delta > 0
-                    ? $"{delta:F1} C over target - ramping up (now {r.OutputPercent:F0}%)."
-                    : $"{-delta:F1} C under target - easing off (now {r.OutputPercent:F0}%).";
-        }
-
         RenderOtherFans(r);
     }
 
@@ -147,86 +104,9 @@ public partial class MainWindow : Window
             .ToList();
     }
 
-    // ---- user input, forwarded to the controller ----------------------------
+    // ---- the two actions ----------------------------------------------------
 
-    private void OnModeChanged(object sender, RoutedEventArgs e)
-    {
-        if (!_ready) return;
-
-        FanMode mode = AutoRadio.IsChecked == true ? FanMode.Auto : FanMode.Manual;
-        _controller.UpdateSettings(s => s.Mode = mode);
-        ApplyModeVisibility(mode);
-        DebugLog.Write($"Mode -> {mode}");
-    }
-
-    private void ApplyModeVisibility(FanMode mode)
-    {
-        ManualPanel.Visibility = mode == FanMode.Manual ? Visibility.Visible : Visibility.Collapsed;
-        AutoPanel.Visibility = mode == FanMode.Auto ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    /// <summary>Fold the curve away, leaving just the handle to bring it back.</summary>
-    private void OnToggleCurve(object sender, RoutedEventArgs e)
-    {
-        bool collapsed = CurveBody.Visibility == Visibility.Visible;
-        ApplyCurveCollapsed(collapsed);
-        _controller.UpdateSettings(s => s.CurveCollapsed = collapsed);
-    }
-
-    // Triangle points up when the curve is open (click to fold up), down when it's
-    // hidden (click to drop it back down).
-    private const string TriangleUp = "M 0,5 L 5,0 L 10,5 Z";
-    private const string TriangleDown = "M 0,0 L 5,5 L 10,0 Z";
-
-    private void ApplyCurveCollapsed(bool collapsed)
-    {
-        CurveBody.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
-        CurveTriangle.Data = Geometry.Parse(collapsed ? TriangleDown : TriangleUp);
-    }
-
-    private void OnSourceChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!_ready) return;
-
-        TempSource src = SourceCombo.SelectedIndex switch
-        {
-            0 => TempSource.Cpu,
-            1 => TempSource.Gpu,
-            _ => TempSource.Hotter,
-        };
-        _controller.UpdateSettings(s => s.Source = src);
-        ApplyHoldLabel(src);
-    }
-
-    /// <summary>Keep the Auto slider's label honest about which temp it's holding.</summary>
-    private void ApplyHoldLabel(TempSource src) =>
-        HoldLabel.Text = src switch
-        {
-            TempSource.Cpu => "HOLD CPU AT",
-            TempSource.Gpu => "HOLD GPU AT",
-            _ => "HOLD HOTTER AT",
-        };
-
-    private void OnTargetChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!_ready) return;
-
-        var target = (float)e.NewValue;
-        TargetText.Text = $"{target:F0} C";
-        _controller.UpdateSettings(s => s.TargetTemp = target);
-    }
-
-    private void OnCurveChanged(object? sender, EventArgs e)
-    {
-        if (!_ready) return;
-        _controller.UpdateSettings(s => s.Curve = Curve.Curve);
-    }
-
-    /// <summary>
-    /// A real toggle. It used to be a one-shot "release" that the very next tick
-    /// silently undid by grabbing the fans straight back - it looked like it
-    /// worked and lasted under a second.
-    /// </summary>
+    /// <summary>Pause/resume: hand the fans back to the BIOS, or take them again.</summary>
     private void OnReleaseClick(object sender, RoutedEventArgs e)
     {
         if (_controller.IsPaused) _controller.Resume();
@@ -237,27 +117,6 @@ public partial class MainWindow : Window
 
     private void UpdateReleaseButton() =>
         ReleaseButton.Content = _controller.IsPaused ? "Take fans back" : "Hand fans to BIOS";
-
-    // ---- caption buttons ----------------------------------------------------
-    // Ours now: DWM can't gradient a title bar, so we draw it, so we own these.
-
-    private void OnMinimizeClick(object sender, RoutedEventArgs e) =>
-        WindowState = WindowState.Minimized;
-
-    private void OnMaximizeClick(object sender, RoutedEventArgs e) =>
-        WindowState = WindowState == WindowState.Maximized
-            ? WindowState.Normal
-            : WindowState.Maximized;
-
-    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
-
-    /// <summary>Swap the glyph so it says what the button will DO, not what state it's in.</summary>
-    private void OnWindowStateChanged(object? sender, EventArgs e)
-    {
-        bool max = WindowState == WindowState.Maximized;
-        MaxButton.Content = max ? "" : "";   // Segoe MDL2: restore / maximise
-        MaxButton.ToolTip = max ? "Restore" : "Maximise";
-    }
 
     private void OnResetPeaksClick(object sender, RoutedEventArgs e)
     {
@@ -296,6 +155,26 @@ public partial class MainWindow : Window
         Show();
         Activate();
         DebugLog.Write("Game Mode off.");
+    }
+
+    // ---- caption buttons (ours, since we draw the title bar) -----------------
+
+    private void OnMinimizeClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void OnMaximizeClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    /// <summary>Swap the glyph so it says what the button will DO, not what state it's in.</summary>
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        bool max = WindowState == WindowState.Maximized;
+        MaxButton.Content = max ? "" : "";   // Segoe MDL2: restore / maximise
+        MaxButton.ToolTip = max ? "Restore" : "Maximise";
     }
 
     private Brush Res(string key) => (Brush)FindResource(key);
