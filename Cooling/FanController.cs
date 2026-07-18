@@ -138,30 +138,41 @@ public sealed class FanController : IDisposable
         DebugLog.Write("Controller started.");
     }
 
+    // Fans we must NOT drive with case-fan logic, matched by name (case-insensitive
+    // substring). Everything else on the board is a case/system fan and is safe to
+    // drive - however many there are.
+    //   pump    - a liquid-cooler pump has to run flat-out; throttle it and the CPU
+    //             cooks. The one genuine landmine.
+    //   cpu     - the CPU cooler stays on the BIOS as a failsafe: no failure of this
+    //             app can then starve the CPU of cooling.
+    //   chipset - cools its own chip on its own temperature, not the CPU/GPU we track.
+    //   gpu     - the GPU's own fan, driven by the GPU's driver, not us.
+    private static readonly string[] SkipFanPatterns = { "pump", "cpu", "chipset", "gpu" };
+
     private void ResolveControlledFans()
     {
         lock (_gate)
         {
             _controlled = new List<FanChannel>();
-            foreach (string name in _settings.ControlledFans)
-            {
-                FanChannel? f = _hw.FindFan(name);
-                if (f == null)
-                {
-                    DebugLog.Write($"Controlled fan '{name}' not found on this hardware - skipping.");
-                    continue;
-                }
+            var skipped = new List<string>();
 
-                if (!f.CanControl)
+            foreach (FanChannel f in _hw.Fans)
+            {
+                if (!f.CanControl) continue; // read-only reading or an empty header
+
+                string name = f.Name.ToLowerInvariant();
+                if (SkipFanPatterns.Any(p => name.Contains(p)))
                 {
-                    DebugLog.Write($"Controlled fan '{name}' is not writable - skipping.");
+                    skipped.Add(f.Name);
                     continue;
                 }
 
                 _controlled.Add(f);
             }
 
-            DebugLog.Write($"Driving: [{string.Join(", ", _controlled.Select(f => f.Name))}]");
+            DebugLog.Write(
+                $"Driving: [{string.Join(", ", _controlled.Select(f => f.Name))}]  " +
+                $"(left on BIOS: [{string.Join(", ", skipped)}])");
         }
     }
 

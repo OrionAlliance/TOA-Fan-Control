@@ -5,14 +5,13 @@ namespace FanControlApp.Infrastructure;
 
 /// <summary>
 /// What little there is to remember. The behaviour isn't configurable - the app
-/// is "fans match the hottest of CPU/GPU, floored at 30%" and that's fixed. All
-/// that persists is which fans to drive and where the Game Mode overlay sits.
+/// drives every case fan (all of them, whatever the board has), skips pumps and
+/// CPU coolers by name, and matches fan % to the hotter of CPU/GPU, floored at
+/// 30%. Which fans to drive is worked out live from the hardware, not stored - so
+/// nothing here is machine-specific. All that persists is the overlay position.
 /// </summary>
 public sealed class FanSettings
 {
-    /// <summary>Only these headers are ever written to. Everything else stays on the BIOS curve.</summary>
-    public List<string> ControlledFans { get; set; } = new() { "Chassis Fan #2", "Chassis Fan #3" };
-
     /// <summary>
     /// Where the Game Mode overlay was left. NaN = never placed, so it starts
     /// top-centre. Worth persisting: you position it once around your HUD and
@@ -47,7 +46,7 @@ public static class SettingsStore
                 return new FanSettings();
             }
 
-            DebugLog.Write($"Settings loaded: driving [{string.Join(", ", s.ControlledFans)}].");
+            DebugLog.Write("Settings loaded.");
             return s;
         }
         catch (Exception ex)
