@@ -47,6 +47,7 @@ public partial class MainWindow : Window
             TempSource.Gpu => 1,
             _ => 2,
         };
+        ApplyHoldLabel(s.Source);
 
         // The redline on the temp gauges is the real one: the 5800X throttles at
         // 90C. Nothing below that is damage.
@@ -194,7 +195,17 @@ public partial class MainWindow : Window
             _ => TempSource.Hotter,
         };
         _controller.UpdateSettings(s => s.Source = src);
+        ApplyHoldLabel(src);
     }
+
+    /// <summary>Keep the Auto slider's label honest about which temp it's holding.</summary>
+    private void ApplyHoldLabel(TempSource src) =>
+        HoldLabel.Text = src switch
+        {
+            TempSource.Cpu => "HOLD CPU AT",
+            TempSource.Gpu => "HOLD GPU AT",
+            _ => "HOLD HOTTER AT",
+        };
 
     private void OnTargetChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {

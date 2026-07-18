@@ -154,7 +154,7 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
                             Margin="0,0,14,0">
-                    <TextBlock Text="HOLD CPU AT" Foreground="{StaticResource TextDim}"
+                    <TextBlock x:Name="HoldLabel" Text="HOLD CPU AT" Foreground="{StaticResource TextDim}"
                                FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <TextBlock x:Name="TargetText" Text="85 C" FontSize="22"
                                FontWeight="SemiBold" VerticalAlignment="Center" />
