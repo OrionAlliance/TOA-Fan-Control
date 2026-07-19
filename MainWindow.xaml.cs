@@ -201,7 +201,6 @@ public partial class MainWindow : Window
     {
         CpuGauge.ResetPeak();
         GpuGauge.ResetPeak();
-        foreach (FanBlade g in _fanGauges.Values) g.ResetPeak();
         _overlay?.ResetPeaks();
     }
 

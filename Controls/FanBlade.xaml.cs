@@ -19,12 +19,11 @@ public partial class FanBlade : UserControl
     // How many blades. Seven reads unmistakably as a computer case fan.
     private const int BladeCount = 7;
 
-    // How much of the height is set aside under the fan for the label + peak line.
-    private const double LabelBand = 40;
+    // How much of the height is set aside under the fan for the name.
+    private const double LabelBand = 24;
 
     private RotateTransform? _spin;
     private TextBlock? _rpmText;
-    private TextBlock? _peakText;
 
     private double _cx, _cy, _r;
 
@@ -50,23 +49,9 @@ public partial class FanBlade : UserControl
     /// <summary>Current RPM. Drives both the readout and the spin speed.</summary>
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
-    /// <summary>Highest RPM seen since the last reset. NaN until the first reading.</summary>
-    public double Peak { get; private set; } = double.NaN;
-
-    public void ResetPeak()
-    {
-        Peak = double.NaN;
-        UpdateReadout();
-    }
-
     private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var fb = (FanBlade)d;
-        var v = (double)e.NewValue;
-
-        if (!double.IsNaN(v) && (double.IsNaN(fb.Peak) || v > fb.Peak))
-            fb.Peak = v;
-
         fb.UpdateReadout();
         fb.UpdateSpin();
     }
@@ -91,7 +76,6 @@ public partial class FanBlade : UserControl
         HubLayer.Children.Clear();
         _spin = null;
         _rpmText = null;
-        _peakText = null;
 
         if (ActualWidth <= 20 || ActualHeight <= 20) return;
 
@@ -306,7 +290,7 @@ public partial class FanBlade : UserControl
         HubLayer.Children.Add(_rpmText);
     }
 
-    /// <summary>Fan name, plus a small "peak" RPM line, under the frame.</summary>
+    /// <summary>Fan name, on one line under the frame.</summary>
     private void DrawLabel()
     {
         var lab = new TextBlock
@@ -316,39 +300,19 @@ public partial class FanBlade : UserControl
             FontSize = 10,
             TextAlignment = TextAlignment.Center,
             Width = ActualWidth,
-            LineHeight = 12,
-            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
         };
         Canvas.SetLeft(lab, 0);
-        Canvas.SetTop(lab, ActualHeight - LabelBand + 2);
+        Canvas.SetTop(lab, ActualHeight - LabelBand + 4);
         FrameLayer.Children.Add(lab);
-
-        _peakText = new TextBlock
-        {
-            Foreground = B("#E3B341"),
-            FontSize = 9,
-            TextAlignment = TextAlignment.Center,
-            Width = ActualWidth,
-        };
-        Canvas.SetLeft(_peakText, 0);
-        Canvas.SetTop(_peakText, ActualHeight - 13);
-        FrameLayer.Children.Add(_peakText);
     }
 
     // ---- live updates -------------------------------------------------------
 
     private void UpdateReadout()
     {
-        if (_rpmText != null)
-        {
-            double v = Value;
-            _rpmText.Text = double.IsNaN(v) ? "--" : v.ToString("0", CultureInfo.InvariantCulture);
-        }
-
-        if (_peakText != null)
-            _peakText.Text = double.IsNaN(Peak)
-                ? ""
-                : "peak " + Peak.ToString("0", CultureInfo.InvariantCulture);
+        if (_rpmText == null) return;
+        double v = Value;
+        _rpmText.Text = double.IsNaN(v) ? "--" : v.ToString("0", CultureInfo.InvariantCulture);
     }
 
     /// <summary>
