@@ -1,18 +1,11 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
+using FanControlApp.Controls;
 using FanControlApp.Cooling;
 using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
-
-/// <summary>One row in the "other fans" strip. Display shape only.</summary>
-public sealed class FanRow
-{
-    public required string Name { get; init; }
-    public required string Reading { get; init; }
-    public required Brush NameBrush { get; init; }
-    public required Brush ValueBrush { get; init; }
-}
 
 /// <summary>
 /// Display only - it renders what the controller reports and forwards the two
@@ -21,12 +14,16 @@ public sealed class FanRow
 /// </summary>
 public partial class MainWindow : Window
 {
-    private const string Fan2 = "Chassis Fan #2";
-    private const string Fan3 = "Chassis Fan #3";
+    private const int FansPerRow = 3;
 
     private readonly FanController _controller = App.Controller;
     private GameModeWindow? _overlay;
     private System.Windows.Forms.NotifyIcon? _tray;
+
+    // A spinning fan tile per running fan, created the first time that fan is seen
+    // spinning and kept after (latched, so a momentary dip doesn't make it vanish).
+    private readonly Dictionary<string, FanBlade> _fanGauges = new();
+    private readonly List<string> _shownFans = new();
 
     public MainWindow()
     {
@@ -108,11 +105,9 @@ public partial class MainWindow : Window
     {
         CpuGauge.Value = r.CpuTemp ?? double.NaN;
         GpuGauge.Value = r.GpuTemp ?? double.NaN;
-        Fan2Gauge.Value = RpmOf(r, Fan2);
-        Fan3Gauge.Value = RpmOf(r, Fan3);
 
-        StatusText.Text = r.Status;
-        StatusText.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
+        TopStatus.Text = $"Case fans follow your hottest item - {r.Status}";
+        TopStatus.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
 
         // Live tray tooltip, so you can hover it while minimised and see the state
         // without reopening. NotifyIcon.Text caps at 63 chars - keep it short.
@@ -123,35 +118,76 @@ public partial class MainWindow : Window
         }
 
         UpdateReleaseButton();
-        RenderOtherFans(r);
+        UpdateFanGauges(r);
     }
 
-    private static double RpmOf(FanReadings r, string name)
+    /// <summary>
+    /// One dial per driven fan that's actually spinning. A fan appears the first
+    /// time it's seen above 0 RPM and stays (latched) - so empty headers never
+    /// show, and a real fan doesn't flicker away on a momentary dip.
+    /// </summary>
+    private void UpdateFanGauges(FanReadings r)
     {
-        FanChannel? f = r.Fans.FirstOrDefault(x =>
-            string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
-        return f?.Rpm ?? double.NaN;
-    }
+        bool added = false;
 
-    /// <summary>Everything the app is NOT driving - the two it does drive have gauges.</summary>
-    private void RenderOtherFans(FanReadings r)
-    {
-        FanList.ItemsSource = r.Fans
-            .Where(f => f.RpmSensor != null)
-            .Where(f => !string.Equals(f.Name, Fan2, StringComparison.OrdinalIgnoreCase)
-                     && !string.Equals(f.Name, Fan3, StringComparison.OrdinalIgnoreCase))
-            .Select(f =>
+        foreach (string name in r.DrivenFans)
+        {
+            FanChannel? f = r.Fans.FirstOrDefault(x =>
+                string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+            double rpm = f?.Rpm ?? double.NaN;
+
+            if (!_fanGauges.ContainsKey(name))
             {
-                bool dead = f.Rpm is null or < 1;
-                return new FanRow
-                {
-                    Name = f.Name,
-                    Reading = dead ? "--" : $"{f.Rpm:F0} rpm",
-                    NameBrush = Res("TextDim"),
-                    ValueBrush = dead ? Res("TextDim") : Res("Text"),
-                };
-            })
-            .ToList();
+                if (rpm is not (> 0)) continue; // not spinning yet - empty header or stopped
+                FanBlade g = NewFanGauge(name);
+                _fanGauges[name] = g;
+                _shownFans.Add(name);
+                added = true;
+            }
+
+            _fanGauges[name].Value = rpm;
+        }
+
+        if (added) RebuildFanRows();
+    }
+
+    /// <summary>Re-lay the shown fans into centred rows of three.</summary>
+    private void RebuildFanRows()
+    {
+        // Detach every tile from its old row first - WPF throws if you add a
+        // control that still has a parent.
+        foreach (FanBlade g in _fanGauges.Values)
+            (g.Parent as Panel)?.Children.Remove(g);
+
+        FanRows.Children.Clear();
+
+        for (int i = 0; i < _shownFans.Count; i += FansPerRow)
+        {
+            var row = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+            };
+
+            for (int j = i; j < System.Math.Min(i + FansPerRow, _shownFans.Count); j++)
+                row.Children.Add(_fanGauges[_shownFans[j]]);
+
+            FanRows.Children.Add(row);
+        }
+    }
+
+    private static FanBlade NewFanGauge(string name)
+    {
+        // Stack the label at its first space: "Chassis Fan #2" -> "Chassis / Fan #2".
+        int sp = name.IndexOf(' ');
+        string label = sp > 0 ? name[..sp] + "\n" + name[(sp + 1)..] : name;
+
+        return new FanBlade
+        {
+            Label = label,
+            Width = 200,
+            Height = 195,
+        };
     }
 
     // ---- the two actions ----------------------------------------------------
@@ -172,8 +208,7 @@ public partial class MainWindow : Window
     {
         CpuGauge.ResetPeak();
         GpuGauge.ResetPeak();
-        Fan2Gauge.ResetPeak();
-        Fan3Gauge.ResetPeak();
+        foreach (FanBlade g in _fanGauges.Values) g.ResetPeak();
         _overlay?.ResetPeaks();
     }
 

@@ -23,6 +23,9 @@ public sealed class FanReadings
 
     public string Status { get; init; } = "";
     public IReadOnlyList<FanChannel> Fans { get; init; } = Array.Empty<FanChannel>();
+
+    /// <summary>Names of the fans the app is actually driving - what the UI shows as dials.</summary>
+    public IReadOnlyList<string> DrivenFans { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>
@@ -338,7 +341,7 @@ public sealed class FanController : IDisposable
         _engaged = true;
 
         string hotter = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
-        string status = $"Matching {hotter} {temp:F0}C -> fans {_currentPercent:F0}%";
+        string status = $"Matching {hotter} {temp:F0}°C -> Fans: {_currentPercent:F0}%";
 
         TrackPeaks(cpu, gpu, controlled);
 
@@ -404,6 +407,7 @@ public sealed class FanController : IDisposable
             SentinelLost = _sentinelLost,
             Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,
             Fans = _hw.Fans,
+            DrivenFans = ControlledFanNames,
         });
     }
 

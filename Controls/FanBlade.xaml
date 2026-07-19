@@ -1,0 +1,15 @@
+<UserControl x:Class="FanControlApp.Controls.FanBlade"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Grid>
+        <!-- Static: the square case-fan frame, corner screws, circular recess. -->
+        <Canvas x:Name="FrameLayer" />
+
+        <!-- The blades. This whole layer spins about the hub. -->
+        <Canvas x:Name="BladeLayer" />
+
+        <!-- Static: raised hub cap with the RPM read out on top of it. -->
+        <Canvas x:Name="HubLayer" />
+    </Grid>
+</UserControl>

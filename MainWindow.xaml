@@ -5,7 +5,7 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="TOA - Fan Control"
         Icon="Icon.ico"
-        Width="920" MinWidth="800"
+        Width="740" MinWidth="680"
         SizeToContent="Height"
         WindowStyle="None"
         Background="{StaticResource Bg}"
@@ -56,71 +56,39 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- The one line that describes the whole app. -->
-            <TextBlock Grid.Row="0" Margin="2,0,2,12" FontSize="12"
+            <!-- One live line: what the app does + what it's doing right now. -->
+            <TextBlock x:Name="TopStatus" Grid.Row="0" Margin="2,0,2,12" FontSize="12"
+                       HorizontalAlignment="Center"
                        Foreground="{StaticResource TextDim}"
-                       Text="Case fans follow your hottest part — fan speed matches the temperature, 1-to-1. Nothing to set." />
+                       Text="Case fans follow your hottest item" />
 
-            <!-- The dash -->
-            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8">
-                <UniformGrid Columns="4" Height="200">
-                    <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C"
-                                Minimum="0" Maximum="100" MajorTick="20"
-                                GreenTo="70" RedFrom="90" />
+            <!-- The dash: CPU + GPU on top, then a dial per running fan (built in
+                 code, 3 across, each row centred). Empty headers never appear. -->
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8,12">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C" Width="200" Height="195"
+                                    Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
+                        <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C" Width="200" Height="195"
+                                    Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
+                    </StackPanel>
 
-                    <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C"
-                                Minimum="0" Maximum="100" MajorTick="20"
-                                GreenTo="70" RedFrom="90" />
-
-                    <!-- &#10; is a line break: the label stacks on two lines. -->
-                    <ctrl:Gauge x:Name="Fan2Gauge" Label="Chassis&#10;Fan #2" Unit=""
-                                Minimum="0" Maximum="2000" MajorTick="1000" />
-
-                    <ctrl:Gauge x:Name="Fan3Gauge" Label="Chassis&#10;Fan #3" Unit=""
-                                Minimum="0" Maximum="2000" MajorTick="1000" />
-                </UniformGrid>
+                    <StackPanel x:Name="FanRows" Margin="0,4,0,0" />
+                </StackPanel>
             </Border>
 
-            <!-- Every other fan, for reference -->
-            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,12">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="OTHER FANS (BIOS controlled)"
-                               Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,0,0,8" />
-                    <ItemsControl x:Name="FanList">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="6" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="0,0,10,2">
-                                    <TextBlock Text="{Binding Name}" FontSize="10"
-                                               Foreground="{Binding NameBrush}" />
-                                    <TextBlock Text="{Binding Reading}" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{Binding ValueBrush}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </DockPanel>
-            </Border>
-
-            <!-- Status + actions -->
-            <DockPanel Grid.Row="3">
-                <Button x:Name="ReleaseButton" DockPanel.Dock="Right" Content="Hand fans to BIOS"
-                        Click="OnReleaseClick" Margin="8,0,0,0" Width="150" />
-                <Button x:Name="ResetPeaksButton" DockPanel.Dock="Right" Content="Reset peaks"
-                        Click="OnResetPeaksClick" Margin="8,0,0,0" />
-                <Button x:Name="GameModeButton" DockPanel.Dock="Right" Content="Game Mode"
-                        Click="OnGameModeClick"
+            <!-- Actions, centred -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button x:Name="GameModeButton" Content="Game Mode" Click="OnGameModeClick"
+                        Margin="0,0,8,0"
                         ToolTip="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
-                <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="12"
-                           Foreground="{StaticResource TextDim}" Text="Starting..." />
-            </DockPanel>
+                <Button x:Name="ResetPeaksButton" Content="Reset peaks"
+                        Click="OnResetPeaksClick" Margin="0,0,8,0" />
+                <Button x:Name="ReleaseButton" Content="Hand fans to BIOS"
+                        Click="OnReleaseClick" Width="150" />
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>
