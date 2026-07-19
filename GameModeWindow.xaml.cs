@@ -16,9 +16,6 @@ namespace FanControlApp;
 /// </summary>
 public partial class GameModeWindow : Window
 {
-    private const string Fan2 = "Chassis Fan #2";
-    private const string Fan3 = "Chassis Fan #3";
-
     private readonly FanController _controller;
 
     private double _peakCpu = double.NaN;
@@ -119,14 +116,14 @@ public partial class GameModeWindow : Window
         CpuPeakText.Text = double.IsNaN(_peakCpu) ? "peak --" : $"peak {_peakCpu:F0}";
         GpuPeakText.Text = double.IsNaN(_peakGpu) ? "peak --" : $"peak {_peakGpu:F0}";
 
-        RpmText.Text = $"{RpmOf(r, Fan2)} / {RpmOf(r, Fan3)}";
-    }
-
-    private static string RpmOf(FanReadings r, string name)
-    {
-        FanChannel? f = r.Fans.FirstOrDefault(x =>
-            string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
-        return f?.Rpm is { } rpm and >= 1 ? $"{rpm:F0}" : "--";
+        // RPM of every fan the app is driving, whatever this machine has - the
+        // main window's rule, not a hardcoded fan list.
+        var rpms = r.DrivenFans
+            .Select(name => r.Fans.FirstOrDefault(f =>
+                string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)))
+            .Select(f => f?.Rpm is { } rpm and >= 1 ? $"{rpm:F0}" : "--")
+            .ToList();
+        RpmText.Text = rpms.Count > 0 ? string.Join(" / ", rpms) : "--";
     }
 
     public void ResetPeaks()
