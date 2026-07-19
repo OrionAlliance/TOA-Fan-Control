@@ -145,7 +145,8 @@ public partial class MainWindow : Window
                 added = true;
             }
 
-            _fanGauges[name].Value = rpm;
+            _fanGauges[name].Value = rpm;             // real speed -> how fast it spins
+            _fanGauges[name].Percent = r.OutputPercent; // driven duty -> the hub number
         }
 
         if (added) RebuildFanRows();

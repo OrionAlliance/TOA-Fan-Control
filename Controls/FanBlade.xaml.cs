@@ -23,7 +23,7 @@ public partial class FanBlade : UserControl
     private const double LabelBand = 24;
 
     private RotateTransform? _spin;
-    private TextBlock? _rpmText;
+    private TextBlock? _hubText;
 
     private double _cx, _cy, _r;
 
@@ -41,20 +41,20 @@ public partial class FanBlade : UserControl
 
     public static readonly DependencyProperty ValueProperty =
         DependencyProperty.Register(nameof(Value), typeof(double), typeof(FanBlade),
-            new PropertyMetadata(double.NaN, OnValueChanged));
+            new PropertyMetadata(double.NaN, (d, _) => ((FanBlade)d).UpdateSpin()));
+
+    public static readonly DependencyProperty PercentProperty =
+        DependencyProperty.Register(nameof(Percent), typeof(double), typeof(FanBlade),
+            new PropertyMetadata(double.NaN, (d, _) => ((FanBlade)d).UpdateReadout()));
 
     /// <summary>Fan name, shown under the frame. May be two lines ("Chassis\nFan #2").</summary>
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
 
-    /// <summary>Current RPM. Drives both the readout and the spin speed.</summary>
+    /// <summary>Current RPM. Drives the spin speed - the blades move at the real rate.</summary>
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
-    private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var fb = (FanBlade)d;
-        fb.UpdateReadout();
-        fb.UpdateSpin();
-    }
+    /// <summary>The duty the app is driving this fan at. Shown in the hub.</summary>
+    public double Percent { get => (double)GetValue(PercentProperty); set => SetValue(PercentProperty, value); }
 
     // ---- geometry -----------------------------------------------------------
 
@@ -75,7 +75,7 @@ public partial class FanBlade : UserControl
         BladeLayer.Children.Clear();
         HubLayer.Children.Clear();
         _spin = null;
-        _rpmText = null;
+        _hubText = null;
 
         if (ActualWidth <= 20 || ActualHeight <= 20) return;
 
@@ -242,7 +242,7 @@ public partial class FanBlade : UserControl
         return geo;
     }
 
-    /// <summary>Raised centre cap; the RPM number rides on top of it (and doesn't spin).</summary>
+    /// <summary>Raised centre cap; the fan % rides on top of it (and doesn't spin).</summary>
     private void DrawHub()
     {
         double hubR = Math.Max(20, _r * 0.34);
@@ -271,10 +271,10 @@ public partial class FanBlade : UserControl
         Canvas.SetTop(hub, _cy - hubR);
         HubLayer.Children.Add(hub);
 
-        _rpmText = new TextBlock
+        _hubText = new TextBlock
         {
             Foreground = B("#E6E9F0"),
-            FontSize = Math.Max(12, hubR * 0.52),
+            FontSize = Math.Max(13, hubR * 0.56),
             FontWeight = FontWeights.SemiBold,
             TextAlignment = TextAlignment.Center,
             Width = hubR * 2,
@@ -284,10 +284,10 @@ public partial class FanBlade : UserControl
                 Direction = 270, Opacity = 0.9,
             },
         };
-        _rpmText.Measure(new Size(hubR * 2, double.PositiveInfinity));
-        Canvas.SetLeft(_rpmText, _cx - hubR);
-        Canvas.SetTop(_rpmText, _cy - _rpmText.DesiredSize.Height / 2);
-        HubLayer.Children.Add(_rpmText);
+        _hubText.Measure(new Size(hubR * 2, double.PositiveInfinity));
+        Canvas.SetLeft(_hubText, _cx - hubR);
+        Canvas.SetTop(_hubText, _cy - _hubText.DesiredSize.Height / 2);
+        HubLayer.Children.Add(_hubText);
     }
 
     /// <summary>Fan name, on one line under the frame.</summary>
@@ -310,9 +310,11 @@ public partial class FanBlade : UserControl
 
     private void UpdateReadout()
     {
-        if (_rpmText == null) return;
-        double v = Value;
-        _rpmText.Text = double.IsNaN(v) ? "--" : v.ToString("0", CultureInfo.InvariantCulture);
+        if (_hubText == null) return;
+        double p = Percent;
+        _hubText.Text = double.IsNaN(p)
+            ? "--"
+            : p.ToString("0", CultureInfo.InvariantCulture) + "%";
     }
 
     /// <summary>
