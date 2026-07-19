@@ -176,19 +176,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private static FanBlade NewFanGauge(string name)
+    private static FanBlade NewFanGauge(string name) => new()
     {
-        // Stack the label at its first space: "Chassis Fan #2" -> "Chassis / Fan #2".
-        int sp = name.IndexOf(' ');
-        string label = sp > 0 ? name[..sp] + "\n" + name[(sp + 1)..] : name;
-
-        return new FanBlade
-        {
-            Label = label,
-            Width = 200,
-            Height = 195,
-        };
-    }
+        Label = name,
+        Width = 200,
+        Height = 195,
+    };
 
     // ---- the two actions ----------------------------------------------------
 
