@@ -82,6 +82,27 @@ public partial class App : Application
         Controller.BeginControl();
 
         new MainWindow().Show();
+
+        // Once the app is up, quietly ask GitHub whether PawnIO has a newer version.
+        // Never blocks startup; offline just no-ops. If there's one, a popup offers
+        // it - Yes updates, No leaves it alone.
+        _ = CheckPawnIoUpdateAsync();
+    }
+
+    private static async Task CheckPawnIoUpdateAsync()
+    {
+        try
+        {
+            PawnIoSetup.UpdateInfo? update = await PawnIoSetup.CheckForUpdateAsync();
+            if (update == null) return;
+
+            DebugLog.Write($"PawnIO update available: {update.Installed} -> {update.Latest}.");
+            new PawnIoSetupWindow(update).ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("PawnIO update check failed.", ex);
+        }
     }
 
     private void StartAsWatchdog(string[] args)

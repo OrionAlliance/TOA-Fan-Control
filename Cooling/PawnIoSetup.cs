@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using FanControlApp.Infrastructure;
 using Microsoft.Win32;
 
@@ -26,6 +27,11 @@ public static class PawnIoSetup
     // asset, so we never hardcode a version that goes stale.
     private const string InstallerUrl =
         "https://github.com/namazso/PawnIO.Setup/releases/latest/download/PawnIO_setup.exe";
+
+    // The releases API, for reading the latest version number to compare against
+    // what's installed. Same repo the installer comes from.
+    private const string LatestReleaseApi =
+        "https://api.github.com/repos/namazso/PawnIO.Setup/releases/latest";
 
     // The installer must be signed by this publisher, or we refuse to run it.
     private const string ExpectedSigner = "namazso";
@@ -52,6 +58,100 @@ public static class PawnIoSetup
             DebugLog.Write("PawnIO detection failed; assuming present so we don't nag.", ex);
             return true; // fail safe: don't badger the user if the check itself broke
         }
+    }
+
+    /// <summary>Installed vs newest-available PawnIO, when an update exists.</summary>
+    public sealed record UpdateInfo(Version Installed, Version Latest);
+
+    /// <summary>
+    /// Is a newer PawnIO out than the one installed? Returns null when there's
+    /// nothing to do - not installed, already current, or we couldn't reach GitHub
+    /// (offline is not a reason to nag). The installer upgrades in place, so
+    /// applying an update is just the normal <see cref="DownloadVerifyInstallAsync"/>.
+    /// </summary>
+    public static async Task<UpdateInfo?> CheckForUpdateAsync()
+    {
+        Version? installed = GetInstalledVersion();
+        if (installed == null) return null; // missing or unreadable - not an "update"
+
+        Version? latest = await GetLatestVersionAsync();
+        if (latest == null) return null; // offline / API hiccup - stay quiet
+
+        return latest > installed ? new UpdateInfo(installed, latest) : null;
+    }
+
+    /// <summary>
+    /// The installed PawnIO version, read from its uninstall entry (DisplayVersion,
+    /// e.g. "2.2.0.0"). Null if PawnIO isn't there or the value can't be read.
+    /// </summary>
+    public static Version? GetInstalledVersion()
+    {
+        string[] roots =
+        {
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+        };
+
+        foreach (string root in roots)
+        {
+            try
+            {
+                using RegistryKey? key = Registry.LocalMachine.OpenSubKey(root);
+                if (key == null) continue;
+
+                foreach (string sub in key.GetSubKeyNames())
+                {
+                    using RegistryKey? entry = key.OpenSubKey(sub);
+                    if (entry?.GetValue("DisplayName") is not string name) continue;
+                    if (!name.Contains("PawnIO", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    if (entry.GetValue("DisplayVersion") is string ver && ParseVersion(ver) is { } v)
+                        return v;
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Reading installed PawnIO version failed.", ex);
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<Version?> GetLatestVersionAsync()
+    {
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
+
+            string json = await http.GetStringAsync(LatestReleaseApi);
+            using JsonDocument doc = JsonDocument.Parse(json);
+            string? tag = doc.RootElement.GetProperty("tag_name").GetString();
+            return ParseVersion(tag);
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("Checking the latest PawnIO version failed (offline?).", ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Turn "2.2.0", "v2.2.0" or "2.2.0.0" into a 4-part Version so the two sources
+    /// compare cleanly - the tag has three parts, the uninstall entry has four, and
+    /// Version treats a missing part as -1 (which would read as "older").
+    /// </summary>
+    private static Version? ParseVersion(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        string[] parts = raw.TrimStart('v', 'V').Trim().Split('.');
+        int[] n = new int[4];
+        for (int i = 0; i < 4; i++)
+            n[i] = i < parts.Length && int.TryParse(parts[i], out int p) ? p : 0;
+
+        return new Version(n[0], n[1], n[2], n[3]);
     }
 
     /// <summary>

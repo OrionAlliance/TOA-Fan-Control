@@ -14,13 +14,13 @@
     <Border BorderBrush="#0B0D12" BorderThickness="1">
         <Border Style="{StaticResource Card}" CornerRadius="0" Margin="0" Padding="22,20">
             <StackPanel>
-                <TextBlock Text="One-time setup" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock x:Name="HeaderText" Text="One-time setup" FontSize="18" FontWeight="SemiBold" />
 
-                <TextBlock Margin="0,12,0,0" FontSize="13" Foreground="{StaticResource Text}"
+                <TextBlock x:Name="BodyText" Margin="0,12,0,0" FontSize="13" Foreground="{StaticResource Text}"
                            TextWrapping="Wrap"
                            Text="To read this PC's temperatures and fans, TOA - Fan Control needs a small hardware-access driver called PawnIO. It isn't installed on this machine yet." />
 
-                <TextBlock Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource TextDim}"
+                <TextBlock x:Name="SubText" Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource TextDim}"
                            TextWrapping="Wrap"
                            Text="PawnIO is the signed, safe driver that modern hardware tools (FanControl, etc.) use. The app will download it straight from its author's official release and check its signature before running it. Nothing is installed without your OK." />
 
@@ -38,7 +38,7 @@
                             Width="150" Click="OnInstallClick" />
                     <Button x:Name="LaterButton" DockPanel.Dock="Right" Content="Not now"
                             Margin="0,0,8,0" Click="OnLaterClick" />
-                    <TextBlock VerticalAlignment="Center" FontSize="11"
+                    <TextBlock x:Name="HintText" VerticalAlignment="Center" FontSize="11"
                                Foreground="{StaticResource TextDim}"
                                Text="Without it, the app opens but can't drive any fans." />
                 </DockPanel>

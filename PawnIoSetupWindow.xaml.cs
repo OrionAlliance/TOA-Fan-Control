@@ -5,8 +5,9 @@ using FanControlApp.Infrastructure;
 namespace FanControlApp;
 
 /// <summary>
-/// First-run gate shown only when PawnIO is missing. Offers a one-click install;
-/// declining lets the app open in read-only mode.
+/// Shown when PawnIO is missing (first-run install) or out of date (update). Same
+/// download-verify-install pipeline either way; the update path just reworded the
+/// text and points at the newer version. Declining leaves things as they are.
 /// </summary>
 public partial class PawnIoSetupWindow : Window
 {
@@ -19,6 +20,23 @@ public partial class PawnIoSetupWindow : Window
     public PawnIoSetupWindow()
     {
         InitializeComponent();
+    }
+
+    /// <summary>Update-available variant: PawnIO is already installed but behind.</summary>
+    public PawnIoSetupWindow(PawnIoSetup.UpdateInfo update)
+    {
+        InitializeComponent();
+
+        Title = "TOA - Fan Control · Update";
+        HeaderText.Text = "PawnIO update available";
+        BodyText.Text =
+            $"A newer version of the PawnIO driver is available.\n\n" +
+            $"Installed:  {update.Installed}\nLatest:  {update.Latest}";
+        SubText.Text =
+            "The app will download it straight from its author's official release and " +
+            "check its signature before running it. Nothing changes without your OK.";
+        InstallButton.Content = "Update PawnIO";
+        HintText.Text = "You can keep using the current version if you'd rather not.";
     }
 
     private async void OnInstallClick(object sender, RoutedEventArgs e)
