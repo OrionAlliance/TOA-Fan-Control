@@ -38,7 +38,7 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button x:Name="MinButton" Style="{StaticResource CaptionButton}"
-                            Content="&#xE921;" Click="OnMinimizeClick" ToolTip="Minimise" />
+                            Content="&#xE921;" Click="OnMinimizeClick" ToolTip="Minimize to system tray" />
                     <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}"
                             Content="&#xE922;" Click="OnMaximizeClick" ToolTip="Maximise" />
                     <Button x:Name="CloseButton" Style="{StaticResource CaptionClose}"
