@@ -26,15 +26,23 @@ public partial class App : Application
 
         FanSettings settings = SettingsStore.Load();
 
-        // Without PawnIO the app is blind to every fan, so offer to set it up
-        // before we open the hardware. Declining just opens the app read-only.
+        // PawnIO is REQUIRED - without it the app can't see or drive a single fan.
+        // So it's mandatory, not optional: if it's missing and the user declines to
+        // install it, there's nothing for the app to do, and it closes.
         if (!PawnIoSetup.IsInstalled())
         {
             DebugLog.Write("PawnIO not installed - showing first-run setup.");
             var setup = new PawnIoSetupWindow();
             setup.ShowDialog();
 
-            if (setup.Installed && setup.RebootRequired)
+            if (!setup.Installed)
+            {
+                DebugLog.Write("PawnIO declined - the app can't run without it. Closing.");
+                Shutdown();
+                return;
+            }
+
+            if (setup.RebootRequired)
             {
                 MessageBox.Show(
                     "PawnIO is installed, but Windows needs a reboot to finish loading it.\n\n" +

@@ -239,9 +239,10 @@ public static class PawnIoSetup
 
     /// <summary>
     /// Valid Authenticode signature (chains to a trusted root, file not tampered)
-    /// AND signed by the expected publisher. Both must hold.
+    /// AND signed by the expected publisher. Both must hold. Public so the setup
+    /// bootstrapper can vet the .NET runtime installer the same way.
     /// </summary>
-    private static bool IsTrustedAndSignedBy(string path, string expectedSigner)
+    public static bool IsTrustedAndSignedBy(string path, string expectedSigner)
     {
         try
         {

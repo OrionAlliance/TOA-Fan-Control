@@ -40,6 +40,14 @@
     <Compile Remove="GlyphSheet\**" />
     <Page Remove="GaugePreview\**" />
     <Page Remove="GlyphSheet\**" />
+
+    <!-- The installer is its own self-contained project (Setup\Setup.csproj); keep
+         its files (and its embedded copy of the app) out of the app's own build. -->
+    <Compile Remove="Setup\**" />
+    <Page Remove="Setup\**" />
+    <Resource Remove="Setup\**" />
+    <EmbeddedResource Remove="Setup\**" />
+    <None Remove="Setup\**" />
   </ItemGroup>
 
   <ItemGroup>

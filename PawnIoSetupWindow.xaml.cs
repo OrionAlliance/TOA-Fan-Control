@@ -36,6 +36,7 @@ public partial class PawnIoSetupWindow : Window
             "The app will download it straight from its author's official release and " +
             "check its signature before running it. Nothing changes without your OK.";
         InstallButton.Content = "Update PawnIO";
+        LaterButton.Content = "Not now";
         HintText.Text = "You can keep using the current version if you'd rather not.";
     }
 

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>TOA - Fan Control Setup</AssemblyName>
+    <RootNamespace>FanControlSetup</RootNamespace>
+    <Version>1.5.2</Version>
+    <ApplicationIcon>..\Icon.ico</ApplicationIcon>
+
+    <!-- We write our own Main (Program.cs) so there's no App.xaml to maintain. -->
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <StartupObject>FanControlSetup.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The window icon must be embedded as a resource to resolve at runtime. -->
+    <Resource Include="..\Icon.ico" Link="Icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reuse the app's already-verified PawnIO installer and its logging deps,
+         so the driver is installed exactly the same trusted way in both places. -->
+    <Compile Include="..\Cooling\PawnIoSetup.cs" Link="Shared\PawnIoSetup.cs" />
+    <Compile Include="..\Infrastructure\DebugLog.cs" Link="Shared\DebugLog.cs" />
+    <Compile Include="..\Infrastructure\AppPaths.cs" Link="Shared\AppPaths.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The framework-dependent app, embedded so the installer is one file. It's
+         copied into payload\ by Build-Setup.ps1 right before this project builds. -->
+    <EmbeddedResource Include="payload\TOA - Fan Control.exe">
+      <LogicalName>app.exe</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

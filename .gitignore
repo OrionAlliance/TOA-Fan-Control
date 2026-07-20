@@ -1,6 +1,8 @@
 bin/
 obj/
 dist/
+installer/
+Setup/payload/
 
 # Runtime artifacts - the app is portable, these live next to the exe
 Settings/

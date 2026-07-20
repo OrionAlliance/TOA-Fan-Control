@@ -36,10 +36,10 @@
                 <TextBlock x:Name="HintText" Margin="0,20,0,0" FontSize="11"
                            Foreground="{StaticResource TextDim}"
                            TextWrapping="Wrap" TextAlignment="Center"
-                           Text="Without it, the app opens but can't drive any fans." />
+                           Text="PawnIO is required - without it the app can't read or drive any fans, so it will close." />
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
-                    <Button x:Name="LaterButton" Content="Not now"
+                    <Button x:Name="LaterButton" Content="Quit"
                             Margin="0,0,8,0" Click="OnLaterClick" />
                     <Button x:Name="InstallButton" Content="Install PawnIO"
                             Width="150" Click="OnInstallClick" />
