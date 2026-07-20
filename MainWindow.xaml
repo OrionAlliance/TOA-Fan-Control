@@ -45,7 +45,7 @@
                             Content="&#xE8BB;" Click="OnCloseClick" ToolTip="Close" />
                 </StackPanel>
 
-                <TextBlock Text="TOA - Fan Control" VerticalAlignment="Center"
+                <TextBlock x:Name="TitleText" Text="TOA - Fan Control" VerticalAlignment="Center"
                            FontSize="12" Foreground="{StaticResource Text}" />
             </DockPanel>
         </Border>

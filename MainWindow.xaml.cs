@@ -29,6 +29,14 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // Stamp the real build version into the caption (and the taskbar title), read
+        // from the assembly so it tracks <Version> in the csproj and never goes stale.
+        Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
+                    ?? new Version(0, 0, 0);
+        string label = $"TOA - Fan Control  v{v.Major}.{v.Minor}.{v.Build}";
+        TitleText.Text = label;
+        Title = label;
+
         SetupTray();
 
         // The redline on the temp gauges is the real one: the 5800X throttles at
