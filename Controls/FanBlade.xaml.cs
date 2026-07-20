@@ -297,7 +297,7 @@ public partial class FanBlade : UserControl
         {
             Text = Label,
             Foreground = B("#8A92A6"),
-            FontSize = 10,
+            FontSize = 11,
             TextAlignment = TextAlignment.Center,
             Width = ActualWidth,
         };

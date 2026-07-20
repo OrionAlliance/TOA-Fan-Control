@@ -16,6 +16,12 @@ public partial class MainWindow : Window
 {
     private const int FansPerRow = 3;
 
+    // Fan tile footprint. Smaller than the 200x195 temp dials - the fan graphic
+    // shrinks to fit, but the % and label keep the control's minimum readable sizes
+    // rather than scaling away to nothing.
+    private const double FanTileW = 120;
+    private const double FanTileH = 124;
+
     private readonly FanController _controller = App.Controller;
     private GameModeWindow? _overlay;
     private System.Windows.Forms.NotifyIcon? _tray;
@@ -188,8 +194,8 @@ public partial class MainWindow : Window
     private static FanBlade NewFanGauge(string name) => new()
     {
         Label = name,
-        Width = 200,
-        Height = 195,
+        Width = FanTileW,
+        Height = FanTileH,
     };
 
     // ---- the two actions ----------------------------------------------------
