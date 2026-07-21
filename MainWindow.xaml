@@ -85,8 +85,10 @@
                         ToolTip="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
                 <Button x:Name="ResetPeaksButton" Content="Reset peaks"
                         Click="OnResetPeaksClick" Margin="0,0,8,0" />
+                <!-- Fixed width sized to the longer of its two labels ("Hand fans to
+                     BIOS" / "Take fans back"), so toggling doesn't shift the row. -->
                 <Button x:Name="ReleaseButton" Content="Hand fans to BIOS"
-                        Click="OnReleaseClick" Width="150" />
+                        Click="OnReleaseClick" Width="113" />
             </StackPanel>
         </Grid>
     </Grid>

@@ -168,7 +168,7 @@
             <Setter Property="Foreground" Value="{StaticResource Text}" />
             <Setter Property="BorderBrush" Value="{StaticResource BtnEdge}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Padding" Value="6,7" />
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
