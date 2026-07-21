@@ -64,11 +64,13 @@
                  memory - the previous E73F was the "FullScreen" arrows, which read as
                  a faint empty square at this size. -->
             <Button x:Name="RestoreButton" Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
-                    Content="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                    Foreground="#FFFFFF" Padding="0"
-                    Width="28" Height="28" VerticalAlignment="Center"
+                    Padding="0" Width="28" Height="28" VerticalAlignment="Center"
                     Click="OnRestoreClick"
-                    ToolTip="Back to the full window (or double-click anywhere)" />
+                    ToolTip="Back to the full window (or double-click anywhere)">
+                <!-- Explicit TextBlock so the glyph can't fall to the implicit
+                     Segoe UI style and render as a tofu box. -->
+                <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+            </Button>
         </Grid>
     </Border>
 </Window>
