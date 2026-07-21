@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private readonly FanController _controller = App.Controller;
     private GameModeWindow? _overlay;
     private System.Windows.Forms.NotifyIcon? _tray;
+    private bool _titleBarReady;
 
     // A spinning fan tile per running fan, created the first time that fan is seen
     // spinning and kept after (latched, so a momentary dip doesn't make it vanish).
@@ -51,18 +52,17 @@ public partial class MainWindow : Window
         GpuGauge.RedFrom = 90;
 
         // We draw the title bar ourselves, so the maximise glyph is kept in step
-        // by hand. The DWM call still colours the window's outer border.
+        // by hand. The DWM call still colours the window's outer border. Re-applied
+        // whenever the theme flips, so the OS chrome follows the palette.
         StateChanged += OnWindowStateChanged;
-        SourceInitialized += (_, _) => TitleBarColor.Apply(
-            this,
-            caption: ResColor("Panel"),
-            text: ResColor("Text"),
-            border: ResColor("PanelEdge"));
+        SourceInitialized += (_, _) => { _titleBarReady = true; ApplyTitleBarColors(); };
+        ThemeManager.Changed += OnThemeChanged;
 
         _controller.Updated += OnUpdated;
         Closing += (_, _) =>
         {
             _controller.Updated -= OnUpdated;
+            ThemeManager.Changed -= OnThemeChanged;
 
             // The overlay cancels its own Closing (so Alt+F4 there just restores),
             // which would keep the process alive forever with no window. Tear it
@@ -131,7 +131,6 @@ public partial class MainWindow : Window
             _tray.Text = $"TOA Fan Control  ·  {hot}  ·  fans {r.OutputPercent:F0}%";
         }
 
-        UpdateReleaseButton();
         UpdateFanGauges(r);
     }
 
@@ -198,25 +197,85 @@ public partial class MainWindow : Window
         Height = FanTileH,
     };
 
-    // ---- the two actions ----------------------------------------------------
-
-    /// <summary>Pause/resume: hand the fans back to the BIOS, or take them again.</summary>
-    private void OnReleaseClick(object sender, RoutedEventArgs e)
-    {
-        if (_controller.IsPaused) _controller.Resume();
-        else _controller.Pause();
-
-        UpdateReleaseButton();
-    }
-
-    private void UpdateReleaseButton() =>
-        ReleaseButton.Content = _controller.IsPaused ? "Take fans back" : "Hand fans to BIOS";
+    // ---- actions ------------------------------------------------------------
 
     private void OnResetPeaksClick(object sender, RoutedEventArgs e)
     {
         CpuGauge.ResetPeak();
         GpuGauge.ResetPeak();
         _overlay?.ResetPeaks();
+    }
+
+    // ---- settings (the cog) --------------------------------------------------
+
+    /// <summary>Rebuilt on every open so each header reflects the current state.</summary>
+    private void OnSettingsClick(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu
+        {
+            PlacementTarget = SettingsButton,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
+
+        menu.Items.Add(Item(
+            ThemeManager.Current == AppTheme.Dark ? "Switch to light theme" : "Switch to dark theme",
+            ToggleTheme));
+
+        menu.Items.Add(Item(
+            _controller.IsPaused ? "Take fans back" : "Hand fans to BIOS",
+            ToggleBios));
+
+        menu.Items.Add(new Separator());
+        menu.Items.Add(Item("Uninstall…", ConfirmUninstall));
+
+        menu.IsOpen = true;
+
+        static MenuItem Item(string header, Action action)
+        {
+            var mi = new MenuItem { Header = header };
+            mi.Click += (_, _) => action();
+            return mi;
+        }
+    }
+
+    private void ToggleTheme()
+    {
+        AppTheme next = ThemeManager.Current == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+        ThemeManager.Apply(next);
+        _controller.UpdateSettings(s => s.Theme = next.ToString());
+    }
+
+    /// <summary>Pause/resume: hand the fans back to the BIOS, or take them again.</summary>
+    private void ToggleBios()
+    {
+        if (_controller.IsPaused) _controller.Resume();
+        else _controller.Pause();
+    }
+
+    private void ConfirmUninstall()
+    {
+        MessageBoxResult r = MessageBox.Show(
+            this,
+            "This will close TOA - Fan Control and remove it from this PC - the app, " +
+            "its settings, its log, and its shortcuts.\n\n" +
+            "(PawnIO and .NET stay: they're shared system components other software " +
+            "can use.)\n\nUninstall?",
+            "Uninstall TOA - Fan Control",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+
+        if (r == MessageBoxResult.Yes) Uninstaller.Run();
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => ApplyTitleBarColors();
+
+    private void ApplyTitleBarColors()
+    {
+        if (!_titleBarReady) return;
+        TitleBarColor.Apply(
+            this,
+            caption: ResColor("Panel"),
+            text: ResColor("Text"),
+            border: ResColor("PanelEdge"));
     }
 
     // ---- game mode ----------------------------------------------------------

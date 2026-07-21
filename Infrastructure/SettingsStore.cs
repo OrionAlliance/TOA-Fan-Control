@@ -19,6 +19,9 @@ public sealed class FanSettings
     /// </summary>
     public double OverlayLeft { get; set; } = double.NaN;
     public double OverlayTop { get; set; } = double.NaN;
+
+    /// <summary>"Dark" or "Light" - the chrome palette picked in Settings.</summary>
+    public string Theme { get; set; } = "Dark";
 }
 
 public static class SettingsStore
@@ -26,6 +29,11 @@ public static class SettingsStore
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
+        // OverlayLeft/Top are NaN until the overlay is first placed, and
+        // System.Text.Json rejects NaN by default - which made BOTH save and load
+        // throw (caught + logged, so it just looked like settings never stuck).
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling
+            .AllowNamedFloatingPointLiterals,
     };
 
     public static FanSettings Load()

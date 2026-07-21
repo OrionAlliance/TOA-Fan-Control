@@ -26,6 +26,9 @@ public partial class App : Application
 
         FanSettings settings = SettingsStore.Load();
 
+        // Theme before any window exists, so even the first-run dialog matches.
+        ThemeManager.Apply(settings.Theme);
+
         // PawnIO is REQUIRED - without it the app can't see or drive a single fan.
         // So it's mandatory, not optional: if it's missing and the user declines to
         // install it, there's nothing for the app to do, and it closes.

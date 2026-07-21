@@ -3,12 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
 
-        <!-- Dark chrome -->
+        <!-- Chrome palette. These are the DARK defaults; ThemeManager overwrites
+             every one of them at runtime (dark or light), and all references below
+             are DynamicResource so the swap is live. The gauges/fan tiles draw
+             their own dark faces in code and are deliberately not themed. -->
         <SolidColorBrush x:Key="Bg"        Color="#12141A" />
         <SolidColorBrush x:Key="Panel"     Color="#1A1D26" />
         <SolidColorBrush x:Key="PanelEdge" Color="#2A2F3D" />
-        <!-- Both pure white on purpose (user call, 2026-07-20): the muted grey
-             "dim" tier was hard to read. Hierarchy comes from font size instead. -->
+        <!-- Text and TextDim identical on purpose (user call, 2026-07-20): the
+             muted grey tier was hard to read. Hierarchy comes from font size. -->
         <SolidColorBrush x:Key="Text"      Color="#FFFFFF" />
         <SolidColorBrush x:Key="TextDim"   Color="#FFFFFF" />
         <SolidColorBrush x:Key="Accent"    Color="#4C8DFF" />
@@ -17,67 +20,6 @@
         <SolidColorBrush x:Key="Cool" Color="#3FB950" />
         <SolidColorBrush x:Key="Warm" Color="#D29922" />
         <SolidColorBrush x:Key="Hot"  Color="#F85149" />
-
-        <!-- Deliberately does NOT set Foreground.
-
-             An implicit TextBlock style reaches inside control templates -
-             including a ToolTip's popup, which is light - so a global
-             "everything is near-white" setter paints that text white-on-white.
-             Worse, a local override on the element does NOT win: implicit
-             styles for template-generated elements resolve against
-             Application.Resources, not the element's own resources.
-
-             So text colour is inherited from the Window instead. Inheritance is
-             overridable at any level; an implicit style setter isn't. -->
-        <Style TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe UI" />
-        </Style>
-
-        <!-- Explicit colours, not inherited ones. A ToolTip's content sits in a popup
-             but still inherits Foreground down the logical tree from the Window - which
-             is near-white here. Left alone, tooltips render white on a light default
-             background and disappear, exactly like the ComboBox did. -->
-        <Style TargetType="ToolTip">
-            <Setter Property="Background" Value="{StaticResource Panel}" />
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
-            <Setter Property="BorderBrush" Value="{StaticResource PanelEdge}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="9,6" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-
-        <!-- Raised panel, lit from above so it agrees with the gauges.
-             The face lightens toward the top; the 1px border runs from a bright
-             highlight on the top edge to near-black on the bottom, which is what
-             actually reads as a bevel.
-
-             No DropShadowEffect on purpose: an Effect renders the border AND its
-             whole subtree through an intermediate surface, which disables ClearType
-             and softens every label inside the card. A shadow isn't worth blurring
-             all the text. -->
-        <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#232834" Offset="0" />
-                        <GradientStop Color="#1A1D26" Offset="0.5" />
-                        <GradientStop Color="#15181F" Offset="1" />
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="BorderBrush">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#454E63" Offset="0" />
-                        <GradientStop Color="#2A2F3D" Offset="0.5" />
-                        <GradientStop Color="#0E1116" Offset="1" />
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="14,12" />
-        </Style>
 
         <!-- Title bar face: same recipe as a card, but only bevelled along the
              bottom edge - it's the top of the window, so there's no light coming
@@ -88,58 +30,18 @@
             <GradientStop Color="#141720" Offset="1" />
         </LinearGradientBrush>
 
-        <!-- Caption buttons: flat until hovered, so they don't compete with the
-             raised cards below. Segoe MDL2 Assets is the system glyph font - the
-             same shapes Windows' own buttons use. -->
-        <Style x:Key="CaptionButton" TargetType="Button">
-            <Setter Property="Width" Value="46" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="Cursor" Value="Arrow" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="b" Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#333B4D" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#454E63" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- Card face + bevel edge, named so the theme can swap them. -->
+        <LinearGradientBrush x:Key="CardFace" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#232834" Offset="0" />
+            <GradientStop Color="#1A1D26" Offset="0.5" />
+            <GradientStop Color="#15181F" Offset="1" />
+        </LinearGradientBrush>
 
-        <Style x:Key="CaptionClose" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="b" Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <!-- Red on hover, like every other Windows close button. -->
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#C42B1C" />
-                                <Setter Property="Foreground" Value="White" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#8E1F14" />
-                                <Setter Property="Foreground" Value="White" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <LinearGradientBrush x:Key="CardEdge" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#454E63" Offset="0" />
+            <GradientStop Color="#2A2F3D" Offset="0.5" />
+            <GradientStop Color="#0E1116" Offset="1" />
+        </LinearGradientBrush>
 
         <!-- Raised keycap, same light source as the cards and gauges. Pressing it
              flips the gradient so the button reads as pushed in. -->
@@ -163,10 +65,108 @@
             <GradientStop Color="#11141B" Offset="1" />
         </LinearGradientBrush>
 
+        <!-- Caption-button hover/press faces (flat, they sit in the title bar). -->
+        <SolidColorBrush x:Key="CapBtnHover"   Color="#333B4D" />
+        <SolidColorBrush x:Key="CapBtnPressed" Color="#454E63" />
+
+        <!-- Deliberately does NOT set Foreground.
+
+             An implicit TextBlock style reaches inside control templates -
+             including a ToolTip's popup, which is light - so a global
+             "everything is near-white" setter paints that text white-on-white.
+             Worse, a local override on the element does NOT win: implicit
+             styles for template-generated elements resolve against
+             Application.Resources, not the element's own resources.
+
+             So text colour is inherited from the Window instead. Inheritance is
+             overridable at any level; an implicit style setter isn't. -->
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+        </Style>
+
+        <!-- Explicit colours, not inherited ones. A ToolTip's content sits in a popup
+             but still inherits Foreground down the logical tree from the Window - which
+             is near-white here. Left alone, tooltips render white on a light default
+             background and disappear, exactly like the ComboBox did. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="{DynamicResource Panel}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelEdge}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="9,6" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <!-- Raised panel, lit from above so it agrees with the gauges.
+             No DropShadowEffect on purpose: an Effect renders the border AND its
+             whole subtree through an intermediate surface, which disables ClearType
+             and softens every label inside the card. -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardFace}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardEdge}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,12" />
+        </Style>
+
+        <!-- Caption buttons: flat until hovered, so they don't compete with the
+             raised cards below. Segoe MDL2 Assets is the system glyph font - the
+             same shapes Windows' own buttons use. -->
+        <Style x:Key="CaptionButton" TargetType="Button">
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource CapBtnHover}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource CapBtnPressed}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CaptionClose" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Red on hover, like every other Windows close button.
+                                 Semantic - stays red in both themes. -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#C42B1C" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#8E1F14" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource BtnFace}" />
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BtnEdge}" />
+            <Setter Property="Background" Value="{DynamicResource BtnFace}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BtnEdge}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="6,7" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -182,15 +182,61 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="{StaticResource BtnFaceHover}" />
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BtnFaceHover}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="{StaticResource BtnFacePressed}" />
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BtnFacePressed}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- The settings menu (cog button). Default WPF menus are light-on-light
+             system chrome; these keep it on the app's palette in both themes. -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="{DynamicResource Panel}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelEdge}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1" CornerRadius="6" Padding="4">
+                            <StackPanel IsItemsHost="True" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="b" Background="Transparent" CornerRadius="4" Padding="10,7">
+                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BtnFaceHover}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Separator">
+            <Setter Property="Background" Value="{DynamicResource PanelEdge}" />
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="6,4" />
         </Style>
 
     </Application.Resources>

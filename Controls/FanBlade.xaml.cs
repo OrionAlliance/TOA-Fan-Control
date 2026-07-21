@@ -290,17 +290,19 @@ public partial class FanBlade : UserControl
         HubLayer.Children.Add(_hubText);
     }
 
-    /// <summary>Fan name, on one line under the frame.</summary>
+    /// <summary>Fan name, on one line under the frame. Unlike everything else in
+    /// this control it sits on the CARD, not the dark fan housing - so it follows
+    /// the theme's text colour instead of being hardcoded white.</summary>
     private void DrawLabel()
     {
         var lab = new TextBlock
         {
             Text = Label,
-            Foreground = B("#FFFFFF"),
             FontSize = 11,
             TextAlignment = TextAlignment.Center,
             Width = ActualWidth,
         };
+        lab.SetResourceReference(TextBlock.ForegroundProperty, "Text");
         Canvas.SetLeft(lab, 0);
         Canvas.SetTop(lab, ActualHeight - LabelBand + 4);
         FrameLayer.Children.Add(lab);

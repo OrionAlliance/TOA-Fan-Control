@@ -1,4 +1,4 @@
-<Window x:Class="FanControlApp.PawnIoSetupWindow"
+﻿<Window x:Class="FanControlApp.PawnIoSetupWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TOA - Fan Control · Setup"
@@ -6,8 +6,8 @@
         Width="480" SizeToContent="Height"
         WindowStyle="None"
         ResizeMode="NoResize"
-        Background="{StaticResource Bg}"
-        Foreground="{StaticResource Text}"
+        Background="{DynamicResource Bg}"
+        Foreground="{DynamicResource Text}"
         FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen">
 
@@ -16,25 +16,25 @@
             <StackPanel>
                 <TextBlock x:Name="HeaderText" Text="One-time setup" FontSize="18" FontWeight="SemiBold" />
 
-                <TextBlock x:Name="BodyText" Margin="0,12,0,0" FontSize="13" Foreground="{StaticResource Text}"
+                <TextBlock x:Name="BodyText" Margin="0,12,0,0" FontSize="13" Foreground="{DynamicResource Text}"
                            TextWrapping="Wrap"
                            Text="To read this PC's temperatures and fans, TOA - Fan Control needs a small hardware-access driver called PawnIO. It isn't installed on this machine yet." />
 
-                <TextBlock x:Name="SubText" Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource TextDim}"
+                <TextBlock x:Name="SubText" Margin="0,10,0,0" FontSize="12" Foreground="{DynamicResource TextDim}"
                            TextWrapping="Wrap"
                            Text="PawnIO is the signed, safe driver that modern hardware tools (FanControl, etc.) use. The app will download it straight from its author's official release and check its signature before running it. Nothing is installed without your OK." />
 
                 <TextBlock x:Name="StatusText" Margin="0,16,0,0" FontSize="12"
-                           Foreground="{StaticResource Accent}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Accent}" TextWrapping="Wrap"
                            Visibility="Collapsed" />
 
                 <ProgressBar x:Name="Progress" Height="4" Margin="0,10,0,0"
                              IsIndeterminate="True" Visibility="Collapsed"
-                             Background="#242938" Foreground="{StaticResource Accent}"
+                             Background="#242938" Foreground="{DynamicResource Accent}"
                              BorderThickness="0" />
 
                 <TextBlock x:Name="HintText" Margin="0,20,0,0" FontSize="11"
-                           Foreground="{StaticResource TextDim}"
+                           Foreground="{DynamicResource TextDim}"
                            TextWrapping="Wrap" TextAlignment="Center"
                            Text="PawnIO is required - without it the app can't read or drive any fans, so it will close." />
 
