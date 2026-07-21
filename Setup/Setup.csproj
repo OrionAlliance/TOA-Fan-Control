@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,12 +6,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <!-- WinForms is enabled ONLY for FolderBrowserDialog (the Browse… button). -->
+    <!-- WinForms is enabled ONLY for FolderBrowserDialog (the Browseâ€¦ button). -->
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>TOA - Fan Control Setup</AssemblyName>
     <RootNamespace>FanControlSetup</RootNamespace>
-    <Version>1.8.0</Version>
+    <Version>1.8.1</Version>
     <ApplicationIcon>..\Icon.ico</ApplicationIcon>
 
     <!-- We write our own Main (Program.cs) so there's no App.xaml to maintain. -->

@@ -42,6 +42,13 @@ public partial class App : Application
         DebugLog.Write(new string('=', 60));
         DebugLog.Write("TOA - Fan Control starting.");
 
+        // Startup shows dialogs BEFORE the main window exists (first-run PawnIO,
+        // the fan picker). Under the default OnLastWindowClose rule, closing one
+        // of those queues an app shutdown that later executes even though the
+        // main window opened - the app silently died ~15s after first run.
+        // So: nothing shuts us down implicitly until the real window is up.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
         FanSettings settings = SettingsStore.Load();
 
         // Theme before any window exists, so even the first-run dialog matches.
@@ -127,7 +134,12 @@ public partial class App : Application
         Controller.AttachWatchdog(link);
         Controller.BeginControl();
 
-        new MainWindow().Show();
+        var main = new MainWindow();
+        MainWindow = main;
+        main.Show();
+
+        // From here the real window governs the app's life: closing it exits.
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         // Quietly check both prerequisites for newer versions - at launch and then
         // every 24 hours, since this app can sit in the tray for weeks. Never blocks
