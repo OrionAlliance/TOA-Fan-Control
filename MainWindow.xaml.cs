@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private GameModeWindow? _overlay;
     private System.Windows.Forms.NotifyIcon? _tray;
     private bool _titleBarReady;
+    private bool _conflictNotified;
 
     // A spinning fan tile per running fan, created the first time that fan is seen
     // spinning and kept after (latched, so a momentary dip doesn't make it vanish).
@@ -129,6 +130,22 @@ public partial class MainWindow : Window
         {
             string hot = r.SourceTemp is { } t ? $"{t:F0}°C" : "--";
             _tray.Text = $"TOA - Fan Control  ·  {hot}  ·  fans {r.OutputPercent:F0}%";
+        }
+
+        // One balloon per conflict episode: the app is holding control, but the
+        // real fix is turning fan control off in the other program.
+        if (r.Conflict && !_conflictNotified && _tray != null)
+        {
+            _conflictNotified = true;
+            _tray.ShowBalloonTip(8000, "TOA - Fan Control",
+                "Another program is also changing your fan speeds - holding your speeds " +
+                "steady. For a real fix, turn off fan control in that app (RGB suites " +
+                "like SignalRGB often switch it on after updates).",
+                System.Windows.Forms.ToolTipIcon.Warning);
+        }
+        else if (!r.Conflict)
+        {
+            _conflictNotified = false;
         }
 
         UpdateFanGauges(r);

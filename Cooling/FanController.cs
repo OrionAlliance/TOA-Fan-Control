@@ -21,6 +21,9 @@ public sealed class FanReadings
     /// <summary>The watchdog died mid-session; a clean exit can no longer restore the BIOS curve.</summary>
     public bool SentinelLost { get; init; }
 
+    /// <summary>Another program is writing fan speeds too; we're out-writing it.</summary>
+    public bool Conflict { get; init; }
+
     public string Status { get; init; } = "";
     public IReadOnlyList<FanChannel> Fans { get; init; } = Array.Empty<FanChannel>();
 
@@ -46,6 +49,11 @@ public sealed class FanController : IDisposable
 {
     private const double TickMs = 1000;
 
+    // When another program is fighting us for the fan registers, tick 4x as fast
+    // so our value is re-asserted within 250ms of any foreign write - holding
+    // control by persistence, since the Super I/O has no concept of ownership.
+    private const double ConflictTickMs = 250;
+
     // The one hard rule, and it is NOT a setting. 30% is the floor for every fan,
     // always: below it Chassis Fan #2 stalls to 0 RPM (measured), and a stalled
     // fan means no airflow. Making it a constant means no config edit or bug can
@@ -56,14 +64,22 @@ public sealed class FanController : IDisposable
 
     // Ramp up eagerly, coast down gently. Fast down-ramps are what make fan
     // control audibly "pulse", and being slow to quieten costs nothing.
-    private const float SlewUpPerTick = 8f;
-    private const float SlewDownPerTick = 3f;
+    // Per SECOND, not per tick - the tick rate changes during a conflict, and
+    // faster ticks must not mean faster ramps.
+    private const float SlewUpPerSec = 8f;
+    private const float SlewDownPerSec = 3f;
 
     private const int MaxBlindTicks = 3;
 
-    // A line every 5s. Thermals move slowly, so this is plenty to tune from, and
-    // it's ~200 lines for a 20-minute session - nothing next to the 2MB roll.
-    private const int SampleEveryTicks = 5;
+    // Conflict detection: the chip reporting a duty that differs from what we
+    // last commanded means someone else wrote it. Tolerance covers the chip's
+    // 0-255 PWM quantization; N consecutive misses avoids one-off flukes.
+    private const float ForeignWriteTolerance = 2.5f;
+    private const int ForeignTicksToConfirm = 3;
+    private const int ConflictClearSeconds = 30;
+
+    // A SAMPLE line every 5s (time-based - tick rate varies during conflicts).
+    private const int SampleEverySeconds = 5;
 
     private readonly object _gate = new();
     private readonly HardwareMonitor _hw = new();
@@ -78,6 +94,12 @@ public sealed class FanController : IDisposable
     private bool _paused;
     private int _blindTicks;
     private bool _disposed;
+
+    // Foreign-writer (SignalRGB & friends) tracking.
+    private int _foreignTicks;
+    private bool _conflict;
+    private DateTime _lastForeignWrite = DateTime.MinValue;
+    private DateTime _lastSampleLog = DateTime.MinValue;
 
     // Session telemetry. Without this the log records that the app ran and
     // nothing about what it did - useless for tuning, which is the whole reason
@@ -358,6 +380,12 @@ public sealed class FanController : IDisposable
             return;
         }
 
+        // Before this tick's write: is the chip still holding what WE wrote last
+        // tick? If not, another program (RGB suites often ship fan control and
+        // enable it in updates) is writing too. Answer: out-write it - tick 4x
+        // faster so our value is re-asserted within 250ms of every foreign write.
+        DetectForeignWriter(controlled);
+
         // fan % = temperature, floored so no fan stalls and capped at full.
         float desired = Math.Clamp(temp, FloorPercent, CeilingPercent);
         _currentPercent = Slew(_currentPercent, desired);
@@ -369,13 +397,59 @@ public sealed class FanController : IDisposable
 
         string hotter = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
         string status = $"Matching {hotter} {temp:F0}°C -> Fans: {_currentPercent:F0}%";
+        if (_conflict)
+            status += "   ·   another app is fighting for the fans - holding control";
 
         TrackPeaks(cpu, gpu, controlled);
 
-        if (++_tickCount % SampleEveryTicks == 0)
+        _tickCount++;
+        if ((DateTime.Now - _lastSampleLog).TotalSeconds >= SampleEverySeconds)
+        {
+            _lastSampleLog = DateTime.Now;
             LogSample(cpu, gpu, temp, controlled);
+        }
 
         Publish(cpu, gpu, temp, controlled, status: status);
+    }
+
+    /// <summary>
+    /// Compare the chip's reported duty against what we last commanded. A
+    /// persistent mismatch (while we're engaged) means a foreign writer; enter
+    /// conflict mode - 4x tick rate - until it's been quiet for 30 seconds.
+    /// </summary>
+    private void DetectForeignWriter(List<FanChannel> controlled)
+    {
+        if (!_engaged) return; // nothing of ours on the chip yet to compare against
+
+        bool foreign = controlled.Any(f =>
+            f.Percent is { } p && Math.Abs(p - _currentPercent) > ForeignWriteTolerance);
+
+        if (foreign)
+        {
+            _lastForeignWrite = DateTime.Now;
+            _foreignTicks++;
+
+            if (!_conflict && _foreignTicks >= ForeignTicksToConfirm)
+            {
+                _conflict = true;
+                _timer.Interval = ConflictTickMs;
+                DebugLog.Write(
+                    "!! Another program is writing fan speeds over ours (chip readback " +
+                    "disagrees with our command). Holding control at 4x re-assert rate. " +
+                    "RGB suites (SignalRGB, iCUE, ...) often enable fan control in updates.");
+            }
+        }
+        else
+        {
+            _foreignTicks = 0;
+
+            if (_conflict && (DateTime.Now - _lastForeignWrite).TotalSeconds > ConflictClearSeconds)
+            {
+                _conflict = false;
+                _timer.Interval = TickMs;
+                DebugLog.Write("Foreign fan writes stopped - back to the normal tick rate.");
+            }
+        }
     }
 
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
@@ -412,11 +486,17 @@ public sealed class FanController : IDisposable
             $"cpu={_peakCpu:F1}C gpu={_peakGpu:F1}C maxOut={_peakOut:F0}% {rpm}");
     }
 
-    private static float Slew(float current, float desired)
+    private float Slew(float current, float desired)
     {
+        // Scale by the live tick interval, so conflict mode's faster ticks keep
+        // the same %/second ramp rates instead of quadrupling them.
+        float dt = (float)(_timer.Interval / 1000.0);
+        float up = SlewUpPerSec * dt;
+        float down = SlewDownPerSec * dt;
+
         float delta = desired - current;
-        if (delta > SlewUpPerTick) delta = SlewUpPerTick;
-        if (delta < -SlewDownPerTick) delta = -SlewDownPerTick;
+        if (delta > up) delta = up;
+        if (delta < -down) delta = -down;
         return current + delta;
     }
 
@@ -432,6 +512,7 @@ public sealed class FanController : IDisposable
             Engaged = _engaged,
             NoControllableFans = noFans,
             SentinelLost = _sentinelLost,
+            Conflict = _conflict,
             Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,
             Fans = _hw.Fans,
             DrivenFans = ControlledFanNames,
