@@ -14,7 +14,7 @@ namespace FanControlApp;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private const int FansPerRow = 3;
+    private const int FansPerRow = 4;
 
     // Fan tile footprint. Smaller than the 200x195 temp dials - the fan graphic
     // shrinks to fit, but the % and label keep the control's minimum readable sizes
