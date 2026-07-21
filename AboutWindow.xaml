@@ -17,25 +17,46 @@
             <StackPanel>
                 <TextBlock x:Name="TitleLine" Text="TOA - Fan Control" FontSize="18" FontWeight="SemiBold" />
 
-                <TextBlock Margin="0,14,0,0" FontSize="12.5" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Text}"
-                           Text="The app works by adjusting ONLY your PC case fans to follow your hottest item. Either your CPU or your GPU. Every second, the app reads the CPU and GPU temperatures and sets every case fan to match the hotter of the two, one-to-one: 70°C means 70% fan speed." />
+                <!-- What-it-does, in the same accent callout as the privacy box. -->
+                <Border Margin="0,14,0,0" Padding="12,10" CornerRadius="6"
+                        BorderThickness="1" BorderBrush="{DynamicResource Accent}"
+                        Background="Transparent">
+                    <StackPanel>
+                        <TextBlock Text="What it does." FontSize="12.5" FontWeight="SemiBold" />
 
-                <TextBlock Margin="0,10,0,0" FontSize="12.5" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Text}"
-                           Text="A hard 30% floor means no case fan ever stalls and changes are rate-limited so fans glide to the needed speed instead of jerking up or down in RPM." />
+                        <TextBlock Margin="0,6,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text}"
+                                   Text="The app works by adjusting ONLY your PC case fans to follow your hottest item. Either your CPU or your GPU. Every second, the app reads the CPU and GPU temperatures and sets every case fan to match the hotter of the two, one-to-one: 70°C means 70% fan speed." />
 
-                <TextBlock Margin="0,10,0,0" FontSize="12.5" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Text}"
-                           Text="Your AIO pumps/CPU coolers and GPU fans are never touched - they stay on your motherboard's BIOS control." />
+                        <TextBlock Margin="0,8,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text}"
+                                   Text="A hard 30% floor means no case fan ever stalls and changes are rate-limited so fans glide to the needed speed instead of jerking up or down in RPM." />
 
-                <TextBlock Margin="0,10,0,0" FontSize="12.5" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Text}"
-                           Text="Closing the app always hands the fans back to the BIOS: a watchdog process guarantees the handoff even if the app is force-killed." />
+                        <TextBlock Margin="0,8,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text}"
+                                   Text="Your AIO pumps/CPU coolers and GPU fans are never touched - they stay on your motherboard's BIOS control." />
 
-                <TextBlock Margin="0,14,0,0" FontSize="12.5" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Text}"
-                           Text="The PawnIO driver (signed, by namazso) provides hardware access, and both PawnIO and .NET are checked for updates automatically - never during a game." />
+                        <TextBlock Margin="0,8,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text}"
+                                   Text="Closing the app always hands the fans back to the BIOS: a watchdog process guarantees the handoff even if the app is force-killed." />
+
+                        <TextBlock Margin="0,8,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text}"
+                                   Text="The PawnIO driver (signed, by namazso) provides hardware access, and both PawnIO and .NET are checked for updates automatically - never during a game." />
+                    </StackPanel>
+                </Border>
+
+                <!-- The privacy promise, in its own callout so it can't be missed. -->
+                <Border Margin="0,14,0,0" Padding="12,10" CornerRadius="6"
+                        BorderThickness="1" BorderBrush="{DynamicResource Accent}"
+                        Background="Transparent">
+                    <StackPanel>
+                        <TextBlock Text="Your data stays yours." FontSize="12.5" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,6,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text}"
+                                   Text="This app collects NOTHING and transmits NOTHING: no telemetry, no analytics, no accounts, no personal data - there isn't even a server to send anything to. Temperatures and fan speeds are read from your hardware, shown on screen, and written only to a local log file next to the app. The app's only internet use is checking for updates (PawnIO from its author's GitHub, .NET from Microsoft and the app itself from GitHub), and those requests send nothing about you or your PC." />
+                    </StackPanel>
+                </Border>
 
                 <Border Height="1" Background="{DynamicResource PanelEdge}" Margin="0,16,0,0" />
 
