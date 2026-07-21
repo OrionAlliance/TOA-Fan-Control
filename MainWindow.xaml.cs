@@ -128,7 +128,7 @@ public partial class MainWindow : Window
         if (_tray != null)
         {
             string hot = r.SourceTemp is { } t ? $"{t:F0}°C" : "--";
-            _tray.Text = $"TOA Fan Control  ·  {hot}  ·  fans {r.OutputPercent:F0}%";
+            _tray.Text = $"TOA - Fan Control  ·  {hot}  ·  fans {r.OutputPercent:F0}%";
         }
 
         UpdateFanGauges(r);
