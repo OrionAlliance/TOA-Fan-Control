@@ -91,16 +91,48 @@ public partial class App : Application
 
         new MainWindow().Show();
 
-        // Once the app is up, quietly check both prerequisites for newer versions.
-        // Never blocks startup; offline just no-ops. Each found update gets its own
-        // popup - Yes installs it, No leaves it alone. .NET is checked here because
+        // Quietly check both prerequisites for newer versions - at launch and then
+        // every 24 hours, since this app can sit in the tray for weeks. Never blocks
+        // startup; offline just no-ops. Each found update gets its own popup - Yes
+        // installs it, No leaves it alone. .NET is checked by the app itself because
         // Windows Update only services .NET when "Receive updates for other
         // Microsoft products" is on - and nobody's PC can be trusted to have it on.
-        _ = CheckForUpdatesAsync();
+        //
+        // The 15-minute timer is the retry heartbeat: when a check comes due while
+        // something fullscreen is up (game, video, presentation) or Game Mode is on,
+        // the popup would steal focus - so it waits and retries until the screen is
+        // clear, then checks.
+        _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
+        _updateTimer.Tick += async (_, _) => await MaybeCheckForUpdatesAsync();
+        _updateTimer.Start();
+        _ = MaybeCheckForUpdatesAsync(); // first check now, not in 15 minutes
     }
+
+    private DispatcherTimer? _updateTimer;
+    private DateTime _nextUpdateCheck = DateTime.Now; // due immediately at launch
+
+    private async Task MaybeCheckForUpdatesAsync()
+    {
+        if (DateTime.Now < _nextUpdateCheck) return;
+
+        // Mid-game is the wrong moment for a popup. Hold off; the timer retries.
+        if (!ScreenState.PopupsSafe() || GameModeActive())
+        {
+            DebugLog.Write("Update check due, but the screen is busy (fullscreen/Game Mode) - waiting.");
+            return;
+        }
+
+        _nextUpdateCheck = DateTime.Now.AddHours(24);
+        await CheckForUpdatesAsync();
+    }
+
+    private static bool GameModeActive() =>
+        Current.Windows.OfType<GameModeWindow>().Any(w => w.IsVisible);
 
     private static async Task CheckForUpdatesAsync()
     {
+        DebugLog.Write("Checking PawnIO and .NET for updates.");
+
         try
         {
             PawnIoSetup.UpdateInfo? pawnIo = await PawnIoSetup.CheckForUpdateAsync();
