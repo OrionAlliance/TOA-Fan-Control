@@ -17,6 +17,11 @@ public partial class PawnIoSetupWindow : Window
     /// <summary>The installer asked for a reboot to finish.</summary>
     public bool RebootRequired { get; private set; }
 
+    // What the Install/Update button actually runs. PawnIO by default; the .NET
+    // update reuses this same window with its own installer plugged in.
+    private Func<IProgress<string>, Task<PawnIoSetup.InstallResult>> _installer =
+        PawnIoSetup.DownloadVerifyInstallAsync;
+
     public PawnIoSetupWindow()
     {
         InitializeComponent();
@@ -40,6 +45,26 @@ public partial class PawnIoSetupWindow : Window
         HintText.Text = "You can keep using the current version if you'd rather not.";
     }
 
+    /// <summary>.NET-update variant: same window, Microsoft's runtime installer.</summary>
+    public PawnIoSetupWindow(DotNetUpdate.UpdateInfo update)
+    {
+        InitializeComponent();
+        _installer = DotNetUpdate.InstallAsync;
+
+        Title = "TOA - Fan Control · Update";
+        HeaderText.Text = ".NET update available";
+        BodyText.Text =
+            $"A newer version of .NET 10 is available. Microsoft ships security and " +
+            $"performance fixes this way.\n\n" +
+            $"Installed:  {update.Installed}\nLatest:  {update.Latest}";
+        SubText.Text =
+            "The app will download it straight from Microsoft and check its signature " +
+            "before running it. Nothing changes without your OK.";
+        InstallButton.Content = "Update .NET";
+        LaterButton.Content = "Not now";
+        HintText.Text = "The update takes effect the next time the app starts.";
+    }
+
     private async void OnInstallClick(object sender, RoutedEventArgs e)
     {
         InstallButton.IsEnabled = false;
@@ -48,7 +73,7 @@ public partial class PawnIoSetupWindow : Window
         Progress.Visibility = Visibility.Visible;
 
         var progress = new Progress<string>(s => StatusText.Text = s);
-        PawnIoSetup.InstallResult result = await PawnIoSetup.DownloadVerifyInstallAsync(progress);
+        PawnIoSetup.InstallResult result = await _installer(progress);
 
         Progress.Visibility = Visibility.Collapsed;
         StatusText.Text = result.Message;

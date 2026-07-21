@@ -26,6 +26,7 @@
     <!-- Reuse the app's already-verified PawnIO installer and its logging deps,
          so the driver is installed exactly the same trusted way in both places. -->
     <Compile Include="..\Cooling\PawnIoSetup.cs" Link="Shared\PawnIoSetup.cs" />
+    <Compile Include="..\Infrastructure\DotNetUpdate.cs" Link="Shared\DotNetUpdate.cs" />
     <Compile Include="..\Infrastructure\DebugLog.cs" Link="Shared\DebugLog.cs" />
     <Compile Include="..\Infrastructure\AppPaths.cs" Link="Shared\AppPaths.cs" />
   </ItemGroup>

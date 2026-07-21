@@ -34,9 +34,9 @@ public partial class SetupWindow : Window
 
             // ---- .NET 10 (required) ----
             SetStatus("Checking for .NET 10…");
-            if (!DotNetRuntime.IsInstalled())
+            if (!DotNetUpdate.IsInstalled())
             {
-                DotNetRuntime.Result r = await DotNetRuntime.InstallAsync(progress);
+                PawnIoSetup.InstallResult r = await DotNetUpdate.InstallAsync(progress);
                 if (!r.Success) { Fail(r.Message); return; }
                 _rebootNeeded |= r.RebootRequired;
             }

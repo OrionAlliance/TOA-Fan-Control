@@ -91,25 +91,42 @@ public partial class App : Application
 
         new MainWindow().Show();
 
-        // Once the app is up, quietly ask GitHub whether PawnIO has a newer version.
-        // Never blocks startup; offline just no-ops. If there's one, a popup offers
-        // it - Yes updates, No leaves it alone.
-        _ = CheckPawnIoUpdateAsync();
+        // Once the app is up, quietly check both prerequisites for newer versions.
+        // Never blocks startup; offline just no-ops. Each found update gets its own
+        // popup - Yes installs it, No leaves it alone. .NET is checked here because
+        // Windows Update only services .NET when "Receive updates for other
+        // Microsoft products" is on - and nobody's PC can be trusted to have it on.
+        _ = CheckForUpdatesAsync();
     }
 
-    private static async Task CheckPawnIoUpdateAsync()
+    private static async Task CheckForUpdatesAsync()
     {
         try
         {
-            PawnIoSetup.UpdateInfo? update = await PawnIoSetup.CheckForUpdateAsync();
-            if (update == null) return;
-
-            DebugLog.Write($"PawnIO update available: {update.Installed} -> {update.Latest}.");
-            new PawnIoSetupWindow(update).ShowDialog();
+            PawnIoSetup.UpdateInfo? pawnIo = await PawnIoSetup.CheckForUpdateAsync();
+            if (pawnIo != null)
+            {
+                DebugLog.Write($"PawnIO update available: {pawnIo.Installed} -> {pawnIo.Latest}.");
+                new PawnIoSetupWindow(pawnIo).ShowDialog();
+            }
         }
         catch (Exception ex)
         {
             DebugLog.Write("PawnIO update check failed.", ex);
+        }
+
+        try
+        {
+            DotNetUpdate.UpdateInfo? dotnet = await DotNetUpdate.CheckForUpdateAsync();
+            if (dotnet != null)
+            {
+                DebugLog.Write($".NET update available: {dotnet.Installed} -> {dotnet.Latest}.");
+                new PawnIoSetupWindow(dotnet).ShowDialog();
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write(".NET update check failed.", ex);
         }
     }
 
