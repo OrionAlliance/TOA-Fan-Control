@@ -7,8 +7,10 @@
         <SolidColorBrush x:Key="Bg"        Color="#12141A" />
         <SolidColorBrush x:Key="Panel"     Color="#1A1D26" />
         <SolidColorBrush x:Key="PanelEdge" Color="#2A2F3D" />
-        <SolidColorBrush x:Key="Text"      Color="#E6E9F0" />
-        <SolidColorBrush x:Key="TextDim"   Color="#8A92A6" />
+        <!-- Both pure white on purpose (user call, 2026-07-20): the muted grey
+             "dim" tier was hard to read. Hierarchy comes from font size instead. -->
+        <SolidColorBrush x:Key="Text"      Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TextDim"   Color="#FFFFFF" />
         <SolidColorBrush x:Key="Accent"    Color="#4C8DFF" />
 
         <!-- Semantic temperature colours: fixed, never themed -->

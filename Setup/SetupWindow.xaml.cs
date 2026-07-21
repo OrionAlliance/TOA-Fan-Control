@@ -97,7 +97,7 @@ public partial class SetupWindow : Window
 
     private void SetStatus(string text)
     {
-        StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xC2, 0xCA, 0xD9));
+        StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
         StatusText.Text = text;
     }
 

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -288,7 +288,7 @@ public partial class Gauge : UserControl
         if (MajorTick <= 0) return;
 
         Brush tick = B("#9AA3B8");
-        Brush num = B("#E6E9F0");
+        Brush num = B("#FFFFFF");
         double minor = MajorTick / 2;
 
         for (double v = Minimum; v <= Maximum + 0.0001; v += minor)
@@ -365,7 +365,7 @@ public partial class Gauge : UserControl
 
         _valueText = new TextBlock
         {
-            Foreground = B("#E6E9F0"),
+            Foreground = B("#FFFFFF"),
             FontSize = size,
             FontWeight = FontWeights.SemiBold,
             TextAlignment = TextAlignment.Center,
@@ -383,7 +383,7 @@ public partial class Gauge : UserControl
         var lab = new TextBlock
         {
             Text = Label,
-            Foreground = B("#8A92A6"),
+            Foreground = B("#FFFFFF"),
             FontSize = 10,
             TextAlignment = TextAlignment.Center,
             Width = _r * 1.6,
@@ -526,10 +526,10 @@ public partial class Gauge : UserControl
               (string.IsNullOrEmpty(Unit) ? "" : " " + Unit)
             : "--";
 
-        _valueText.Foreground = !has ? B("#8A92A6")
+        _valueText.Foreground = !has ? B("#FFFFFF")
             : !double.IsNaN(RedFrom) && v >= RedFrom ? B("#F85149")
             : !double.IsNaN(GreenTo) && v <= GreenTo ? B("#3FB950")
-            : B("#E6E9F0");
+            : B("#FFFFFF");
 
         // Animate rather than snap - a needle that jumps once a second reads as
         // broken; one that sweeps reads as a gauge.

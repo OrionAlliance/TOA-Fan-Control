@@ -71,7 +71,7 @@
                  a faint empty square at this size. -->
             <Button x:Name="RestoreButton" Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
                     Content="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                    Foreground="#C2CAD9" Padding="0"
+                    Foreground="#FFFFFF" Padding="0"
                     Width="28" Height="28" VerticalAlignment="Center"
                     Click="OnRestoreClick"
                     ToolTip="Back to the full window (or double-click anywhere)" />

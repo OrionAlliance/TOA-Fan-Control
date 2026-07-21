@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -273,7 +273,7 @@ public partial class FanBlade : UserControl
 
         _hubText = new TextBlock
         {
-            Foreground = B("#E6E9F0"),
+            Foreground = B("#FFFFFF"),
             FontSize = Math.Max(13, hubR * 0.56),
             FontWeight = FontWeights.SemiBold,
             TextAlignment = TextAlignment.Center,
@@ -296,7 +296,7 @@ public partial class FanBlade : UserControl
         var lab = new TextBlock
         {
             Text = Label,
-            Foreground = B("#8A92A6"),
+            Foreground = B("#FFFFFF"),
             FontSize = 11,
             TextAlignment = TextAlignment.Center,
             Width = ActualWidth,

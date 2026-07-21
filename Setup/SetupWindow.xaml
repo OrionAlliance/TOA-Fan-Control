@@ -5,14 +5,14 @@
         Icon="Icon.ico"
         Width="480" SizeToContent="Height"
         WindowStyle="None" ResizeMode="NoResize"
-        Background="#0E1116" Foreground="#E6E9F0"
+        Background="#0E1116" Foreground="#FFFFFF"
         FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="Background" Value="#20283A" />
-            <Setter Property="Foreground" Value="#E6E9F0" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
             <Setter Property="BorderBrush" Value="#38425A" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="14,7" />
@@ -45,7 +45,7 @@
                            FontSize="18" FontWeight="SemiBold" />
 
                 <TextBlock x:Name="StatusText" Margin="0,14,0,0" FontSize="13"
-                           Foreground="#C2CAD9" TextWrapping="Wrap"
+                           Foreground="#FFFFFF" TextWrapping="Wrap"
                            Text="Getting things ready…" />
 
                 <ProgressBar x:Name="Progress" Height="4" Margin="0,16,0,0"
