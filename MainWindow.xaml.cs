@@ -211,10 +211,12 @@ public partial class MainWindow : Window
     /// <summary>Rebuilt on every open so each header reflects the current state.</summary>
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
+        // Opens UPWARDS - the cog sits at the bottom edge of the window, so a
+        // downward menu would hang off the app over the desktop.
         var menu = new ContextMenu
         {
             PlacementTarget = SettingsButton,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
         };
 
         menu.Items.Add(Item(
@@ -226,6 +228,7 @@ public partial class MainWindow : Window
             ToggleBios));
 
         menu.Items.Add(new Separator());
+        menu.Items.Add(Item("About", ShowAbout));
         menu.Items.Add(Item("Uninstall…", ConfirmUninstall));
 
         menu.IsOpen = true;
@@ -251,6 +254,8 @@ public partial class MainWindow : Window
         if (_controller.IsPaused) _controller.Resume();
         else _controller.Pause();
     }
+
+    private void ShowAbout() => new AboutWindow { Owner = this }.ShowDialog();
 
     private void ConfirmUninstall()
     {
