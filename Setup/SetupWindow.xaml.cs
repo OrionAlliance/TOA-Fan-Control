@@ -90,8 +90,7 @@ public partial class SetupWindow : Window
             // The desktop is the user's space - that one gets asked about.
             bool desktop = await AskAsync(
                 "Add a desktop shortcut?",
-                "TOA - Fan Control is installed and in your Start menu. Want a " +
-                "desktop shortcut too?",
+                "Want a desktop shortcut too?",
                 "Add it", "No thanks");
 
             if (desktop) AppInstaller.CreateDesktopShortcut();
