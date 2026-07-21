@@ -86,6 +86,7 @@ public partial class SetupWindow : Window
             ShowProgress(true);
             AppInstaller.ExtractApp();
             AppInstaller.CreateStartMenuShortcut();
+            AppInstaller.RegisterInInstalledApps();
 
             // The desktop is the user's space - that one gets asked about.
             bool desktop = await AskAsync(

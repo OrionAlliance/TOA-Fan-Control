@@ -227,6 +227,8 @@ public partial class MainWindow : Window
             _controller.IsPaused ? "Take fans back" : "Hand fans to BIOS",
             ToggleBios));
 
+        menu.Items.Add(Item("Choose fans…", ChooseFans));
+
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("About", ShowAbout));
         menu.Items.Add(Item("Uninstall…", ConfirmUninstall));
@@ -256,6 +258,26 @@ public partial class MainWindow : Window
     }
 
     private void ShowAbout() => new AboutWindow { Owner = this }.ShowDialog();
+
+    /// <summary>
+    /// Re-pick which fans to drive. Applies NEXT launch on purpose: the watchdog
+    /// seized the current set at startup and only it holds their BIOS state - a
+    /// fan added mid-run would be driven unguarded.
+    /// </summary>
+    private void ChooseFans()
+    {
+        var picker = new FanPickerWindow(
+            _controller.CandidateFans, _controller.Settings.SelectedFans, firstRun: false)
+        {
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        picker.ShowDialog();
+
+        if (picker.Selection == null) return; // cancelled
+        _controller.UpdateSettings(s => s.SelectedFans = picker.Selection, reresolve: false);
+        DebugLog.Write("Fan selection changed - applies next launch.");
+    }
 
     private void ConfirmUninstall()
     {

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using FanControlApp.Infrastructure;
+using Microsoft.Win32;
 
 namespace FanControlSetup;
 
@@ -72,6 +73,41 @@ public static class AppInstaller
         {
             // A missing shortcut isn't fatal - the exe is installed and launchable.
             DebugLog.Write("Shortcut creation failed (non-fatal).", ex);
+        }
+    }
+
+    /// <summary>
+    /// Register in Windows' "Installed apps" list, like a proper install. The
+    /// uninstall command runs the app with --uninstall, which shows the same
+    /// confirm-and-remove flow as Settings → Uninstall. The app's uninstaller
+    /// deletes this key again.
+    /// </summary>
+    public static void RegisterInInstalledApps()
+    {
+        try
+        {
+            using RegistryKey key = Registry.LocalMachine.CreateSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" + AppName);
+
+            string version = FileVersionInfo.GetVersionInfo(InstalledExe).FileVersion ?? "1.0.0";
+            long sizeKb = new FileInfo(InstalledExe).Length / 1024;
+
+            key.SetValue("DisplayName", AppName);
+            key.SetValue("DisplayVersion", version);
+            key.SetValue("Publisher", "TOA");
+            key.SetValue("InstallLocation", InstallDir);
+            key.SetValue("DisplayIcon", InstalledExe);
+            key.SetValue("UninstallString", $"\"{InstalledExe}\" --uninstall");
+            key.SetValue("NoModify", 1, RegistryValueKind.DWord);
+            key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+            key.SetValue("EstimatedSize", (int)sizeKb, RegistryValueKind.DWord);
+
+            DebugLog.Write($"Registered in Installed apps (v{version}).");
+        }
+        catch (Exception ex)
+        {
+            // Registration is cosmetic - a failure must not fail the install.
+            DebugLog.Write("Installed-apps registration failed (non-fatal).", ex);
         }
     }
 

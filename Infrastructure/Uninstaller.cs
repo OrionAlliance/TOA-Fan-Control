@@ -20,6 +20,7 @@ public static class Uninstaller
         DebugLog.Write("UNINSTALL requested - removing shortcuts, scheduling folder removal.");
 
         DeleteShortcuts();
+        DeleteInstalledAppsEntry();
         ScheduleFolderRemoval();
 
         // Normal shutdown: controller disposes, watchdog restores the BIOS curve
@@ -64,6 +65,22 @@ public static class Uninstaller
             {
                 DebugLog.Write($"Couldn't remove shortcut '{lnk}'.", ex);
             }
+        }
+    }
+
+    /// <summary>Remove the entry the installer put in Windows' "Installed apps".</summary>
+    private static void DeleteInstalledAppsEntry()
+    {
+        try
+        {
+            Microsoft.Win32.Registry.LocalMachine.DeleteSubKeyTree(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\TOA - Fan Control",
+                throwOnMissingSubKey: false);
+            DebugLog.Write("Installed-apps entry removed.");
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("Couldn't remove the Installed-apps entry.", ex);
         }
     }
 

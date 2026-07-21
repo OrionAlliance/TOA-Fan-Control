@@ -72,6 +72,7 @@ public sealed class FanController : IDisposable
     private FanSettings _settings;
     private WatchdogLink? _link;
     private List<FanChannel> _controlled = new();
+    private List<FanChannel> _candidates = new();
     private float _currentPercent = FloorPercent;
     private bool _engaged;
     private bool _paused;
@@ -105,6 +106,16 @@ public sealed class FanController : IDisposable
     public IReadOnlyList<string> ControlledFanNames
     {
         get { lock (_gate) return _controlled.Select(f => f.Name).ToList(); }
+    }
+
+    /// <summary>
+    /// Every fan the app COULD drive (controllable, passes the pump/CPU/GPU name
+    /// rule), with a current RPM to help a person identify it - what the fan
+    /// picker lists, regardless of what's currently selected.
+    /// </summary>
+    public IReadOnlyList<(string Name, float? Rpm)> CandidateFans
+    {
+        get { lock (_gate) return _candidates.Select(f => (f.Name, f.Rpm)).ToList(); }
     }
 
     public FanController(FanSettings settings)
@@ -156,7 +167,7 @@ public sealed class FanController : IDisposable
     {
         lock (_gate)
         {
-            _controlled = new List<FanChannel>();
+            _candidates = new List<FanChannel>();
             var skipped = new List<string>();
 
             foreach (FanChannel f in _hw.Fans)
@@ -170,23 +181,39 @@ public sealed class FanController : IDisposable
                     continue;
                 }
 
-                _controlled.Add(f);
+                _candidates.Add(f);
             }
 
+            // The user's picker can only NARROW the safety rule, never widen it:
+            // it filters the candidates, and pump/CPU/GPU names never got that far.
+            // Null = never picked (first run drives all candidates until then).
+            List<string>? picked = _settings.SelectedFans;
+            _controlled = picked == null
+                ? _candidates.ToList()
+                : _candidates.Where(f =>
+                        picked.Contains(f.Name, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+
+            var unchecked_ = _candidates.Except(_controlled).Select(f => f.Name).ToList();
             DebugLog.Write(
                 $"Driving: [{string.Join(", ", _controlled.Select(f => f.Name))}]  " +
-                $"(left on BIOS: [{string.Join(", ", skipped)}])");
+                $"(left on BIOS: [{string.Join(", ", skipped)}]" +
+                (unchecked_.Count > 0 ? $", unchecked by user: [{string.Join(", ", unchecked_)}]" : "") +
+                ")");
         }
     }
 
-    public void UpdateSettings(Action<FanSettings> mutate)
+    /// <param name="reresolve">False = save only, don't touch the driven set. Used
+    /// when a fan-selection change must wait for the next launch: the watchdog
+    /// guards the set it seized at startup, and only that set.</param>
+    public void UpdateSettings(Action<FanSettings> mutate, bool reresolve = true)
     {
         lock (_gate)
         {
             mutate(_settings);
             SettingsStore.Save(_settings);
         }
-        ResolveControlledFans();
+        if (reresolve) ResolveControlledFans();
     }
 
     // ---- pause / resume -----------------------------------------------------

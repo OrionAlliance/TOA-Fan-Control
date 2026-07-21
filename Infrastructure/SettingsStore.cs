@@ -22,6 +22,14 @@ public sealed class FanSettings
 
     /// <summary>"Dark" or "Light" - the chrome palette picked in Settings.</summary>
     public string Theme { get; set; } = "Dark";
+
+    /// <summary>
+    /// The fans the user confirmed the app may drive (Settings → Choose fans, or
+    /// the first-run picker). Null = never picked yet, which triggers the picker.
+    /// Only ever narrows the built-in safety rule - fans named like pumps/CPU/GPU
+    /// coolers are excluded before this list is even consulted.
+    /// </summary>
+    public List<string>? SelectedFans { get; set; }
 }
 
 public static class SettingsStore

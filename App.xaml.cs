@@ -21,6 +21,24 @@ public partial class App : Application
             return;
         }
 
+        // Windows' "Installed apps" Uninstall button runs us with --uninstall.
+        // Same confirm-and-remove flow as Settings → Uninstall, no controller.
+        if (e.Args.Contains("--uninstall"))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            MessageBoxResult r = MessageBox.Show(
+                "This will remove TOA - Fan Control from this PC - the app, its " +
+                "settings, its log, and its shortcuts.\n\n(PawnIO and .NET stay: " +
+                "they're shared system components other software can use.)\n\nUninstall?",
+                "Uninstall TOA - Fan Control",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+
+            if (r == MessageBoxResult.Yes) Uninstaller.Run();
+            else Shutdown();
+            return;
+        }
+
         DebugLog.Write(new string('=', 60));
         DebugLog.Write("TOA - Fan Control starting.");
 
@@ -80,6 +98,23 @@ public partial class App : Application
                 "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
             return;
+        }
+
+        // First run: let the person confirm which case fans the app may drive.
+        // Exists for boards that name every header "Fan #N", where a liquid-cooler
+        // pump is indistinguishable from a case fan - only the builder knows.
+        // Must happen BEFORE the watchdog, so it guards exactly the chosen set.
+        if (settings.SelectedFans == null && Controller.CandidateFans.Count > 0)
+        {
+            DebugLog.Write("No fan selection saved - showing the first-run fan picker.");
+            var picker = new FanPickerWindow(Controller.CandidateFans, null, firstRun: true);
+            picker.ShowDialog();
+
+            // Closing the window without saving counts as "keep them all" - the
+            // default is every candidate, same as before the picker existed.
+            List<string> chosen = picker.Selection
+                ?? Controller.CandidateFans.Select(f => f.Name).ToList();
+            Controller.UpdateSettings(s => s.SelectedFans = chosen);
         }
 
         // The watchdog must take the fans BEFORE we write to any of them: whoever
