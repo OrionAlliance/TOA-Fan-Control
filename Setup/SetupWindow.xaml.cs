@@ -71,13 +71,25 @@ public partial class SetupWindow : Window
             SetStatus("Installing TOA - Fan Control…");
             ShowProgress(true);
             AppInstaller.ExtractApp();
-            AppInstaller.CreateShortcut();
+
+            // Their Start menu, their call. (A true "pin to Start" tile is user-only
+            // territory - Windows gives installers no API for it, on purpose.)
+            bool addShortcut = await AskAsync(
+                "Add a Start menu shortcut?",
+                "Want TOA - Fan Control in your Start menu? That's the everyday way " +
+                "to launch it.",
+                "Add shortcut", "Skip");
+
+            if (addShortcut) { ShowProgress(true); AppInstaller.CreateShortcut(); }
+            else DebugLog.Write("Start menu shortcut skipped by user.");
 
             // ---- done ----
             if (_rebootNeeded)
             {
-                ShowClose("Installed. Restart your PC to finish, then open TOA - Fan Control " +
-                          "from the Start menu.");
+                ShowClose(addShortcut
+                    ? "Installed. Restart your PC to finish, then open TOA - Fan Control " +
+                      "from the Start menu."
+                    : "Installed. Restart your PC to finish, then run:\n" + AppInstaller.InstalledExe);
                 return;
             }
 
@@ -147,24 +159,24 @@ public partial class SetupWindow : Window
         Buttons.Visibility = Visibility.Visible;
     }
 
-    private void OnPrimaryClick(object sender, RoutedEventArgs e)
-    {
-        if (_choice != null)
-        {
-            HideButtons();
-            _choice.TrySetResult(true);
-        }
-        else Close();
-    }
+    private void OnPrimaryClick(object sender, RoutedEventArgs e) => Answer(true);
 
-    private void OnSecondaryClick(object sender, RoutedEventArgs e)
+    private void OnSecondaryClick(object sender, RoutedEventArgs e) => Answer(false);
+
+    private void Answer(bool yes)
     {
-        if (_choice != null)
+        // Grab the pending question BEFORE HideButtons clears it - answering
+        // through the field after that was a guaranteed null-reference crash.
+        TaskCompletionSource<bool>? choice = _choice;
+
+        if (choice == null)
         {
-            HideButtons();
-            _choice.TrySetResult(false);
+            Close(); // no question pending - the button is a plain Close
+            return;
         }
-        else Close();
+
+        HideButtons();
+        choice.TrySetResult(yes);
     }
 
     private void HideButtons()
