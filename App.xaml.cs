@@ -9,6 +9,13 @@ public partial class App : Application
 {
     public static FanController Controller { get; private set; } = null!;
 
+    // Held for the app's whole life. Two instances would both drive the fans -
+    // and worse, the second one's watchdog captures the FIRST instance's software
+    // state as "BIOS", so whichever exits last parks the fans there until reboot.
+    // Proven live in the 2026-07-21 failure-mode audit.
+    private const string InstanceMutexName = @"Global\TOA.FanControl.Instance";
+    private System.Threading.Mutex? _instanceMutex;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -27,6 +34,22 @@ public partial class App : Application
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+            // A running instance holds the exe lock, so the folder removal would
+            // half-fail. Ask for a clean exit first - that also releases the fans.
+            if (System.Threading.Mutex.TryOpenExisting(InstanceMutexName,
+                    out System.Threading.Mutex? running))
+            {
+                running.Dispose();
+                MessageBox.Show(
+                    "TOA - Fan Control is currently running.\n\nExit it first " +
+                    "(right-click the fan icon in the system tray → Exit), then run " +
+                    "Uninstall again.",
+                    "Uninstall TOA - Fan Control",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                Shutdown();
+                return;
+            }
+
             MessageBoxResult r = MessageBox.Show(
                 "This will remove TOA - Fan Control from this PC - the app, its " +
                 "settings, its log, and its shortcuts.\n\n(PawnIO and .NET stay: " +
@@ -36,6 +59,21 @@ public partial class App : Application
 
             if (r == MessageBoxResult.Yes) Uninstaller.Run();
             else Shutdown();
+            return;
+        }
+
+        // One instance only. The tray icon is easy to miss - a second double-click
+        // should point at it, not spawn a rival controller.
+        _instanceMutex = new System.Threading.Mutex(
+            true, InstanceMutexName, out bool createdNew);
+        if (!createdNew)
+        {
+            DebugLog.Write("Second instance blocked - the app is already running.");
+            MessageBox.Show(
+                "TOA - Fan Control is already running - check the system tray " +
+                "(double-click the fan icon to open it).",
+                "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown();
             return;
         }
 
