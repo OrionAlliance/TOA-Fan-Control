@@ -6,16 +6,25 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- WinForms is enabled ONLY for FolderBrowserDialog (the Browse… button). -->
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>TOA - Fan Control Setup</AssemblyName>
     <RootNamespace>FanControlSetup</RootNamespace>
-    <Version>1.5.2</Version>
+    <Version>1.6.0</Version>
     <ApplicationIcon>..\Icon.ico</ApplicationIcon>
 
     <!-- We write our own Main (Program.cs) so there's no App.xaml to maintain. -->
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <StartupObject>FanControlSetup.Program</StartupObject>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Drop WinForms' global usings so WPF types (Application, MessageBox, Button)
+         stay unambiguous; FolderBrowserDialog is fully qualified at its one use. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- The window icon must be embedded as a resource to resolve at runtime. -->

@@ -16,9 +16,16 @@ public static class AppInstaller
     public const string AppName = "TOA - Fan Control";
     private const string ExeName = "TOA - Fan Control.exe";
 
-    public static string InstallDir { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Programs", AppName);
+    /// <summary>
+    /// A visible, obvious folder - not AppData, where nobody can find anything.
+    /// The user picks the actual location at install time; this is the suggestion.
+    /// Settings and the debug log live next to the exe, so this one folder IS the
+    /// whole app - same portable convention as every other TOA app.
+    /// </summary>
+    public const string DefaultInstallDir = @"C:\TOA - Fan Control";
+
+    /// <summary>Where the app goes - set from the location popup before extracting.</summary>
+    public static string InstallDir { get; set; } = DefaultInstallDir;
 
     public static string InstalledExe => Path.Combine(InstallDir, ExeName);
 

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using FanControlApp.Cooling;
@@ -67,6 +68,19 @@ public partial class SetupWindow : Window
             }
             else DebugLog.Write("PawnIO already present.");
 
+            // ---- where should it go? ----
+            // A visible folder the user picked beats AppData every time - one
+            // obvious place that IS the whole app (exe, settings, log together).
+            string? installDir = await AskInstallDirAsync();
+            if (installDir == null)
+            {
+                DebugLog.Write("Install location declined - setup cancelled.");
+                ShowClose("Setup cancelled - the app wasn't installed.");
+                return;
+            }
+            AppInstaller.InstallDir = installDir;
+            DebugLog.Write($"Install location: {installDir}");
+
             // ---- the app ----
             SetStatus("Installing TOA - Fan Control…");
             ShowProgress(true);
@@ -103,6 +117,65 @@ public partial class SetupWindow : Window
             DebugLog.Write("Setup failed.", ex);
             Fail("Something went wrong during setup: " + ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Show the location box (default C:\TOA - Fan Control), let them edit or
+    /// Browse, and create the folder. Re-asks on a bad path; null = they quit.
+    /// </summary>
+    private async Task<string?> AskInstallDirAsync()
+    {
+        PathBox.Text = AppInstaller.DefaultInstallDir;
+        PathRow.Visibility = Visibility.Visible;
+
+        string body = "Pick where TOA - Fan Control should live. Everything the app " +
+                      "uses (settings, debug log) stays in this one folder.";
+
+        while (true)
+        {
+            bool install = await AskAsync("Where should the app go?", body, "Install", "Quit");
+            if (!install)
+            {
+                PathRow.Visibility = Visibility.Collapsed;
+                return null;
+            }
+
+            string path = PathBox.Text.Trim();
+            try
+            {
+                if (!Path.IsPathRooted(path))
+                    throw new InvalidOperationException(@"use a full path, like C:\TOA - Fan Control");
+
+                Directory.CreateDirectory(path);
+                PathRow.Visibility = Visibility.Collapsed;
+                return path;
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write($"Install path '{path}' rejected.", ex);
+                body = $"Can't use that folder ({ex.Message.TrimEnd('.')}). Pick another:";
+            }
+        }
+    }
+
+    private void OnBrowseClick(object sender, RoutedEventArgs e)
+    {
+        using var dlg = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "Pick where TOA - Fan Control should live",
+            UseDescriptionForTitle = true,
+        };
+
+        if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+
+        // If they picked a generic spot (a drive root, an Apps folder), give the
+        // app its own folder inside it rather than dumping files loose.
+        string p = dlg.SelectedPath;
+        if (!string.Equals(Path.GetFileName(p.TrimEnd('\\')), AppInstaller.AppName,
+                StringComparison.OrdinalIgnoreCase))
+            p = Path.Combine(p, AppInstaller.AppName);
+
+        PathBox.Text = p;
     }
 
     // ---- ui helpers ---------------------------------------------------------

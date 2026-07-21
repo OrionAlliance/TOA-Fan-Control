@@ -48,6 +48,16 @@
                            Foreground="#FFFFFF" TextWrapping="Wrap"
                            Text="Getting things ready…" />
 
+                <!-- Install-location picker, shown only for the "where should it go?" step -->
+                <DockPanel x:Name="PathRow" Margin="0,14,0,0" Visibility="Collapsed">
+                    <Button x:Name="BrowseButton" DockPanel.Dock="Right" Content="Browse…"
+                            Margin="8,0,0,0" MinWidth="86" Click="OnBrowseClick" />
+                    <TextBox x:Name="PathBox" Height="32" VerticalContentAlignment="Center"
+                             Background="#0E1116" Foreground="#FFFFFF" CaretBrush="#FFFFFF"
+                             BorderBrush="#38425A" BorderThickness="1" Padding="8,0"
+                             FontSize="13" />
+                </DockPanel>
+
                 <ProgressBar x:Name="Progress" Height="4" Margin="0,16,0,0"
                              IsIndeterminate="True"
                              Background="#242938" Foreground="#4F8CFF" BorderThickness="0" />
