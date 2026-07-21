@@ -42,24 +42,31 @@ public static class AppInstaller
         DebugLog.Write($"App written to {InstalledExe}.");
     }
 
-    /// <summary>Start-menu shortcut. The app's manifest asks for admin, so launching
-    /// it from the shortcut triggers UAC on its own - no special flag needed here.</summary>
-    public static void CreateShortcut()
-    {
-        string startMenu = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Programs), AppName + ".lnk");
+    /// <summary>
+    /// Start-menu shortcut - always created, never asked about. An installed app
+    /// that isn't in the Start menu reads as shady, not minimal. The app's manifest
+    /// asks for admin, so the shortcut triggers UAC on its own - no flag needed.
+    /// </summary>
+    public static void CreateStartMenuShortcut() => WriteShortcut(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.Programs), AppName + ".lnk"));
 
+    /// <summary>Desktop shortcut - the optional one; the installer asks first.</summary>
+    public static void CreateDesktopShortcut() => WriteShortcut(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.Desktop), AppName + ".lnk"));
+
+    private static void WriteShortcut(string lnkPath)
+    {
         try
         {
             dynamic shell = Activator.CreateInstance(
                 Type.GetTypeFromProgID("WScript.Shell")!)!;
-            var link = shell.CreateShortcut(startMenu);
+            var link = shell.CreateShortcut(lnkPath);
             link.TargetPath = InstalledExe;
             link.WorkingDirectory = InstallDir;
             link.IconLocation = InstalledExe + ",0";
             link.Description = "Temperature-driven case-fan control";
             link.Save();
-            DebugLog.Write($"Shortcut created: {startMenu}");
+            DebugLog.Write($"Shortcut created: {lnkPath}");
         }
         catch (Exception ex)
         {

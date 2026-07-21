@@ -85,25 +85,23 @@ public partial class SetupWindow : Window
             SetStatus("Installing TOA - Fan Control…");
             ShowProgress(true);
             AppInstaller.ExtractApp();
+            AppInstaller.CreateStartMenuShortcut();
 
-            // Their Start menu, their call. (A true "pin to Start" tile is user-only
-            // territory - Windows gives installers no API for it, on purpose.)
-            bool addShortcut = await AskAsync(
-                "Add a Start menu shortcut?",
-                "Want TOA - Fan Control in your Start menu? That's the everyday way " +
-                "to launch it.",
-                "Add shortcut", "Skip");
+            // The desktop is the user's space - that one gets asked about.
+            bool desktop = await AskAsync(
+                "Add a desktop shortcut?",
+                "TOA - Fan Control is installed and in your Start menu. Want a " +
+                "desktop shortcut too?",
+                "Add it", "No thanks");
 
-            if (addShortcut) { ShowProgress(true); AppInstaller.CreateShortcut(); }
-            else DebugLog.Write("Start menu shortcut skipped by user.");
+            if (desktop) AppInstaller.CreateDesktopShortcut();
+            else DebugLog.Write("Desktop shortcut skipped by user.");
 
             // ---- done ----
             if (_rebootNeeded)
             {
-                ShowClose(addShortcut
-                    ? "Installed. Restart your PC to finish, then open TOA - Fan Control " +
-                      "from the Start menu."
-                    : "Installed. Restart your PC to finish, then run:\n" + AppInstaller.InstalledExe);
+                ShowClose("Installed. Restart your PC to finish, then open TOA - Fan Control " +
+                          "from the Start menu.");
                 return;
             }
 
