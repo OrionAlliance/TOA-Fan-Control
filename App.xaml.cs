@@ -266,6 +266,20 @@ public partial class App : Application
         {
             DebugLog.Write(".NET update check failed.", ex);
         }
+
+        try
+        {
+            AppUpdate.UpdateInfo? app = await AppUpdate.CheckForUpdateAsync();
+            if (app != null)
+            {
+                DebugLog.Write($"App update available: v{app.Installed} -> v{app.Latest}.");
+                new PawnIoSetupWindow(app).ShowDialog();
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("App update check failed.", ex);
+        }
     }
 
     private void StartAsWatchdog(string[] args)

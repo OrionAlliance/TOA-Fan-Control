@@ -68,6 +68,38 @@ public partial class SetupWindow : Window
             }
             else DebugLog.Write("PawnIO already present.");
 
+            // ---- update mode? ----
+            // --update "<dir>": launched by the app's self-updater, which already
+            // knows where the app lives. No questions - replace in place, refresh
+            // the Start-menu shortcut and the Installed-apps version, relaunch.
+            // The desktop is left exactly as the user has it.
+            string? updateDir = GetUpdateDir();
+            if (updateDir != null)
+            {
+                AppInstaller.InstallDir = updateDir;
+                DebugLog.Write($"Update mode - replacing app in: {updateDir}");
+
+                HeaderText.Text = "Updating TOA - Fan Control";
+                SetStatus("Updating TOA - Fan Control…");
+                ShowProgress(true);
+                AppInstaller.ExtractApp();
+                AppInstaller.CreateStartMenuShortcut();
+                AppInstaller.RegisterInInstalledApps();
+
+                if (_rebootNeeded)
+                {
+                    ShowClose("Updated. Restart your PC to finish, then open TOA - Fan Control " +
+                              "from the Start menu.");
+                    return;
+                }
+
+                SetStatus("Starting TOA - Fan Control…");
+                AppInstaller.Launch();
+                DebugLog.Write("Update complete - app relaunched.");
+                Close();
+                return;
+            }
+
             // ---- where should it go? ----
             // A visible folder the user picked beats AppData every time - one
             // obvious place that IS the whole app (exe, settings, log together).
@@ -115,6 +147,16 @@ public partial class SetupWindow : Window
             DebugLog.Write("Setup failed.", ex);
             Fail("Something went wrong during setup: " + ex.Message);
         }
+    }
+
+    /// <summary>The folder from "--update <dir>", or null when this is a normal install.</summary>
+    private static string? GetUpdateDir()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        int i = Array.IndexOf(args, "--update");
+        return i >= 0 && i + 1 < args.Length && !string.IsNullOrWhiteSpace(args[i + 1])
+            ? args[i + 1]
+            : null;
     }
 
     /// <summary>

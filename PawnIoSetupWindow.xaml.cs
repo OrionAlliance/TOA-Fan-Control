@@ -45,6 +45,26 @@ public partial class PawnIoSetupWindow : Window
         HintText.Text = "You can keep using the current version if you'd rather not.";
     }
 
+    /// <summary>App-update variant: downloads the latest GitHub release installer.</summary>
+    public PawnIoSetupWindow(AppUpdate.UpdateInfo update)
+    {
+        InitializeComponent();
+        _installer = AppUpdate.InstallerFor(update);
+
+        Title = "TOA - Fan Control · Update";
+        HeaderText.Text = "App update available";
+        BodyText.Text =
+            $"A newer version of TOA - Fan Control is available.\n\n" +
+            $"Installed:  v{update.Installed}\nLatest:  v{update.Latest}";
+        SubText.Text =
+            "The update downloads from the app's official GitHub releases. The app " +
+            "will close and the installer finishes the job - your settings and fan " +
+            "selection are kept.";
+        InstallButton.Content = "Update app";
+        LaterButton.Content = "Not now";
+        HintText.Text = "Every past version stays downloadable on GitHub if you ever want to roll back.";
+    }
+
     /// <summary>.NET-update variant: same window, Microsoft's runtime installer.</summary>
     public PawnIoSetupWindow(DotNetUpdate.UpdateInfo update)
     {

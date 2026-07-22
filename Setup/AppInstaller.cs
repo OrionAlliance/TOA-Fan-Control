@@ -30,15 +30,33 @@ public static class AppInstaller
 
     public static string InstalledExe => Path.Combine(InstallDir, ExeName);
 
-    /// <summary>Write the embedded app exe into the install folder.</summary>
+    /// <summary>
+    /// Write the embedded app exe into the install folder. Retries for a while:
+    /// during a self-update the OLD app is still exiting when we start, and its
+    /// exe stays locked until it (and its watchdog) are gone.
+    /// </summary>
     public static void ExtractApp()
     {
         Directory.CreateDirectory(InstallDir);
 
         using Stream? src = Assembly.GetExecutingAssembly().GetManifestResourceStream("app.exe")
             ?? throw new InvalidOperationException("The app payload is missing from this installer.");
-        using FileStream dst = File.Create(InstalledExe);
-        src.CopyTo(dst);
+
+        DateTime deadline = DateTime.Now.AddSeconds(20);
+        while (true)
+        {
+            try
+            {
+                using FileStream dst = File.Create(InstalledExe);
+                src.CopyTo(dst);
+                break;
+            }
+            catch (IOException) when (DateTime.Now < deadline)
+            {
+                System.Threading.Thread.Sleep(500); // old exe still locked - wait it out
+                src.Position = 0;
+            }
+        }
 
         DebugLog.Write($"App written to {InstalledExe}.");
     }

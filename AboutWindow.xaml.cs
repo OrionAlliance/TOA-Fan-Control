@@ -25,5 +25,12 @@ public partial class AboutWindow : Window
         catch (InvalidOperationException) { /* button already released */ }
     }
 
+    private void OnLinkClick(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            e.Uri.AbsoluteUri) { UseShellExecute = true });
+        e.Handled = true;
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 }

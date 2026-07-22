@@ -17,6 +17,13 @@
             <StackPanel>
                 <TextBlock x:Name="TitleLine" Text="TOA - Fan Control" FontSize="18" FontWeight="SemiBold" />
 
+                <TextBlock Margin="0,6,0,0" FontSize="12">
+                    <Run Text="Source code, updates &amp; support: " />
+                    <Hyperlink NavigateUri="https://github.com/OrionAlliance/TOA-Fan-Control"
+                               RequestNavigate="OnLinkClick"
+                               Foreground="{DynamicResource Accent}">github.com/OrionAlliance/TOA-Fan-Control</Hyperlink>
+                </TextBlock>
+
                 <!-- What-it-does, in the same accent callout as the privacy box. -->
                 <Border Margin="0,14,0,0" Padding="12,10" CornerRadius="6"
                         BorderThickness="1" BorderBrush="{DynamicResource Accent}"
