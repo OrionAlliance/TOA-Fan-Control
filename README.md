@@ -1,4 +1,4 @@
-# TOA - Fan Control <img src="https://img.shields.io/github/downloads/OrionAlliance/TOA-Fan-Control/total?style=for-the-badge&logo=github&color=2ea44f" align="right" alt="Total downloads">
+# TOA - Fan Control <a href="https://github.com/OrionAlliance/TOA-Fan-Control/releases"><img src="https://img.shields.io/github/downloads/OrionAlliance/TOA-Fan-Control/total?style=for-the-badge&logo=github&color=2ea44f" align="right" alt="Total downloads"></a>
 
 **Zero-config fan control for Windows. Your case fans follow your hottest component — that's it, that's the app.**
 
