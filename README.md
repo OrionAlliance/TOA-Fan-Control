@@ -10,7 +10,7 @@ Years ago I installed SpeedFan to quiet my PC down. I stared at a wall of tabs, 
 
 I never wanted control over my fans. I wanted an *outcome*: cooler parts, quiet fans, and nothing to configure. Years later I built exactly that.
 
-The first real test was a Diablo IV dungeon that used to push my GPU to 85°C. With this app running the same dungeon — pushing *harder* — it peaked at 75°C, and I never heard the fans do it. Ten degrees cooler, near silent, zero settings touched. That's the whole idea.
+The first real test I put it through was Diablo IV. It would continuously push my GPU to 85°C. With this app running, it peaked at 75°C, and I barely heard the fans at all. Ten degrees cooler, near silent, zero settings touched. That's when I knew I had the right idea.
 
 ## What it does
 
