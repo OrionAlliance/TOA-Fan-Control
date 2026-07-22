@@ -34,6 +34,10 @@ Honestly? There isn't any. It sits in the system tray and does its job. But you 
 
 - **A dashboard** — CPU/GPU temperature dials with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin at the fan's real speed).
 - **Game Mode** — a small always-on-top temps/fans readout for gaming (works over Borderless/Windowed Fullscreen; nothing can draw over true exclusive fullscreen — that's a Windows rule).
+
+  <img src="Docs/images/game-mode-dark.png" width="300" alt="Game Mode overlay — dark theme" /><br/>
+  <img src="Docs/images/game-mode-light.png" width="300" alt="Game Mode overlay — light theme" />
+
 - **Settings (the ⚙ cog)** — dark/light theme, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), About, and a full uninstall.
 - **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily, downloads only official signed installers, verifies their signatures, and never interrupts you mid-game with a popup.
 
