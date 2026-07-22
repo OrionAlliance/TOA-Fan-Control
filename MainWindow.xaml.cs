@@ -246,6 +246,10 @@ public partial class MainWindow : Window
 
         menu.Items.Add(Item("Choose fans…", ChooseFans));
 
+        menu.Items.Add(Item(
+            (StartupTask.IsEnabled() ? "✓  " : "") + "Start with Windows",
+            ToggleStartup));
+
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("About", ShowAbout));
         menu.Items.Add(Item("Uninstall…", ConfirmUninstall));
@@ -275,6 +279,16 @@ public partial class MainWindow : Window
     }
 
     private void ShowAbout() => new AboutWindow { Owner = this }.ShowDialog();
+
+    /// <summary>Register/unregister the logon task. Menu shows fresh state next open.</summary>
+    private void ToggleStartup()
+    {
+        if (StartupTask.IsEnabled()) StartupTask.Disable();
+        else if (!StartupTask.Enable())
+            MessageBox.Show(this,
+                "Couldn't register the startup task. See fan_debug.log.",
+                "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
 
     /// <summary>
     /// Re-pick which fans to drive. Applies NEXT launch on purpose: the watchdog

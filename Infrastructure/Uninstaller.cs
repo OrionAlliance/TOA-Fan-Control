@@ -21,6 +21,7 @@ public static class Uninstaller
 
         DeleteShortcuts();
         DeleteInstalledAppsEntry();
+        StartupTask.Disable(); // remove the start-with-Windows task, if registered
         ScheduleFolderRemoval();
 
         // Normal shutdown: controller disposes, watchdog restores the BIOS curve

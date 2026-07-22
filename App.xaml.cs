@@ -174,7 +174,14 @@ public partial class App : Application
 
         var main = new MainWindow();
         MainWindow = main;
-        main.Show();
+
+        // --minimized: the start-with-Windows task uses this so a boot brings the
+        // app up silently in the tray. The window exists (it owns the tray icon
+        // and all rendering) - it just isn't shown until the tray is clicked.
+        if (e.Args.Contains("--minimized"))
+            DebugLog.Write("Started minimized to the tray (--minimized).");
+        else
+            main.Show();
 
         // From here the real window governs the app's life: closing it exits.
         ShutdownMode = ShutdownMode.OnMainWindowClose;
