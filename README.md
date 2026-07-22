@@ -22,6 +22,15 @@ The app adjusts **only your PC case fans**, making them follow your hottest comp
 
 There are no curves, no profiles, no targets, no tuning. If that's what you want, this isn't your app — [FanControl](https://github.com/Rem0o/FanControl.Releases) is excellent. This app is for everyone who bounced off tools like that and just wants their PC to run cooler and quieter.
 
+## Everyday use
+
+Honestly? There isn't any. It sits in the system tray and does its job. But you get:
+
+- **A dashboard** — CPU/GPU temperature dials with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin at the fan's real speed).
+- **Game Mode** — a small always-on-top temps/fans readout for gaming (works over Borderless/Windowed Fullscreen; nothing can draw over true exclusive fullscreen — that's a Windows rule).
+- **Settings (the ⚙ cog)** — dark/light theme, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), About, and a full uninstall.
+- **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily, downloads only official signed installers, verifies their signatures, and never interrupts you mid-game with a popup.
+
 ## If the app ever fails, your BIOS takes over. Every time.
 
 This is the design promise: **there is no failure that leaves your fans stranded.**
@@ -53,15 +62,6 @@ Windows only, by design. No Linux/SteamOS version is planned — that world alre
 4. First launch shows you the fans it found — uncheck anything that isn't a regular case fan, hit Save, done.
 
 **Rolling back:** every version stays downloadable on the Releases page. If an update ever misbehaves on your hardware, grab the previous installer and run it.
-
-## Everyday use
-
-Honestly? There isn't any. It sits in the system tray and does its job. But you get:
-
-- **A dashboard** — CPU/GPU temperature dials with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin at the fan's real speed).
-- **Game Mode** — a small always-on-top temps/fans readout for gaming (works over Borderless/Windowed Fullscreen; nothing can draw over true exclusive fullscreen — that's a Windows rule).
-- **Settings (the ⚙ cog)** — dark/light theme, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), About, and a full uninstall.
-- **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily, downloads only official signed installers, verifies their signatures, and never interrupts you mid-game with a popup.
 
 ## FAQ
 
