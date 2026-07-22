@@ -44,7 +44,7 @@ There's nothing you *have* to do — it sits in the system tray and does its job
 
   <p align="center"><img src="Docs/images/settings-menu.png" width="220" alt="Settings menu" /></p>
 
-- **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily, downloads only official signed installers, verifies their signatures, and never interrupts you mid-game with a popup.
+- **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily (if you leave your PC on continuously) and at app launch. The app only downloads official signed installers, verifies their signatures and never interrupts you mid-game with a popup.
 
 ## If the app ever fails, your BIOS takes over. Every time.
 
