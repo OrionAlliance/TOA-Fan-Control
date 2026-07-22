@@ -25,6 +25,7 @@ The app adjusts **only your PC case fans**, making them follow your hottest comp
 - A hard **30% floor** means no case fan ever stalls, and changes are **rate-limited** so fans glide to the needed speed instead of jerking up and down.
 - Your **AIO pumps, CPU coolers, and GPU fans are never touched** — they stay on your motherboard's BIOS control (and your GPU driver's), where they belong.
 - On first run, the app shows you the case fans it found and lets you confirm which ones it may drive. Fans it recognizes as pumps or CPU/GPU coolers are never even listed.
+- **No bloatware. Period.** — you get one small app and nothing else. No background services, no launcher, no account to create, no ads, no "companion" software sneaking onto your PC like so many other apps love to do. Its only two requirements — Microsoft's .NET and the PawnIO driver — are official, signed, and installed with your OK.
 
 There are no curves, no profiles, no targets, no tuning. If that's what you want, this isn't your app — [FanControl](https://github.com/Rem0o/FanControl.Releases) is excellent. This app is for everyone who bounced off tools like that and just wants their PC to run cooler and quieter.
 
