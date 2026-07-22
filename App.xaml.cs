@@ -80,6 +80,17 @@ public partial class App : Application
         DebugLog.Write(new string('=', 60));
         DebugLog.Write("TOA - Fan Control starting.");
 
+        // Environment banner - the first thing support needs from any "doesn't
+        // work" report. No personal data: versions and bitness only.
+        Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
+                    ?? new Version(0, 0, 0);
+        DebugLog.Write(
+            $"App v{v.Major}.{v.Minor}.{v.Build}  ·  " +
+            $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription} " +
+            $"({(Environment.Is64BitOperatingSystem ? "64" : "32")}-bit OS, " +
+            $"{(Environment.Is64BitProcess ? "64" : "32")}-bit app)  ·  " +
+            $"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}");
+
         // Startup shows dialogs BEFORE the main window exists (first-run PawnIO,
         // the fan picker). Under the default OnLastWindowClose rule, closing one
         // of those queues an app shutdown that later executes even though the
