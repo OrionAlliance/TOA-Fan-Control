@@ -1,0 +1,95 @@
+# TOA - Fan Control
+
+**Zero-config fan control for Windows. Your case fans follow your hottest component — that's it, that's the app.**
+
+---
+
+## Why this exists
+
+Years ago I installed SpeedFan to quiet my PC down. I stared at a wall of tabs, cryptic sensor names, and settings I didn't understand — and uninstalled it about five minutes later. SpeedFan is long dead now, and its modern successors are genuinely powerful… and still greet you with curve editors, sensor mixes, and homework.
+
+I never wanted control over my fans. I wanted an *outcome*: cooler parts, quiet fans, and nothing to configure. Years later I built exactly that.
+
+The first real test was a Diablo IV dungeon that used to push my GPU to 85°C. With this app running the same dungeon — pushing *harder* — it peaked at 75°C, and I never heard the fans do it. Ten degrees cooler, near silent, zero settings touched. That's the whole idea.
+
+## What it does
+
+The app adjusts **only your PC case fans**, making them follow your hottest component — your CPU or your GPU. Every second it reads both temperatures and sets every case fan to match the hotter of the two, one-to-one: **70°C means 70% fan speed.**
+
+- A hard **30% floor** means no case fan ever stalls, and changes are **rate-limited** so fans glide to the needed speed instead of jerking up and down.
+- Your **AIO pumps, CPU coolers, and GPU fans are never touched** — they stay on your motherboard's BIOS control (and your GPU driver's), where they belong.
+- On first run, the app shows you the case fans it found and lets you confirm which ones it may drive. Fans it recognizes as pumps or CPU/GPU coolers are never even listed.
+
+There are no curves, no profiles, no targets, no tuning. If that's what you want, this isn't your app — [FanControl](https://github.com/Rem0o/FanControl.Releases) is excellent. This app is for everyone who bounced off tools like that and just wants their PC to run cooler and quieter.
+
+## If the app ever fails, your BIOS takes over. Every time.
+
+This is the design promise: **there is no failure that leaves your fans stranded.**
+
+| What happens | Result |
+|---|---|
+| You close the app | Fans back to BIOS control |
+| The app crashes | Fans back to BIOS control |
+| The app is force-killed (Task Manager) | A watchdog process restores BIOS control |
+| Temperature readings vanish | Fans handed to BIOS within 3 seconds |
+| Windows shuts down or you log off | Fans back to BIOS control |
+| You uninstall | Fans back to BIOS control |
+
+Worst case, your PC behaves exactly as it did before you installed this. Every one of those paths has been tested on real hardware.
+
+## Requirements
+
+- **Windows 10 or 11, 64-bit.** That's the only requirement you need to meet yourself.
+- Administrator access — the app asks automatically (required to talk to the motherboard's fan hardware).
+- .NET 10 and the PawnIO driver — **the installer handles both** if they're missing, with your permission.
+
+Windows only, by design. No Linux/SteamOS version is planned — that world already has native tools.
+
+## Installing
+
+1. Download **`TOA - Fan Control Setup.exe`** from the [Releases](../../releases) page.
+2. Run it. **Windows will show a blue "Windows protected your PC" warning** — that's SmartScreen reacting to an unsigned open-source app with no download reputation yet, not a threat detection. Click **More info → Run anyway**. (Don't take my word for what the app does — the entire source code is this repository.)
+3. The installer checks for .NET 10 and PawnIO (installs them if needed, telling you first), asks where you want the app, adds it to your Start menu, and offers a desktop shortcut.
+4. First launch shows you the fans it found — uncheck anything that isn't a regular case fan, hit Save, done.
+
+**Rolling back:** every version stays downloadable on the Releases page. If an update ever misbehaves on your hardware, grab the previous installer and run it.
+
+## Everyday use
+
+Honestly? There isn't any. It sits in the system tray and does its job. But you get:
+
+- **A dashboard** — CPU/GPU temperature dials with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin at the fan's real speed).
+- **Game Mode** — a small always-on-top temps/fans readout for gaming (works over Borderless/Windowed Fullscreen; nothing can draw over true exclusive fullscreen — that's a Windows rule).
+- **Settings (the ⚙ cog)** — dark/light theme, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), About, and a full uninstall.
+- **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily, downloads only official signed installers, verifies their signatures, and never interrupts you mid-game with a popup.
+
+## FAQ
+
+**Won't adjusting fans every second wear them out?**
+No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and 1°C = 1% (~15 RPM — inaudible). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
+
+**Does this touch my RGB lighting?**
+Never. The app writes fan *motor* speeds on the motherboard's fan-control chip. RGB runs on entirely separate hardware (ARGB headers / USB controllers) that this app can't even see. Your light show is untouched.
+
+**I run SignalRGB / iCUE / Armoury Crate — will they fight?**
+Only if that software *also* has fan control enabled (RGB suites sometimes switch it on after updates). If something else starts overwriting fan speeds, this app detects it within seconds, holds your speeds steady by re-asserting them faster than the other program writes, and shows you a notification naming the fix: turn off fan control in the other app. Lighting features are never affected.
+
+**Some sensors don't show on my brand-new hardware.**
+The sensor library is deliberately version-pinned — it never updates behind your back (silent sensor-library updates breaking PCs overnight is a recurring story with other tools). Brand-new chips can lag behind support; when that happens, the app runs read-only and your BIOS keeps running the fans — nothing breaks. Support arrives via a normal, tested release. Open an Issue with your hardware details.
+
+**Why does it need administrator?**
+Fan speed lives on the motherboard's Super I/O chip, which Windows only exposes to elevated processes via a signed kernel driver (PawnIO — the same signed driver modern hardware tools use).
+
+## Your data stays yours
+
+This app collects **nothing** and transmits **nothing**: no telemetry, no analytics, no accounts, no personal data — there isn't even a server to send anything to. Temperatures and fan speeds are read from your hardware, shown on screen, and written only to a local log file next to the app. The app's only internet use is checking for updates (PawnIO from its author's GitHub, .NET from Microsoft, and the app itself from this repository), and those requests send nothing about you or your PC.
+
+## Found a bug?
+
+Open an [Issue](../../issues). Include the `fan_debug.log` file that lives next to the app's exe — it records exactly what the app was doing, and it contains no personal information (temperatures, fan speeds, and app events only — read it yourself first if you like).
+
+---
+
+**© 2026 TOA. All rights reserved.**
+
+This software is provided "as is", without warranty of any kind, express or implied. It controls real hardware — your fans — and while it is designed to always return them to motherboard (BIOS) control and never drive them below a safe floor, you use it at your own risk. TOA is not liable for any damage to hardware, loss of data, or any other damages arising from the use of this software.
