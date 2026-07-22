@@ -38,6 +38,9 @@ Honestly? There isn't any. It sits in the system tray and does its job. But you 
   <img src="Docs/images/game-mode-dark.png" width="300" alt="Game Mode overlay — dark theme" />&nbsp;&nbsp;<img src="Docs/images/game-mode-light.png" width="300" alt="Game Mode overlay — light theme" />
 
 - **Settings (the ⚙ cog)** — dark/light theme, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), About, and a full uninstall.
+
+  <img src="Docs/images/settings-menu.png" width="220" alt="Settings menu" />
+
 - **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily, downloads only official signed installers, verifies their signatures, and never interrupts you mid-game with a popup.
 
 ## If the app ever fails, your BIOS takes over. Every time.
