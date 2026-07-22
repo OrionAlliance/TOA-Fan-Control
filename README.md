@@ -30,7 +30,7 @@ There are no curves, no profiles, no targets, no tuning. If that's what you want
 
 ## Everyday use
 
-Honestly? There isn't any. It sits in the system tray and does its job. But you get:
+There's nothing you *have* to do — it sits in the system tray and does its job on its own. But when you want to check in on things, you get:
 
 - **A dashboard** — CPU/GPU temperature dials with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin at the fan's real speed).
 
