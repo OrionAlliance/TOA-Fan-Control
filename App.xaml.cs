@@ -232,12 +232,26 @@ public partial class App : Application
         await CheckForUpdatesAsync();
     }
 
+    /// <summary>
+    /// Settings → Check for updates: run all three checks right now, skipping the
+    /// daily gate (the user asked, so popups are welcome). Returns true if any
+    /// update was offered - false means "tell them they're current", because a
+    /// manual check that ends in silence reads as broken.
+    /// </summary>
+    public async Task<bool> CheckForUpdatesNowAsync()
+    {
+        DebugLog.Write("Manual update check (Settings).");
+        _nextUpdateCheck = DateTime.Now.AddHours(24); // counts as today's check
+        return await CheckForUpdatesAsync();
+    }
+
     private static bool GameModeActive() =>
         Current.Windows.OfType<GameModeWindow>().Any(w => w.IsVisible);
 
-    private static async Task CheckForUpdatesAsync()
+    private static async Task<bool> CheckForUpdatesAsync()
     {
         DebugLog.Write("Checking PawnIO and .NET for updates.");
+        bool offered = false;
 
         try
         {
@@ -245,6 +259,7 @@ public partial class App : Application
             if (pawnIo != null)
             {
                 DebugLog.Write($"PawnIO update available: {pawnIo.Installed} -> {pawnIo.Latest}.");
+                offered = true;
                 new PawnIoSetupWindow(pawnIo).ShowDialog();
             }
         }
@@ -259,6 +274,7 @@ public partial class App : Application
             if (dotnet != null)
             {
                 DebugLog.Write($".NET update available: {dotnet.Installed} -> {dotnet.Latest}.");
+                offered = true;
                 new PawnIoSetupWindow(dotnet).ShowDialog();
             }
         }
@@ -273,6 +289,7 @@ public partial class App : Application
             if (app != null)
             {
                 DebugLog.Write($"App update available: v{app.Installed} -> v{app.Latest}.");
+                offered = true;
                 new PawnIoSetupWindow(app).ShowDialog();
             }
         }
@@ -280,6 +297,8 @@ public partial class App : Application
         {
             DebugLog.Write("App update check failed.", ex);
         }
+
+        return offered;
     }
 
     private void StartAsWatchdog(string[] args)

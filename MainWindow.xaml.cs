@@ -250,6 +250,8 @@ public partial class MainWindow : Window
             (StartupTask.IsEnabled() ? "✓  " : "") + "Start with Windows",
             ToggleStartup));
 
+        menu.Items.Add(Item("Check for updates", CheckForUpdates));
+
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("About", ShowAbout));
         menu.Items.Add(Item("Uninstall…", ConfirmUninstall));
@@ -279,6 +281,20 @@ public partial class MainWindow : Window
     }
 
     private void ShowAbout() => new AboutWindow { Owner = this }.ShowDialog();
+
+    /// <summary>Manual check. Silence would read as broken, so "current" says so.</summary>
+    private async void CheckForUpdates()
+    {
+        bool offered = await ((App)Application.Current).CheckForUpdatesNowAsync();
+        if (offered) return;
+
+        Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
+                    ?? new Version(0, 0, 0);
+        MessageBox.Show(this,
+            $"You're up to date.\n\nApp v{v.Major}.{v.Minor}.{v.Build}, PawnIO, and " +
+            ".NET are all current.",
+            "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
 
     /// <summary>Register/unregister the logon task. Menu shows fresh state next open.</summary>
     private void ToggleStartup()
