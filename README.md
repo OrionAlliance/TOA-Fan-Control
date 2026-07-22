@@ -107,6 +107,6 @@ Open an [Issue](../../issues). Include the `fan_debug.log` file that lives next 
 
 ---
 
-**© 2026 TOA. All rights reserved.**
+**© 2026 TOA. Released under the [MIT License](LICENSE).**
 
 This software is provided "as is", without warranty of any kind, express or implied. It controls real hardware — your fans — and while it is designed to always return them to motherboard (BIOS) control and never drive them below a safe floor, you use it at your own risk. TOA is not liable for any damage to hardware, loss of data, or any other damages arising from the use of this software.
