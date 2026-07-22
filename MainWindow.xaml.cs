@@ -290,10 +290,8 @@ public partial class MainWindow : Window
 
         Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
                     ?? new Version(0, 0, 0);
-        MessageBox.Show(this,
-            $"You're up to date.\n\nApp v{v.Major}.{v.Minor}.{v.Build}, PawnIO, and " +
-            ".NET are all current.",
-            "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageWindow.Show(this, "You're up to date.",
+            $"App v{v.Major}.{v.Minor}.{v.Build}, PawnIO, and .NET are all current.");
     }
 
     /// <summary>Register/unregister the logon task. Menu shows fresh state next open.</summary>
@@ -301,9 +299,9 @@ public partial class MainWindow : Window
     {
         if (StartupTask.IsEnabled()) StartupTask.Disable();
         else if (!StartupTask.Enable())
-            MessageBox.Show(this,
-                "Couldn't register the startup task. See fan_debug.log.",
-                "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageWindow.Show(this, "Couldn't register the startup task",
+                "Windows refused the scheduled task. Details are in fan_debug.log, " +
+                "next to the app.");
     }
 
     /// <summary>
@@ -328,16 +326,15 @@ public partial class MainWindow : Window
 
     private void ConfirmUninstall()
     {
-        MessageBoxResult r = MessageBox.Show(
-            this,
-            "This will close TOA - Fan Control and remove it from this PC - the app, " +
-            "its settings, its log, and its shortcuts.\n\n" +
+        bool yes = MessageWindow.Confirm(this,
+            "Uninstall TOA - Fan Control?",
+            "This will close the app and remove it from this PC - the app, its " +
+            "settings, its log, and its shortcuts.\n\n" +
             "(PawnIO and .NET stay: they're shared system components other software " +
-            "can use.)\n\nUninstall?",
-            "Uninstall TOA - Fan Control",
-            MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            "can use.)",
+            "Uninstall", "Cancel");
 
-        if (r == MessageBoxResult.Yes) Uninstaller.Run();
+        if (yes) Uninstaller.Run();
     }
 
     private void OnThemeChanged(object? sender, EventArgs e) => ApplyTitleBarColors();

@@ -40,24 +40,21 @@ public partial class App : Application
                     out System.Threading.Mutex? running))
             {
                 running.Dispose();
-                MessageBox.Show(
-                    "TOA - Fan Control is currently running.\n\nExit it first " +
-                    "(right-click the fan icon in the system tray → Exit), then run " +
-                    "Uninstall again.",
-                    "Uninstall TOA - Fan Control",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageWindow.Show(null, "TOA - Fan Control is currently running",
+                    "Exit it first (right-click the fan icon in the system tray → " +
+                    "Exit), then run Uninstall again.");
                 Shutdown();
                 return;
             }
 
-            MessageBoxResult r = MessageBox.Show(
+            bool yes = MessageWindow.Confirm(null,
+                "Uninstall TOA - Fan Control?",
                 "This will remove TOA - Fan Control from this PC - the app, its " +
                 "settings, its log, and its shortcuts.\n\n(PawnIO and .NET stay: " +
-                "they're shared system components other software can use.)\n\nUninstall?",
-                "Uninstall TOA - Fan Control",
-                MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                "they're shared system components other software can use.)",
+                "Uninstall", "Cancel");
 
-            if (r == MessageBoxResult.Yes) Uninstaller.Run();
+            if (yes) Uninstaller.Run();
             else Shutdown();
             return;
         }
@@ -69,10 +66,9 @@ public partial class App : Application
         if (!createdNew)
         {
             DebugLog.Write("Second instance blocked - the app is already running.");
-            MessageBox.Show(
+            MessageWindow.Show(null, "Already running",
                 "TOA - Fan Control is already running - check the system tray " +
-                "(double-click the fan icon to open it).",
-                "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Information);
+                "(double-click the fan icon to open it).");
             Shutdown();
             return;
         }
@@ -121,10 +117,9 @@ public partial class App : Application
 
             if (setup.RebootRequired)
             {
-                MessageBox.Show(
-                    "PawnIO is installed, but Windows needs a reboot to finish loading it.\n\n" +
-                    "Reboot, then open TOA - Fan Control again.",
-                    "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageWindow.Show(null, "One reboot to go",
+                    "PawnIO is installed, but Windows needs a reboot to finish " +
+                    "loading it.\n\nReboot, then open TOA - Fan Control again.");
                 Shutdown();
                 return;
             }
@@ -147,11 +142,9 @@ public partial class App : Application
         catch (Exception ex)
         {
             DebugLog.Write("Controller failed to start.", ex);
-            MessageBox.Show(
-                "Couldn't open the fan hardware.\n\n" +
+            MessageWindow.Show(null, "Couldn't open the fan hardware",
                 "This app needs to run as administrator to reach the motherboard's " +
-                "fan chip.\n\n" + ex.Message,
-                "TOA - Fan Control", MessageBoxButton.OK, MessageBoxImage.Error);
+                "fan chip.\n\n" + ex.Message);
             Shutdown(1);
             return;
         }
