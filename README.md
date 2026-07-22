@@ -49,7 +49,7 @@ Windows only, by design. No Linux/SteamOS version is planned — that world alre
 
 1. Download **`TOA - Fan Control Setup.exe`** from the [Releases](../../releases) page.
 2. Run it. **Windows will show a blue "Windows protected your PC" warning** — that's SmartScreen reacting to an unsigned open-source app with no download reputation yet, not a threat detection. Click **More info → Run anyway**. (Don't take my word for what the app does — the entire source code is this repository.)
-3. The installer checks for .NET 10 and PawnIO (installs them if needed, telling you first), asks where you want the app, adds it to your Start menu, and offers a desktop shortcut.
+3. The installer checks for .NET 10 and PawnIO (installs them if needed, telling you first), asks where you want the app installed (drive letter, etc.), adds it to your Start menu, and offers a desktop shortcut.
 4. First launch shows you the fans it found — uncheck anything that isn't a regular case fan, hit Save, done.
 
 **Rolling back:** every version stays downloadable on the Releases page. If an update ever misbehaves on your hardware, grab the previous installer and run it.
