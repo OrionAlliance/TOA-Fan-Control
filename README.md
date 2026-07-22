@@ -50,14 +50,15 @@ There's nothing you *have* to do — it sits in the system tray and does its job
 
 This is the design promise: **there is no failure that leaves your fans stranded.**
 
-| What happens | Result |
-|---|---|
-| You close the app | Fans back to BIOS control |
-| The app crashes | Fans back to BIOS control |
-| The app is force-killed (Task Manager) | A watchdog process restores BIOS control |
-| Temperature readings vanish | Fans handed to BIOS within 3 seconds |
-| Windows shuts down or you log off | Fans back to BIOS control |
-| You uninstall | Fans back to BIOS control |
+<table align="center">
+  <tr><th>What happens</th><th>Result</th></tr>
+  <tr><td>You close the app</td><td>Fans back to BIOS control</td></tr>
+  <tr><td>The app crashes</td><td>Fans back to BIOS control</td></tr>
+  <tr><td>The app is force-killed (Task Manager)</td><td>A watchdog process restores BIOS control</td></tr>
+  <tr><td>Temperature readings vanish</td><td>Fans handed to BIOS within 3 seconds</td></tr>
+  <tr><td>Windows shuts down or you log off</td><td>Fans back to BIOS control</td></tr>
+  <tr><td>You uninstall</td><td>Fans back to BIOS control</td></tr>
+</table>
 
 Worst case, your PC behaves exactly as it did before you installed this. Every one of those paths has been tested on real hardware.
 
