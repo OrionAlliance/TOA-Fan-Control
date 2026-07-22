@@ -36,7 +36,7 @@ There's nothing you *have* to do — it sits in the system tray and does its job
 
   <p align="center"><img src="Docs/images/dials-dark.png" width="300" alt="Temperature dials — dark theme" />&nbsp;&nbsp;<img src="Docs/images/dials-light.png" width="300" alt="Temperature dials — light theme" /></p>
 
-- **Game Mode** — a small, always-on-top, drag to place any where on your screen, temps/fans readout for gaming (works over Borderless/Windowed Fullscreen; nothing can draw over true exclusive fullscreen — that's a Windows rule).
+- **Game Mode** — a small, always-on-top, drag to place any where on your screen, temps/fans readout for gaming. Works over Borderless/Windowed Fullscreen. Nothing can draw over true exclusive fullscreen. That's a Windows rule.
 
   <p align="center"><img src="Docs/images/game-mode-dark.png" width="300" alt="Game Mode overlay — dark theme" />&nbsp;&nbsp;<img src="Docs/images/game-mode-light.png" width="300" alt="Game Mode overlay — light theme" /></p>
 
