@@ -289,30 +289,31 @@ public partial class Gauge : UserControl
 
         Brush tick = B("#9AA3B8");
         Brush num = B("#FFFFFF");
-        double minor = MajorTick / 2;
 
-        for (double v = Minimum; v <= Maximum + 0.0001; v += minor)
+        // Every NUMBERED value (each 10 on the temp dials) gets the long heavy
+        // marker - a number deserves a real tick. The short faint ticks sit on
+        // the unnumbered midpoints between them (5, 15, 25, ...).
+        double numberedStep = MajorTick / 2;
+        double step = MajorTick / 4;
+
+        for (double v = Minimum; v <= Maximum + 0.0001; v += step)
         {
             double a = AngleFor(v);
-            bool isMajor = Math.Abs(v / MajorTick - Math.Round(v / MajorTick)) < 0.001;
+            bool numbered = Math.Abs(v / numberedStep - Math.Round(v / numberedStep)) < 0.001;
 
-            Point p1 = PointAt(a, TickOuter - (isMajor ? 9 : 5));
+            Point p1 = PointAt(a, TickOuter - (numbered ? 9 : 5));
             Point p2 = PointAt(a, TickOuter);
 
             Face.Children.Add(new Line
             {
                 X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y,
                 Stroke = tick,
-                StrokeThickness = isMajor ? 2 : 1,
-                Opacity = isMajor ? 1 : 0.55,
+                StrokeThickness = numbered ? 2 : 1,
+                Opacity = numbered ? 1 : 0.55,
             });
 
-            // Every tick gets its number - no blank markers. Majors stay longer and
-            // heavier so the scale still has a rhythm to read by.
-            //
-            // This is why the fan dials major on 1000 rather than 500: it puts their
-            // ticks on 0/500/1000/1500/2000, all of which shorten cleanly. Majoring
-            // on 500 would drop minors on 250s and label them "0.3k".
+            if (!numbered) continue; // midpoints are markers only, no label
+
             string text = Maximum >= 1000
                 ? (v / 1000d).ToString("0.#", CultureInfo.InvariantCulture) + "k"
                 : v.ToString("0", CultureInfo.InvariantCulture);
