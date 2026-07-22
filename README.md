@@ -6,7 +6,7 @@
 
 ## Why this exists
 
-Years ago I installed SpeedFan, now Fan Control, to cool my PC down. After installing it, I was overwhelmed with all the options, cryptic sensor names, and settings I didn't understand. After about five or 10 minutes of asking myself, "What is this? What is that?," I uninstalled it. SpeedFan is long dead now, and its modern successors are genuinely powerful… and still greet you with curve editors, sensor mixes, and homework.
+Years ago I installed SpeedFan — the FanControl of its day — to cool my PC down. After installing it, I was overwhelmed with all the options, cryptic sensor names, and settings I didn't understand. After about five or 10 minutes of asking myself, "What is this? What is that?," I uninstalled it. SpeedFan is long dead now, and its spiritual successor, FanControl, is genuinely powerful… and still greets you with curve editors, sensor mixes, and homework.
 
 I never wanted control over my fans. I wanted an *outcome*: cooler parts, quiet fans, and nothing to configure. Years later I built exactly that.
 
