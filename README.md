@@ -4,6 +4,12 @@
 
 ---
 
+<p align="center">
+  <img src="Docs/images/dashboard-dark.png" width="380" alt="TOA - Fan Control — dark theme" />
+  &nbsp;&nbsp;
+  <img src="Docs/images/dashboard-light.png" width="380" alt="TOA - Fan Control — light theme" />
+</p>
+
 ## Why this exists
 
 Years ago I installed SpeedFan — the FanControl of its day — to cool my PC down. After installing it, I was overwhelmed with all the options, cryptic sensor names, and settings I didn't understand. After about five or 10 minutes of asking myself, "What is this? What is that?," I uninstalled it. SpeedFan is long dead now, and its spiritual successor, FanControl, is genuinely powerful… and still greets you with curve editors, sensor mixes, and homework.
