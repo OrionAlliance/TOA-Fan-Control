@@ -33,6 +33,9 @@ There are no curves, no profiles, no targets, no tuning. If that's what you want
 Honestly? There isn't any. It sits in the system tray and does its job. But you get:
 
 - **A dashboard** — CPU/GPU temperature dials with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin at the fan's real speed).
+
+  <img src="Docs/images/dials-dark.png" width="300" alt="Temperature dials — dark theme" />&nbsp;&nbsp;<img src="Docs/images/dials-light.png" width="300" alt="Temperature dials — light theme" />
+
 - **Game Mode** — a small always-on-top temps/fans readout for gaming (works over Borderless/Windowed Fullscreen; nothing can draw over true exclusive fullscreen — that's a Windows rule).
 
   <img src="Docs/images/game-mode-dark.png" width="300" alt="Game Mode overlay — dark theme" />&nbsp;&nbsp;<img src="Docs/images/game-mode-light.png" width="300" alt="Game Mode overlay — light theme" />
