@@ -13,18 +13,9 @@
 
         <Grid x:Name="TrackHost" Grid.Column="0" VerticalAlignment="Center" Height="22">
             <Border x:Name="Track" VerticalAlignment="Stretch"
-                    CornerRadius="5" BorderThickness="1">
-                <Border.BorderBrush>
-                    <SolidColorBrush Color="#323848" />
-                </Border.BorderBrush>
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#0C0E13" Offset="0" />
-                        <GradientStop Color="#191D27" Offset="0.55" />
-                        <GradientStop Color="#232735" Offset="1" />
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
+                    CornerRadius="5" BorderThickness="1"
+                    BorderBrush="{DynamicResource BarTrackEdge}"
+                    Background="{DynamicResource BarTrack}" />
 
             <!-- Fill clipped to the track's rounded inside. -->
             <Border Margin="1" CornerRadius="4" ClipToBounds="True">
@@ -37,10 +28,12 @@
                  see black; past its edge, white. Laid out identically. -->
             <Grid x:Name="TextWhiteLayer">
                 <TextBlock x:Name="LabelTextW" HorizontalAlignment="Left" VerticalAlignment="Center"
-                           Margin="9,0,0,0" FontSize="11.5" FontWeight="Bold" Foreground="White"
+                           Margin="9,0,0,0" FontSize="11.5" FontWeight="Bold"
+                           Foreground="{DynamicResource BarTrackText}"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock x:Name="InBarTextW" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Margin="0,0,9,0" FontSize="10.5" FontWeight="Bold" Foreground="White" />
+                           Margin="0,0,9,0" FontSize="10.5" FontWeight="Bold"
+                           Foreground="{DynamicResource BarTrackText}" />
             </Grid>
 
             <Grid x:Name="TextBlackLayer">

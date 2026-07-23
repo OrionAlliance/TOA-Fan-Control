@@ -48,6 +48,11 @@ public static class ThemeManager
 
             r["CapBtnHover"] = Solid("#333B4D");
             r["CapBtnPressed"] = Solid("#454E63");
+
+            // Bar view: dark machined groove, matching the dials' faces.
+            r["BarTrack"] = Grad(("#0C0E13", 0), ("#191D27", 0.55), ("#232735", 1));
+            r["BarTrackEdge"] = Solid("#323848");
+            r["BarTrackText"] = Solid("#FFFFFF");
         }
         else
         {
@@ -68,6 +73,12 @@ public static class ThemeManager
 
             r["CapBtnHover"] = Solid("#D9DDE5");
             r["CapBtnPressed"] = Solid("#C0C6D1");
+
+            // Bar view: a recessed light groove instead of the dark one - naked
+            // dark tracks on a light card read as holes, not instruments.
+            r["BarTrack"] = Grad(("#C6CBD6", 0), ("#DDE1E8", 0.55), ("#EDEFF4", 1));
+            r["BarTrackEdge"] = Solid("#A9B0BF");
+            r["BarTrackText"] = Solid("#14171F");
         }
 
         DebugLog.Write($"Theme applied: {theme}.");
