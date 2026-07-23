@@ -94,6 +94,9 @@ Never. The app writes fan *motor* speeds on the motherboard's fan-control chip. 
 **I run SignalRGB / iCUE / Armoury Crate — will they fight?**
 Only if that software *also* has fan control enabled (RGB suites sometimes switch it on after updates). If something else starts overwriting fan speeds, this app detects it within seconds, holds your speeds steady by re-asserting them faster than the other program writes, and shows you a notification naming the fix: turn off fan control in the other app. Lighting features are never affected.
 
+**Does it work on laptops?**
+It'll show your temps, but laptop fans are run by the laptop's own embedded controller, which is proprietary per model. The app leaves them alone — the same safety rule that never touches your CPU cooler on a desktop. This app is for desktop case fans.
+
 **Some sensors don't show on my brand-new hardware.**
 The sensor library is deliberately version-pinned — it never updates behind your back (silent sensor-library updates breaking PCs overnight is a recurring story with other tools). Brand-new chips can lag behind support; when that happens, the app runs read-only and your BIOS keeps running the fans — nothing breaks. Support arrives via a normal, tested release. Open an Issue with your hardware details.
 
