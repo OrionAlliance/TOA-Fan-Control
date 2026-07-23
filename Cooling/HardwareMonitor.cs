@@ -88,13 +88,22 @@ public sealed class HardwareMonitor : IDisposable
         Discover();
 
         // Hardware models matter for bug reports (fan control lives on the board's
-        // Super I/O chip) and identify nothing about the person - unlike paths.
+        // Super I/O chip, and its behaviour can shift with a BIOS update) and
+        // identify nothing about the person - unlike paths or serial numbers.
         IHardware? board = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Motherboard);
         string chip = board?.SubHardware.FirstOrDefault(s => s.HardwareType == HardwareType.SuperIO)?.Name ?? "-";
         string cpu = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu)?.Name ?? "-";
         string gpu = _gpuTemp?.Hardware.Name ?? "-";
 
-        DebugLog.Write($"Hardware: board='{board?.Name ?? "-"}' chip='{chip}' cpu='{cpu}' gpu='{gpu}'");
+        string bios = "-";
+        try
+        {
+            LibreHardwareMonitor.Hardware.BiosInformation? b = _computer.SMBios?.Bios;
+            if (b != null) bios = $"{b.Vendor} {b.Version}".Trim();
+        }
+        catch { /* SMBIOS can be unreadable on odd systems - never block startup for a log line */ }
+
+        DebugLog.Write($"Hardware: board='{board?.Name ?? "-"}' bios='{bios}' chip='{chip}' cpu='{cpu}' gpu='{gpu}'");
         DebugLog.Write($"Hardware opened. cpuTemp='{CpuTempName}' gpuTemp='{GpuTempName}' " +
                        $"fans=[{string.Join(", ", Fans.Select(f => $"{f.Name}{(f.CanControl ? "*" : "")}"))}]");
     }

@@ -85,7 +85,8 @@ public partial class App : Application
             $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription} " +
             $"({(Environment.Is64BitOperatingSystem ? "64" : "32")}-bit OS, " +
             $"{(Environment.Is64BitProcess ? "64" : "32")}-bit app)  ·  " +
-            $"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}");
+            $"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}  ·  " +
+            $"PawnIO {PawnIoSetup.GetInstalledVersion()?.ToString() ?? "not installed"}");
 
         // Startup shows dialogs BEFORE the main window exists (first-run PawnIO,
         // the fan picker). Under the default OnLastWindowClose rule, closing one
@@ -134,6 +135,11 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => Controller.Dispose();
         SessionEnding += OnSessionEnding;
+
+        // Sleep/resume visibility. The controller re-writes the fans every tick,
+        // so control re-asserts within a second of waking - these lines are the
+        // timestamps that prove it when a report says "weird after sleep".
+        Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
 
         try
         {
@@ -323,6 +329,14 @@ public partial class App : Application
         Controller.Dispose();
     }
 
+    private void OnPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == Microsoft.Win32.PowerModes.Suspend)
+            DebugLog.Write("System going to sleep.");
+        else if (e.Mode == Microsoft.Win32.PowerModes.Resume)
+            DebugLog.Write("System resumed from sleep - fan control re-asserts on the next tick.");
+    }
+
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         DebugLog.Write("Unhandled UI exception - releasing fans.", e.Exception);
@@ -341,6 +355,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         Controller?.Dispose();
         DebugLog.Write("Exited cleanly.");
         base.OnExit(e);
