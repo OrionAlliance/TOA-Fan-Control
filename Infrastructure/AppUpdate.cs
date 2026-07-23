@@ -86,7 +86,9 @@ public static class AppUpdate
                 await src.CopyToAsync(file);
             }
 
-            DebugLog.Write($"App update downloaded: {temp}");
+            // Filename only - the full temp path contains the Windows username,
+            // and this log ships with bug reports.
+            DebugLog.Write($"App update downloaded: {Path.GetFileName(temp)}");
             progress.Report("Starting the installer - the app will close…");
 
             // --update = silent replace-in-place: no location or shortcut questions,

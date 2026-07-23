@@ -168,7 +168,9 @@ public static class PawnIoSetup
         {
             progress.Report("Downloading the official PawnIO installer…");
             await DownloadAsync(InstallerUrl, temp);
-            DebugLog.Write($"PawnIO installer downloaded to {temp}.");
+            // Filename only - the full temp path contains the Windows username,
+            // and this log ships with bug reports.
+            DebugLog.Write($"PawnIO installer downloaded ({Path.GetFileName(temp)}).");
 
             progress.Report("Verifying its signature…");
             if (!IsTrustedAndSignedBy(temp, ExpectedSigner))
