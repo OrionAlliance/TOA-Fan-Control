@@ -10,6 +10,12 @@
   <img src="Docs/images/dashboard-light.png" width="380" alt="TOA - Fan Control — light theme" />
 </p>
 
+<p align="center">
+  <img src="Docs/images/bars-dark.png" width="380" alt="Bar view — dark theme" />
+  &nbsp;&nbsp;
+  <img src="Docs/images/bars-light.png" width="380" alt="Bar view — light theme" />
+</p>
+
 ## Why this exists
 
 Years ago I installed SpeedFan, the FanControl of its day, to cool my PC down. After installing it, I was overwhelmed with all the options, cryptic sensor names and settings I didn't understand. After about five or 10 minutes of asking myself, "What is this? What is that?," I uninstalled it. SpeedFan has been gone for a while now and its eventual successor, FanControl, is genuinely powerful… but still has the curve editors, sensor mixes and homework, that personally, I don't want.
