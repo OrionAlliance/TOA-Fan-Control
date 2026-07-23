@@ -97,6 +97,9 @@ Only if that software *also* has fan control enabled (RGB suites sometimes switc
 **Does it work on laptops?**
 It'll show your temps, but laptop fans are run by the laptop's own embedded controller, which is proprietary per model. The app leaves them alone — the same safety rule that never touches your CPU cooler on a desktop. This app is for desktop case fans.
 
+**It says "no controllable fans found" on my Dell / HP / Lenovo desktop.**
+Same story as laptops: the big brands often skip the standard fan-control chip and run the fans from their own proprietary controller, which they've tuned at the factory and locked down. The app can't safely talk to those, so it leaves your fans on the manufacturer's control and runs as a temperature dashboard instead. It's happiest on a PC where you (or your builder) picked the motherboard.
+
 **Some sensors don't show on my brand-new hardware.**
 The sensor library is deliberately version-pinned — it never updates behind your back (silent sensor-library updates breaking PCs overnight is a recurring story with other tools). Brand-new chips can lag behind support; when that happens, the app runs read-only and your BIOS keeps running the fans — nothing breaks. Support arrives via a normal, tested release. Open an Issue with your hardware details.
 
