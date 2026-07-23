@@ -64,17 +64,32 @@
                        Text="Case fans follow your hottest item" />
 
             <!-- The dash: CPU + GPU on top, then a dial per running fan (built in
-                 code, 3 across, each row centred). Empty headers never appear. -->
+                 code, 4 across, each row centred). Empty headers never appear.
+                 Bars is the same information as compact sensor-panel rows -
+                 Settings switches between the two, the behaviour never changes. -->
             <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8,12">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C" Width="200" Height="195"
-                                    Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
-                        <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C" Width="200" Height="195"
-                                    Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
+                    <StackPanel x:Name="DialsPanel">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C" Width="200" Height="195"
+                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
+                            <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C" Width="200" Height="195"
+                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="FanRows" Margin="0,4,0,0" />
                     </StackPanel>
 
-                    <StackPanel x:Name="FanRows" Margin="0,4,0,0" />
+                    <StackPanel x:Name="BarsPanel" Visibility="Collapsed" MinWidth="430" Margin="4,6">
+                        <ctrl:StatBar x:Name="CpuBar" Label="CPU" Unit="C"
+                                      GreenTo="70" RedFrom="90" TrackPeak="True" />
+                        <ctrl:StatBar x:Name="GpuBar" Label="GPU" Unit="C"
+                                      GreenTo="70" RedFrom="90" TrackPeak="True" />
+
+                        <Border Height="1" Background="#323848" Margin="6,7" />
+
+                        <StackPanel x:Name="FanBarRows" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

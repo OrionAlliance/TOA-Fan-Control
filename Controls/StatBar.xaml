@@ -1,0 +1,56 @@
+<UserControl x:Class="FanControlApp.Controls.StatBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Height="34">
+    <Grid Margin="6,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="112" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="70" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock x:Name="LabelText" Grid.Column="0" VerticalAlignment="Center"
+                   FontSize="12" TextTrimming="CharacterEllipsis"
+                   Foreground="{DynamicResource Text}" />
+
+        <!-- The track keeps the dashboard's dark machined face in either theme,
+             same as the dials and fan tiles: a car dash is dark in any theme. -->
+        <Grid x:Name="TrackHost" Grid.Column="1" VerticalAlignment="Center" Height="18">
+            <Border x:Name="Track" Height="14" VerticalAlignment="Center"
+                    CornerRadius="4" BorderThickness="1">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#323848" />
+                </Border.BorderBrush>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#0C0E13" Offset="0" />
+                        <GradientStop Color="#191D27" Offset="0.55" />
+                        <GradientStop Color="#232735" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <!-- Fill clipped to the track's rounded inside. -->
+            <Border Height="12" VerticalAlignment="Center" Margin="1,0"
+                    CornerRadius="3" ClipToBounds="True">
+                <Border x:Name="Fill" HorizontalAlignment="Left" CornerRadius="3"
+                        Width="0" />
+            </Border>
+
+            <!-- Secondary reading (a fan's live RPM) tucked into the free end of
+                 the track, where the AIDA-style panels put it. -->
+            <TextBlock x:Name="InBarText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                       Margin="0,0,7,0" FontSize="10.5" Foreground="#9AA3B8" />
+
+            <!-- Peak-this-run marker, the bar version of the dials' yellow tick. -->
+            <Rectangle x:Name="PeakTick" Width="2" Height="18" RadiusX="1" RadiusY="1"
+                       HorizontalAlignment="Left" VerticalAlignment="Center"
+                       Fill="#E3B341" Visibility="Collapsed"
+                       ToolTipService.InitialShowDelay="200" />
+        </Grid>
+
+        <TextBlock x:Name="ValueText" Grid.Column="2" HorizontalAlignment="Right"
+                   VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
+                   Foreground="White" Text="--" />
+    </Grid>
+</UserControl>

@@ -30,7 +30,10 @@ public partial class MainWindow : Window
 
     // A spinning fan tile per running fan, created the first time that fan is seen
     // spinning and kept after (latched, so a momentary dip doesn't make it vanish).
+    // Each fan also gets a bar - both display styles stay live, Settings just
+    // picks which panel is visible.
     private readonly Dictionary<string, FanBlade> _fanGauges = new();
+    private readonly Dictionary<string, StatBar> _fanBars = new();
     private readonly List<string> _shownFans = new();
 
     public MainWindow()
@@ -51,6 +54,8 @@ public partial class MainWindow : Window
         // 90C. Nothing below that is damage.
         CpuGauge.RedFrom = 90;
         GpuGauge.RedFrom = 90;
+
+        ApplyDisplayStyle(_controller.Settings.DisplayStyle);
 
         // We draw the title bar ourselves, so the maximise glyph is kept in step
         // by hand. The DWM call still colours the window's outer border. Re-applied
@@ -120,6 +125,8 @@ public partial class MainWindow : Window
     {
         CpuGauge.Value = r.CpuTemp ?? double.NaN;
         GpuGauge.Value = r.GpuTemp ?? double.NaN;
+        CpuBar.Value = r.CpuTemp ?? double.NaN;
+        GpuBar.Value = r.GpuTemp ?? double.NaN;
 
         TopStatus.Text = $"Case fans follow your hottest item - {r.Status}";
         TopStatus.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
@@ -171,12 +178,16 @@ public partial class MainWindow : Window
                 if (rpm is not (> 0)) continue; // not spinning yet - empty header or stopped
                 FanBlade g = NewFanGauge(name);
                 _fanGauges[name] = g;
+                _fanBars[name] = new StatBar { Label = name, Unit = "%" };
                 _shownFans.Add(name);
                 added = true;
             }
 
             _fanGauges[name].Value = rpm;             // real speed -> how fast it spins
             _fanGauges[name].Percent = r.OutputPercent; // driven duty -> the hub number
+
+            _fanBars[name].Value = r.OutputPercent;
+            _fanBars[name].SecondaryText = rpm is > 0 ? $"{rpm:F0} rpm" : "";
         }
 
         if (added) RebuildFanRows();
@@ -205,6 +216,14 @@ public partial class MainWindow : Window
 
             FanRows.Children.Add(row);
         }
+
+        // The bar list is just vertical - one row per fan, same order.
+        foreach (StatBar b in _fanBars.Values)
+            (b.Parent as Panel)?.Children.Remove(b);
+
+        FanBarRows.Children.Clear();
+        foreach (string name in _shownFans)
+            FanBarRows.Children.Add(_fanBars[name]);
     }
 
     private static FanBlade NewFanGauge(string name) => new()
@@ -220,6 +239,8 @@ public partial class MainWindow : Window
     {
         CpuGauge.ResetPeak();
         GpuGauge.ResetPeak();
+        CpuBar.ResetPeak();
+        GpuBar.ResetPeak();
         _overlay?.ResetPeaks();
     }
 
@@ -239,6 +260,10 @@ public partial class MainWindow : Window
         menu.Items.Add(Item(
             ThemeManager.Current == AppTheme.Dark ? "Switch to light theme" : "Switch to dark theme",
             ToggleTheme));
+
+        menu.Items.Add(Item(
+            BarsPanel.Visibility == Visibility.Visible ? "Switch to dial display" : "Switch to bar display",
+            ToggleDisplayStyle));
 
         menu.Items.Add(Item(
             _controller.IsPaused ? "Take fans back" : "Hand fans to BIOS",
@@ -271,6 +296,28 @@ public partial class MainWindow : Window
         AppTheme next = ThemeManager.Current == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
         ThemeManager.Apply(next);
         _controller.UpdateSettings(s => s.Theme = next.ToString());
+    }
+
+    /// <summary>Dials or bars - same numbers, different dashboard. Saved like the theme.</summary>
+    private void ToggleDisplayStyle()
+    {
+        string next = BarsPanel.Visibility == Visibility.Visible ? "Dials" : "Bars";
+        ApplyDisplayStyle(next);
+        _controller.UpdateSettings(s => s.DisplayStyle = next, reresolve: false);
+    }
+
+    private void ApplyDisplayStyle(string style)
+    {
+        bool bars = string.Equals(style, "Bars", StringComparison.OrdinalIgnoreCase);
+        BarsPanel.Visibility = bars ? Visibility.Visible : Visibility.Collapsed;
+        DialsPanel.Visibility = bars ? Visibility.Collapsed : Visibility.Visible;
+
+        // SizeToContent only recalculates on content changes while Normal; a
+        // maximised window keeps its size either way.
+        if (WindowState == WindowState.Normal)
+        {
+            InvalidateMeasure();
+        }
     }
 
     /// <summary>Pause/resume: hand the fans back to the BIOS, or take them again.</summary>

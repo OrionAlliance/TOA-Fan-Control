@@ -24,6 +24,12 @@ public sealed class FanSettings
     public string Theme { get; set; } = "Dark";
 
     /// <summary>
+    /// "Dials" (car-dash gauges + spinning fan tiles) or "Bars" (compact
+    /// sensor-panel rows). Pure display taste - the fan behaviour is identical.
+    /// </summary>
+    public string DisplayStyle { get; set; } = "Dials";
+
+    /// <summary>
     /// The fans the user confirmed the app may drive (Settings → Choose fans, or
     /// the first-run picker). Null = never picked yet, which triggers the picker.
     /// Only ever narrows the built-in safety rule - fans named like pumps/CPU/GPU
