@@ -33,7 +33,7 @@ public partial class FanPickerWindow : Window
             string rpmText = rpm is { } r and >= 1 ? $"{r:F0} RPM" : "not spinning";
             var box = new CheckBox
             {
-                Content = $"{name}   ·   {rpmText}",
+                Content = $"{Infrastructure.FanName.Display(name)}   ·   {rpmText}",
                 FontSize = 13,
                 Margin = new Thickness(0, 4, 0, 4),
                 IsChecked = checkedNames == null ||

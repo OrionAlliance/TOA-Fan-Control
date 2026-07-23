@@ -178,7 +178,7 @@ public partial class MainWindow : Window
                 if (rpm is not (> 0)) continue; // not spinning yet - empty header or stopped
                 FanBlade g = NewFanGauge(name);
                 _fanGauges[name] = g;
-                _fanBars[name] = new StatBar { Label = name, Unit = "%" };
+                _fanBars[name] = new StatBar { Label = FanName.Display(name), Unit = "%" };
                 _shownFans.Add(name);
                 added = true;
             }
@@ -187,7 +187,6 @@ public partial class MainWindow : Window
             _fanGauges[name].Percent = r.OutputPercent; // driven duty -> the hub number
 
             _fanBars[name].Value = r.OutputPercent;
-            _fanBars[name].SecondaryText = rpm is > 0 ? $"{rpm:F0} rpm" : "";
         }
 
         if (added) RebuildFanRows();
@@ -217,18 +216,50 @@ public partial class MainWindow : Window
             FanRows.Children.Add(row);
         }
 
-        // The bar list is just vertical - one row per fan, same order.
+        // Fan bars pair up side by side, same as the CPU/GPU line above them.
         foreach (StatBar b in _fanBars.Values)
             (b.Parent as Panel)?.Children.Remove(b);
 
         FanBarRows.Children.Clear();
-        foreach (string name in _shownFans)
-            FanBarRows.Children.Add(_fanBars[name]);
+        for (int i = 0; i < _shownFans.Count; i += 2)
+        {
+            var row = new Grid();
+
+            if (i + 1 < _shownFans.Count)
+            {
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                StatBar left = _fanBars[_shownFans[i]];
+                left.Margin = new Thickness(0);
+                Grid.SetColumn(left, 0);
+                row.Children.Add(left);
+
+                StatBar right = _fanBars[_shownFans[i + 1]];
+                right.Margin = new Thickness(8, 0, 0, 0);
+                Grid.SetColumn(right, 1);
+                row.Children.Add(right);
+            }
+            else
+            {
+                // The odd one out keeps the left slot, same as reading order -
+                // centred was tried and looked wrong ("ewww", 2026-07-23).
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                StatBar lone = _fanBars[_shownFans[i]];
+                lone.Margin = new Thickness(0);
+                Grid.SetColumn(lone, 0);
+                row.Children.Add(lone);
+            }
+
+            FanBarRows.Children.Add(row);
+        }
     }
 
     private static FanBlade NewFanGauge(string name) => new()
     {
-        Label = name,
+        Label = FanName.Display(name),
         Width = FanTileW,
         Height = FanTileH,
     };

@@ -6,11 +6,11 @@ using System.Windows.Media.Effects;
 namespace FanControlApp.Controls;
 
 /// <summary>
-/// A horizontal readout bar - the "sensor panel" counterpart to the dials. Same
-/// visual language as <see cref="Gauge"/>: dark machined track, green/red zones
-/// expressed through the fill colour, and a yellow peak-this-run tick. One bar
-/// shows one number; a second, smaller reading (a fan's RPM) can ride inside
-/// the free end of the track.
+/// A horizontal readout bar - the "sensor panel" counterpart to the dials, styled
+/// after the classic AIDA strip displays: every reading lives INSIDE the bar
+/// (name left, value right, a fan's RPM just before the value). Same visual
+/// language as <see cref="Gauge"/>: dark machined track, zone-coloured fill
+/// (green/amber/red for temps, neutral steel for fan %), yellow peak tick.
 /// </summary>
 public partial class StatBar : UserControl
 {
@@ -56,7 +56,7 @@ public partial class StatBar : UserControl
         DependencyProperty.Register(nameof(TrackPeak), typeof(bool), typeof(StatBar),
             new PropertyMetadata(false));
 
-    /// <summary>Name on the left. Long fan names ellipsize with a tooltip.</summary>
+    /// <summary>Name inside the bar's left end. Long fan names ellipsize with a tooltip.</summary>
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
 
     /// <summary>The reading. NaN renders an empty bar and "--".</summary>
@@ -77,8 +77,8 @@ public partial class StatBar : UserControl
     /// <summary>Remember and mark the highest value this run (temps yes, fans no).</summary>
     public bool TrackPeak { get => (bool)GetValue(TrackPeakProperty); set => SetValue(TrackPeakProperty, value); }
 
-    /// <summary>Secondary reading inside the track's free end (a fan's live RPM).</summary>
-    public string SecondaryText { set => InBarText.Text = value; }
+    /// <summary>Secondary reading just before the value (a fan's live RPM).</summary>
+    public string SecondaryText { set { InBarTextW.Text = value; InBarTextB.Text = value; } }
 
     public void ResetPeak()
     {
@@ -90,8 +90,10 @@ public partial class StatBar : UserControl
 
     private void OnLabelChanged()
     {
-        LabelText.Text = Label;
-        LabelText.ToolTip = Label;
+        LabelTextW.Text = Label;
+        LabelTextB.Text = Label;
+        LabelTextW.ToolTip = Label;
+        LabelTextB.ToolTip = Label;
     }
 
     private void UpdateVisual()
@@ -102,16 +104,24 @@ public partial class StatBar : UserControl
         double v = Value;
         bool has = !double.IsNaN(v);
 
-        // The number, coloured exactly like the dials colour theirs: green in the
-        // green zone, red at the redline, white in between (or when zoneless).
+        // The number outside the bar, coloured exactly like the dials colour
+        // theirs: zone colour for temps, the theme's text colour when zoneless.
         string unit = Unit == "%" ? "%" : string.IsNullOrEmpty(Unit) ? "" : $" {Unit}";
         ValueText.Text = has ? $"{v:F0}{unit}" : "--";
-        ValueText.Foreground = ZoneBrush(v, has);
+        if (double.IsNaN(GreenTo) && double.IsNaN(RedFrom))
+            ValueText.SetResourceReference(ForegroundProperty, "Text");
+        else
+            ValueText.Foreground = new SolidColorBrush(ZoneColor(v, has));
 
         double frac = has ? Math.Clamp((v - Minimum) / (Maximum - Minimum), 0, 1) : 0;
         Fill.Width = frac * w;
         Fill.Background = FillBrush(v, has);
-        Fill.Effect = has && frac > 0 ? Glow(((SolidColorBrush)ZoneBrush(v, has)).Color) : null;
+        Fill.Effect = has && frac > 0 ? Glow(ZoneColor(v, has)) : null;
+
+        // Black text exists only over the fill: the black layer is clipped to the
+        // fill's width, and the white layer shows past its edge.
+        TextBlackLayer.Clip = new System.Windows.Media.RectangleGeometry(
+            new Rect(0, 0, Math.Max(0, Fill.Width + 1), TrackHost.ActualHeight));
 
         if (TrackPeak && has && (double.IsNaN(_peak) || v > _peak))
             _peak = v;
@@ -119,24 +129,24 @@ public partial class StatBar : UserControl
         if (TrackPeak && !double.IsNaN(_peak))
         {
             double pf = Math.Clamp((_peak - Minimum) / (Maximum - Minimum), 0, 1);
-            PeakTick.Margin = new Thickness(Math.Max(0, pf * w - 1), 0, 0, 0);
+            PeakTick.Margin = new Thickness(Math.Max(0, pf * w - 1), 1, 0, 1);
             PeakTick.ToolTip = $"Peak this run: {_peak:F0}{unit}";
             PeakTick.Visibility = Visibility.Visible;
         }
     }
 
-    private Brush ZoneBrush(double v, bool has)
+    private Color ZoneColor(double v, bool has)
     {
-        if (!has) return B("#FFFFFF");
-        if (!double.IsNaN(RedFrom) && v >= RedFrom) return B("#F85149");
-        if (!double.IsNaN(GreenTo) && v <= GreenTo) return B("#3FB950");
-        if (!double.IsNaN(GreenTo) || !double.IsNaN(RedFrom)) return B("#E3B341");
-        return B("#AEB6C6"); // zoneless (fan %): neutral steel, same as the needle metal
+        if (!has) return C("#AEB6C6");
+        if (!double.IsNaN(RedFrom) && v >= RedFrom) return C("#F85149");
+        if (!double.IsNaN(GreenTo) && v <= GreenTo) return C("#3FB950");
+        if (!double.IsNaN(GreenTo) || !double.IsNaN(RedFrom)) return C("#E3B341");
+        return C("#AEB6C6"); // zoneless (fan %): neutral steel, same as the needle metal
     }
 
     private Brush FillBrush(double v, bool has)
     {
-        Color c = ((SolidColorBrush)ZoneBrush(v, has)).Color;
+        Color c = ZoneColor(v, has);
         // Lit from the top like everything else on the dash.
         return new LinearGradientBrush(
             Color.FromRgb((byte)Math.Min(255, c.R + 40), (byte)Math.Min(255, c.G + 40), (byte)Math.Min(255, c.B + 40)),
@@ -149,6 +159,5 @@ public partial class StatBar : UserControl
         Color = c, BlurRadius = 8, ShadowDepth = 0, Opacity = 0.45,
     };
 
-    private static SolidColorBrush B(string hex) =>
-        new((Color)ColorConverter.ConvertFromString(hex)!);
+    private static Color C(string hex) => (Color)ColorConverter.ConvertFromString(hex)!;
 }

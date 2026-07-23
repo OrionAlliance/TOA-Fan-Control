@@ -80,13 +80,21 @@
                         <StackPanel x:Name="FanRows" Margin="0,4,0,0" />
                     </StackPanel>
 
-                    <StackPanel x:Name="BarsPanel" Visibility="Collapsed" MinWidth="430" Margin="4,6">
-                        <ctrl:StatBar x:Name="CpuBar" Label="CPU" Unit="C"
-                                      GreenTo="70" RedFrom="90" TrackPeak="True" />
-                        <ctrl:StatBar x:Name="GpuBar" Label="GPU" Unit="C"
-                                      GreenTo="70" RedFrom="90" TrackPeak="True" />
+                    <StackPanel x:Name="BarsPanel" Visibility="Collapsed" MinWidth="460" Margin="4,4">
+                        <!-- CPU + GPU share the line, like the dials share theirs. -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <ctrl:StatBar x:Name="CpuBar" Grid.Column="0" Label="CPU" Unit="C"
+                                          GreenTo="70" RedFrom="90" TrackPeak="True" />
+                            <ctrl:StatBar x:Name="GpuBar" Grid.Column="1" Label="GPU" Unit="C"
+                                          GreenTo="70" RedFrom="90" TrackPeak="True"
+                                          Margin="8,0,0,0" />
+                        </Grid>
 
-                        <Border Height="1" Background="#323848" Margin="6,7" />
+                        <Border Height="1" Background="#323848" Margin="6,4" />
 
                         <StackPanel x:Name="FanBarRows" />
                     </StackPanel>
