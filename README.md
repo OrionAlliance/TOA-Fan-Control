@@ -47,7 +47,7 @@ There's nothing you *have* to do — it sits in the system tray and does its job
 
   <p align="center"><img src="Docs/images/game-mode-dark.png" width="300" alt="Game Mode overlay — dark theme" />&nbsp;&nbsp;<img src="Docs/images/game-mode-light.png" width="300" alt="Game Mode overlay — light theme" /></p>
 
-- **Settings (the ⚙ cog)** — dark/light theme, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), Check for updates, About and a full uninstall.
+- **Settings (the ⚙ cog)** — dark/light theme, dial or bar display, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), Check for updates, About and a full uninstall.
 
   <p align="center"><img src="Docs/images/settings-menu.png" width="220" alt="Settings menu" /></p>
 
