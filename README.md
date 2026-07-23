@@ -14,7 +14,7 @@
 
 Years ago I installed SpeedFan, the FanControl of its day, to cool my PC down. After installing it, I was overwhelmed with all the options, cryptic sensor names and settings I didn't understand. After about five or 10 minutes of asking myself, "What is this? What is that?," I uninstalled it. SpeedFan has been gone for a while now and its spiritual successor, FanControl, is genuinely powerful… but still greets you with curve editors, sensor mixes and homework, to understand it all.
 
-I never wanted that type of control over my fans. I didn't want the confusion or possibility of changing a setting and cooking my PC. I wanted simplicity. Cooler parts, quiet fans, and nothing to configure. Basically, a "start it and forget it" type of app. Here it is, years later and I built exactly what I wanted. Hopefully, it's what you've wanted, too.
+I never wanted that type of control over my fans. I didn't want the confusion or possibility of changing a setting and cooking my PC. I wanted simplicity. Cooler parts, quiet fans, and nothing to configure. Basically, a "start it and forget it" type of app. Here it is, years later, and with the help of Claude AI, I built exactly what I wanted. Hopefully... it's what you've wanted, too.
 
 The first real test I put it through was Diablo IV. It would continuously push my GPU to 85°C to almost 90°C. With this app running, it peaked at 75°C, and I barely heard the fans at all. Ten plus degrees cooler, near silent and peace of mind. That's when I knew I had the app I wanted.
 
