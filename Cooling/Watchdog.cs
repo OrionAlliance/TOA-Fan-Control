@@ -141,6 +141,10 @@ public static class Watchdog
                 return;
             }
 
+            // The sentinel now just waits, possibly for days - give its idle
+            // pages back so two Task Manager rows don't read as two full apps.
+            Infrastructure.WorkingSet.Trim();
+
             Loop(link, hw, fans, parentPid);
         }
 

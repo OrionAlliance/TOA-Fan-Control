@@ -461,7 +461,11 @@ public partial class MainWindow : Window
 
     // Minimise goes to the tray, not the taskbar - this is a set-and-forget
     // background app. Hide() drops the taskbar button; the tray icon brings it back.
-    private void OnMinimizeClick(object sender, RoutedEventArgs e) => Hide();
+    private void OnMinimizeClick(object sender, RoutedEventArgs e)
+    {
+        Hide();
+        WorkingSet.Trim();
+    }
 
     private void OnMaximizeClick(object sender, RoutedEventArgs e) =>
         WindowState = WindowState == WindowState.Maximized
