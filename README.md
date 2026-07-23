@@ -100,6 +100,11 @@ It'll show your temps, but laptop fans are run by the laptop's own embedded cont
 **It says "no controllable fans found" on my Dell / HP / Lenovo desktop.**
 Same story as laptops: the big brands often skip the standard fan-control chip and run the fans from their own proprietary controller, which they've tuned at the factory and locked down. The app can't safely talk to those, so it leaves your fans on the manufacturer's control and runs as a temperature dashboard instead. It's happiest on a PC where you (or your builder) picked the motherboard.
 
+**So which PCs does it actually work on?**
+The dividing line is the motherboard:
+- **Retail motherboard** (ASUS, MSI, Gigabyte, ASRock…) → standard fan-control chip → the app works. That covers home builds, and also the gaming-shop prebuilts — iBuyPower, CyberPower, NZXT BLD, Micro Center builds — since they assemble from retail parts.
+- **Big-box machines** (Dell, HP, Lenovo) → custom board, fans on their own locked controller → temp dashboard only, fans stay on the factory's tuning.
+
 **Some sensors don't show on my brand-new hardware.**
 The sensor library is deliberately version-pinned — it never updates behind your back (silent sensor-library updates breaking PCs overnight is a recurring story with other tools). Brand-new chips can lag behind support; when that happens, the app runs read-only and your BIOS keeps running the fans — nothing breaks. Support arrives via a normal, tested release. Open an Issue with your hardware details.
 
