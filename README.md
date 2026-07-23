@@ -1,7 +1,7 @@
 # TOA - Fan Control <a href="https://github.com/OrionAlliance/TOA-Fan-Control/releases"><img src="https://img.shields.io/github/downloads/OrionAlliance/TOA-Fan-Control/total?style=for-the-badge&logo=github&color=2ea44f" align="right" alt="Total downloads"></a>
 
 **Zero-config fan control for Windows 10/11 64 bit PC case fans.**<br>
-**Your case fans follow your hottest component. CPU or the GPU. It's that simple. That's the app.**
+**Your case fans follow your hottest component, the CPU or the GPU. It's that simple. That's the app.**
 
 ---
 
