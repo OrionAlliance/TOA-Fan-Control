@@ -52,10 +52,6 @@ public partial class StatBar : UserControl
         DependencyProperty.Register(nameof(RedFrom), typeof(double), typeof(StatBar),
             new PropertyMetadata(double.NaN, (d, _) => ((StatBar)d).UpdateVisual()));
 
-    public static readonly DependencyProperty TrackPeakProperty =
-        DependencyProperty.Register(nameof(TrackPeak), typeof(bool), typeof(StatBar),
-            new PropertyMetadata(false));
-
     /// <summary>Name inside the bar's left end. Long fan names ellipsize with a tooltip.</summary>
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
 
@@ -74,13 +70,19 @@ public partial class StatBar : UserControl
     /// <summary>Values at or above this fill red; NaN = no red zone.</summary>
     public double RedFrom { get => (double)GetValue(RedFromProperty); set => SetValue(RedFromProperty, value); }
 
-    /// <summary>Remember and mark the highest value this run (temps yes, fans no).</summary>
-    public bool TrackPeak { get => (bool)GetValue(TrackPeakProperty); set => SetValue(TrackPeakProperty, value); }
-
-    public void ResetPeak()
+    /// <summary>
+    /// The session peak, fed by the controller - one truth shared by every view.
+    /// NaN hides the marker (fan bars simply never get one).
+    /// </summary>
+    public double Peak
     {
-        _peak = double.NaN;
-        PeakTick.Visibility = Visibility.Collapsed;
+        get => _peak;
+        set
+        {
+            if (value.Equals(_peak) || (double.IsNaN(value) && double.IsNaN(_peak))) return;
+            _peak = value;
+            UpdateVisual();
+        }
     }
 
     // ---- rendering ----------------------------------------------------------
@@ -120,15 +122,16 @@ public partial class StatBar : UserControl
         TextBlackLayer.Clip = new System.Windows.Media.RectangleGeometry(
             new Rect(0, 0, Math.Max(0, Fill.Width + 1), TrackHost.ActualHeight));
 
-        if (TrackPeak && has && (double.IsNaN(_peak) || v > _peak))
-            _peak = v;
-
-        if (TrackPeak && !double.IsNaN(_peak))
+        if (!double.IsNaN(_peak))
         {
             double pf = Math.Clamp((_peak - Minimum) / (Maximum - Minimum), 0, 1);
             PeakTick.Margin = new Thickness(Math.Max(0, pf * w - 1), 1, 0, 1);
             PeakTick.ToolTip = $"Peak this run: {_peak:F0}{unit}";
             PeakTick.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            PeakTick.Visibility = Visibility.Collapsed;
         }
     }
 

@@ -128,6 +128,12 @@ public partial class MainWindow : Window
         CpuBar.Value = r.CpuTemp ?? double.NaN;
         GpuBar.Value = r.GpuTemp ?? double.NaN;
 
+        // Peaks come from the controller - the same numbers in every view.
+        CpuGauge.Peak = r.PeakCpu;
+        GpuGauge.Peak = r.PeakGpu;
+        CpuBar.Peak = r.PeakCpu;
+        GpuBar.Peak = r.PeakGpu;
+
         TopStatus.Text = $"Case fans follow your hottest item - {r.Status}";
         TopStatus.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
 
@@ -267,13 +273,7 @@ public partial class MainWindow : Window
     // ---- actions ------------------------------------------------------------
 
     private void OnResetPeaksClick(object sender, RoutedEventArgs e)
-    {
-        CpuGauge.ResetPeak();
-        GpuGauge.ResetPeak();
-        CpuBar.ResetPeak();
-        GpuBar.ResetPeak();
-        _overlay?.ResetPeaks();
-    }
+        => _controller.ResetDisplayPeaks(); // every view clears on the next tick
 
     // ---- settings (the cog) --------------------------------------------------
 

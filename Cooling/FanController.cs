@@ -14,6 +14,11 @@ public sealed class FanReadings
     public float? SourceTemp { get; init; }
     public float OutputPercent { get; init; }
 
+    /// <summary>Session peaks (since app start / last Reset peaks) - the ONE truth
+    /// every view renders, so dials, bars and Game Mode always agree.</summary>
+    public float PeakCpu { get; init; } = float.NaN;
+    public float PeakGpu { get; init; } = float.NaN;
+
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
 
@@ -109,6 +114,10 @@ public sealed class FanController : IDisposable
     private float _peakGpu = float.NaN;
     private float _peakOut;
     private readonly Dictionary<string, float> _peakRpm = new();
+
+    // The peaks the UI shows (cleared by Reset peaks; the log's stay whole-session).
+    private float _dispPeakCpu = float.NaN;
+    private float _dispPeakGpu = float.NaN;
     private readonly DateTime _startedAt = DateTime.Now;
 
     public event EventHandler<FanReadings>? Updated;
@@ -238,6 +247,13 @@ public sealed class FanController : IDisposable
     }
 
     // ---- pause / resume -----------------------------------------------------
+
+    /// <summary>Clear the displayed session peaks - every view resets at once.</summary>
+    public void ResetDisplayPeaks()
+    {
+        _dispPeakCpu = float.NaN;
+        _dispPeakGpu = float.NaN;
+    }
 
     /// <summary>Stop driving and put the fans back on the BIOS curve.</summary>
     public void Pause()
@@ -502,12 +518,21 @@ public sealed class FanController : IDisposable
     private void Publish(float? cpu, float? gpu, float? source, IReadOnlyList<FanChannel> fans,
                          string status, bool noFans = false)
     {
+        // Display peaks live here, not in the views: every view renders these, so
+        // switching dial/bar/Game Mode can never show different "peaks". Kept
+        // separate from the SESSION PEAKS log values - Reset peaks clears these,
+        // but the log keeps reporting the true whole-session maximum for support.
+        if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) _dispPeakCpu = pc;
+        if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
+
         Updated?.Invoke(this, new FanReadings
         {
             CpuTemp = cpu,
             GpuTemp = gpu,
             SourceTemp = source,
             OutputPercent = _currentPercent,
+            PeakCpu = _dispPeakCpu,
+            PeakGpu = _dispPeakGpu,
             NoControllableFans = noFans,
             SentinelLost = _sentinelLost,
             Conflict = _conflict,

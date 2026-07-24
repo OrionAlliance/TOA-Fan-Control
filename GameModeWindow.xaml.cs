@@ -18,8 +18,6 @@ public partial class GameModeWindow : Window
 {
     private readonly FanController _controller;
 
-    private double _peakCpu = double.NaN;
-    private double _peakGpu = double.NaN;
     private bool _forceClose;
 
     /// <summary>Raised when the user wants the full window back.</summary>
@@ -108,13 +106,10 @@ public partial class GameModeWindow : Window
         // Red when whatever's driving the fans is genuinely hot.
         FanText.Foreground = r.SourceTemp is >= 85 ? Res("Hot") : Res("Text");
 
-        // Its own peaks, deliberately: this window is for watching one gaming
-        // session, so they start fresh each time you drop into it.
-        if (r.CpuTemp is { } cv && (double.IsNaN(_peakCpu) || cv > _peakCpu)) _peakCpu = cv;
-        if (r.GpuTemp is { } gv && (double.IsNaN(_peakGpu) || gv > _peakGpu)) _peakGpu = gv;
-
-        CpuPeakText.Text = double.IsNaN(_peakCpu) ? "peak --" : $"peak {_peakCpu:F0}";
-        GpuPeakText.Text = double.IsNaN(_peakGpu) ? "peak --" : $"peak {_peakGpu:F0}";
+        // The controller's session peaks - the same numbers as the dials and bars,
+        // so no view ever disagrees. Reset peaks (main window) clears them all.
+        CpuPeakText.Text = float.IsNaN(r.PeakCpu) ? "peak --" : $"peak {r.PeakCpu:F0}";
+        GpuPeakText.Text = float.IsNaN(r.PeakGpu) ? "peak --" : $"peak {r.PeakGpu:F0}";
 
         // RPM of every fan the app is driving, whatever this machine has - the
         // main window's rule, not a hardcoded fan list.
@@ -124,12 +119,6 @@ public partial class GameModeWindow : Window
             .Select(f => f?.Rpm is { } rpm and >= 1 ? $"{rpm:F0}" : "--")
             .ToList();
         RpmText.Text = rpms.Count > 0 ? string.Join(" / ", rpms) : "--";
-    }
-
-    public void ResetPeaks()
-    {
-        _peakCpu = double.NaN;
-        _peakGpu = double.NaN;
     }
 
     /// <summary>Drag to place it; double-click anywhere to come back.</summary>

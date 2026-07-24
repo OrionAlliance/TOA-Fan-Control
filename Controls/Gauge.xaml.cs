@@ -71,29 +71,30 @@ public partial class Gauge : UserControl
     public double RedFrom { get => (double)GetValue(RedFromProperty); set => SetValue(RedFromProperty, value); }
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
-    /// <summary>Highest value seen since the last reset. NaN until the first reading.</summary>
-    public double Peak { get; private set; } = double.NaN;
+    private double _peak = double.NaN;
+
+    /// <summary>
+    /// The session peak, fed by the controller - one truth shared by every view
+    /// (dials, bars, Game Mode), so switching views can never disagree. NaN hides
+    /// the marker.
+    /// </summary>
+    public double Peak
+    {
+        get => _peak;
+        set
+        {
+            if (value.Equals(_peak) || (double.IsNaN(value) && double.IsNaN(_peak))) return;
+            _peak = value;
+            UpdateMoving();
+        }
+    }
 
     private static DependencyProperty Reg(string name, object def) =>
         DependencyProperty.Register(name, def.GetType(), typeof(Gauge),
             new PropertyMetadata(def, (d, _) => ((Gauge)d).Rebuild()));
 
-    public void ResetPeak()
-    {
-        Peak = double.NaN;
-        UpdateMoving();
-    }
-
     private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var g = (Gauge)d;
-        var v = (double)e.NewValue;
-
-        if (!double.IsNaN(v) && (double.IsNaN(g.Peak) || v > g.Peak))
-            g.Peak = v;
-
-        g.UpdateMoving();
-    }
+        => ((Gauge)d).UpdateMoving();
 
     // ---- geometry -----------------------------------------------------------
 

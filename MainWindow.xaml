@@ -88,9 +88,9 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <ctrl:StatBar x:Name="CpuBar" Grid.Column="0" Label="CPU" Unit="C"
-                                          GreenTo="70" RedFrom="90" TrackPeak="True" />
+                                          GreenTo="70" RedFrom="90" />
                             <ctrl:StatBar x:Name="GpuBar" Grid.Column="1" Label="GPU" Unit="C"
-                                          GreenTo="70" RedFrom="90" TrackPeak="True"
+                                          GreenTo="70" RedFrom="90"
                                           Margin="8,0,0,0" />
                         </Grid>
 
