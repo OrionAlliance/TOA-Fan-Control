@@ -3,6 +3,10 @@
 **Zero-config fan control for Windows 10/11 64 bit PC case fans.**<br>
 **Your case fans follow your hottest component, the CPU or the GPU. It's that simple. That's the app.**
 
+<p align="center">
+  <a href="../../releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-Latest%20version-2ea44f?style=for-the-badge" alt="Download the latest version"></a>
+</p>
+
 ---
 
 <p align="center">
