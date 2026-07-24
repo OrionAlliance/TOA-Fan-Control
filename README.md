@@ -5,12 +5,11 @@
   <b>Your case fans follow your hottest component, the CPU or the GPU. It's that simple. That's the app.</b>
 </p>
 
-<table align="center">
-  <tr>
-    <td align="center"><a href="../../releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-Latest%20version-2ea44f?style=for-the-badge" alt="Download the latest version"></a></td>
-    <td align="center"><a href="../../releases"><img src="https://img.shields.io/github/downloads/OrionAlliance/TOA-Fan-Control/total?style=for-the-badge&logo=github&color=2ea44f" alt="Total downloads"></a></td>
-  </tr>
-</table>
+<p align="center">
+  <a href="../../releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-Latest%20version-2ea44f?style=for-the-badge" alt="Download the latest version"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="../../releases"><img src="https://img.shields.io/github/downloads/OrionAlliance/TOA-Fan-Control/total?style=for-the-badge&logo=github&color=2ea44f" alt="Total downloads"></a>
+</p>
 
 ---
 
