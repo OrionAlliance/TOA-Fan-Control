@@ -1,11 +1,16 @@
-# TOA - Fan Control <a href="https://github.com/OrionAlliance/TOA-Fan-Control/releases"><img src="https://img.shields.io/github/downloads/OrionAlliance/TOA-Fan-Control/total?style=for-the-badge&logo=github&color=2ea44f" align="right" alt="Total downloads"></a>
-
-**Zero-config fan control for Windows 10/11 64 bit PC case fans.**<br>
-**Your case fans follow your hottest component, the CPU or the GPU. It's that simple. That's the app.**
+<h1 align="center">TOA - Fan Control</h1>
 
 <p align="center">
-  <a href="../../releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-Latest%20version-2ea44f?style=for-the-badge" alt="Download the latest version"></a>
+  <b>Zero-config fan control for Windows 10/11 64 bit PC case fans.</b><br>
+  <b>Your case fans follow your hottest component, the CPU or the GPU. It's that simple. That's the app.</b>
 </p>
+
+<table align="center">
+  <tr>
+    <td align="center"><a href="../../releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-Latest%20version-2ea44f?style=for-the-badge" alt="Download the latest version"></a></td>
+    <td align="center"><a href="../../releases"><img src="https://img.shields.io/github/downloads/OrionAlliance/TOA-Fan-Control/total?style=for-the-badge&logo=github&color=2ea44f" alt="Total downloads"></a></td>
+  </tr>
+</table>
 
 ---
 
