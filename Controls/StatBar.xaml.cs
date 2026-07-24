@@ -77,9 +77,6 @@ public partial class StatBar : UserControl
     /// <summary>Remember and mark the highest value this run (temps yes, fans no).</summary>
     public bool TrackPeak { get => (bool)GetValue(TrackPeakProperty); set => SetValue(TrackPeakProperty, value); }
 
-    /// <summary>Secondary reading just before the value (a fan's live RPM).</summary>
-    public string SecondaryText { set { InBarTextW.Text = value; InBarTextB.Text = value; } }
-
     public void ResetPeak()
     {
         _peak = double.NaN;

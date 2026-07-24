@@ -13,7 +13,6 @@ public sealed class FanReadings
     /// <summary>The hotter of CPU/GPU - the number the fans are matching.</summary>
     public float? SourceTemp { get; init; }
     public float OutputPercent { get; init; }
-    public bool Engaged { get; init; }
 
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
@@ -509,7 +508,6 @@ public sealed class FanController : IDisposable
             GpuTemp = gpu,
             SourceTemp = source,
             OutputPercent = _currentPercent,
-            Engaged = _engaged,
             NoControllableFans = noFans,
             SentinelLost = _sentinelLost,
             Conflict = _conflict,

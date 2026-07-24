@@ -14,10 +14,6 @@ public sealed class FanChannel
     public float? Percent => ControlSensor?.Value;
     public bool CanControl => ControlSensor?.Control != null;
 
-    /// <summary>True once we've seized this channel from the BIOS.</summary>
-    public bool IsSoftwareControlled =>
-        ControlSensor?.Control?.ControlMode == ControlMode.Software;
-
     public void SetPercent(float percent)
     {
         IControl? c = ControlSensor?.Control;
