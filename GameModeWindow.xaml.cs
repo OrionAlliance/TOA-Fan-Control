@@ -97,6 +97,10 @@ public partial class GameModeWindow : Window
 
     private void Render(FanReadings r)
     {
+        // The overlay stays subscribed while hidden (it's reused between Game
+        // Mode sessions) - don't paint it when it isn't on screen.
+        if (!IsVisible) return;
+
         CpuText.Text = r.CpuTemp is { } c ? $"{c:F0}" : "--";
         CpuText.Foreground = TempBrush(r.CpuTemp);
         GpuText.Text = r.GpuTemp is { } g ? $"{g:F0}" : "--";

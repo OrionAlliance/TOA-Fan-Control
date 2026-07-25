@@ -123,20 +123,7 @@ public partial class MainWindow : Window
 
     private void Render(FanReadings r)
     {
-        CpuGauge.Value = r.CpuTemp ?? double.NaN;
-        GpuGauge.Value = r.GpuTemp ?? double.NaN;
-        CpuBar.Value = r.CpuTemp ?? double.NaN;
-        GpuBar.Value = r.GpuTemp ?? double.NaN;
-
-        // Peaks come from the controller - the same numbers in every view.
-        CpuGauge.Peak = r.PeakCpu;
-        GpuGauge.Peak = r.PeakGpu;
-        CpuBar.Peak = r.PeakCpu;
-        GpuBar.Peak = r.PeakGpu;
-
-        TopStatus.Text = $"Case fans follow your hottest item - {r.Status}";
-        TopStatus.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
-
+        // Tray-facing updates come first - they matter even while hidden.
         // Live tray tooltip, so you can hover it while minimised and see the state
         // without reopening. NotifyIcon.Text caps at 63 chars - keep it short.
         if (_tray != null)
@@ -160,6 +147,26 @@ public partial class MainWindow : Window
         {
             _conflictNotified = false;
         }
+
+        // Nobody's looking: while hidden in the tray, skip painting the dashboard
+        // entirely - no dial animation, no bar redraws, no per-tick allocations.
+        // Safe because the peaks live in the controller now, so the first tick
+        // after reopening repaints everything current with nothing lost.
+        if (!IsVisible) return;
+
+        CpuGauge.Value = r.CpuTemp ?? double.NaN;
+        GpuGauge.Value = r.GpuTemp ?? double.NaN;
+        CpuBar.Value = r.CpuTemp ?? double.NaN;
+        GpuBar.Value = r.GpuTemp ?? double.NaN;
+
+        // Peaks come from the controller - the same numbers in every view.
+        CpuGauge.Peak = r.PeakCpu;
+        GpuGauge.Peak = r.PeakGpu;
+        CpuBar.Peak = r.PeakCpu;
+        GpuBar.Peak = r.PeakGpu;
+
+        TopStatus.Text = $"Case fans follow your hottest item - {r.Status}";
+        TopStatus.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
 
         UpdateFanGauges(r);
     }

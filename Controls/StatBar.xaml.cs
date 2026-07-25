@@ -107,20 +107,26 @@ public partial class StatBar : UserControl
         // theirs: zone colour for temps, the theme's text colour when zoneless.
         string unit = Unit == "%" ? "%" : string.IsNullOrEmpty(Unit) ? "" : $" {Unit}";
         ValueText.Text = has ? $"{v:F0}{unit}" : "--";
+
+        Color zone = ZoneColor(v, has);
         if (double.IsNaN(GreenTo) && double.IsNaN(RedFrom))
             ValueText.SetResourceReference(ForegroundProperty, "Text");
         else
-            ValueText.Foreground = new SolidColorBrush(ZoneColor(v, has));
+            ValueText.Foreground = Solid(zone);
 
         double frac = has ? Math.Clamp((v - Minimum) / (Maximum - Minimum), 0, 1) : 0;
         Fill.Width = frac * w;
-        Fill.Background = FillBrush(v, has);
-        Fill.Effect = has && frac > 0 ? Glow(ZoneColor(v, has)) : null;
+
+        // Paint only changes when the value crosses a zone line - reuse the
+        // frozen cached brushes instead of mixing fresh paint every tick.
+        Fill.Background = FillFor(zone);
+        Fill.Effect = has && frac > 0 ? GlowFor(zone) : null;
 
         // Black text exists only over the fill: the black layer is clipped to the
-        // fill's width, and the white layer shows past its edge.
-        TextBlackLayer.Clip = new System.Windows.Media.RectangleGeometry(
-            new Rect(0, 0, Math.Max(0, Fill.Width + 1), TrackHost.ActualHeight));
+        // fill's width, and the white layer shows past its edge. One geometry,
+        // resized in place.
+        _clip.Rect = new Rect(0, 0, Math.Max(0, Fill.Width + 1), TrackHost.ActualHeight);
+        TextBlackLayer.Clip ??= _clip;
 
         if (!double.IsNaN(_peak))
         {
@@ -135,6 +141,9 @@ public partial class StatBar : UserControl
         }
     }
 
+    // The clip geometry is reused and resized in place, never reallocated.
+    private readonly System.Windows.Media.RectangleGeometry _clip = new();
+
     private Color ZoneColor(double v, bool has)
     {
         if (!has) return C("#AEB6C6");
@@ -144,20 +153,50 @@ public partial class StatBar : UserControl
         return C("#AEB6C6"); // zoneless (fan %): neutral steel, same as the needle metal
     }
 
-    private Brush FillBrush(double v, bool has)
+    // ---- shared frozen paint: one instance per zone colour, app-wide.
+    // Frozen Freezables are thread-safe, shareable, and never re-created, so a
+    // day in the tray allocates zero paint. Four zone colours = tiny caches.
+
+    private static readonly Dictionary<Color, SolidColorBrush> SolidCache = new();
+    private static readonly Dictionary<Color, LinearGradientBrush> FillCache = new();
+    private static readonly Dictionary<Color, DropShadowEffect> GlowCache = new();
+
+    private static SolidColorBrush Solid(Color c)
     {
-        Color c = ZoneColor(v, has);
-        // Lit from the top like everything else on the dash.
-        return new LinearGradientBrush(
-            Color.FromRgb((byte)Math.Min(255, c.R + 40), (byte)Math.Min(255, c.G + 40), (byte)Math.Min(255, c.B + 40)),
-            Color.FromRgb((byte)(c.R * 0.55), (byte)(c.G * 0.55), (byte)(c.B * 0.55)),
-            90);
+        if (!SolidCache.TryGetValue(c, out SolidColorBrush? b))
+        {
+            b = new SolidColorBrush(c);
+            b.Freeze();
+            SolidCache[c] = b;
+        }
+        return b;
     }
 
-    private static DropShadowEffect Glow(Color c) => new()
+    private static LinearGradientBrush FillFor(Color c)
     {
-        Color = c, BlurRadius = 8, ShadowDepth = 0, Opacity = 0.45,
-    };
+        if (!FillCache.TryGetValue(c, out LinearGradientBrush? b))
+        {
+            // Lit from the top like everything else on the dash.
+            b = new LinearGradientBrush(
+                Color.FromRgb((byte)Math.Min(255, c.R + 40), (byte)Math.Min(255, c.G + 40), (byte)Math.Min(255, c.B + 40)),
+                Color.FromRgb((byte)(c.R * 0.55), (byte)(c.G * 0.55), (byte)(c.B * 0.55)),
+                90);
+            b.Freeze();
+            FillCache[c] = b;
+        }
+        return b;
+    }
+
+    private static DropShadowEffect GlowFor(Color c)
+    {
+        if (!GlowCache.TryGetValue(c, out DropShadowEffect? e))
+        {
+            e = new DropShadowEffect { Color = c, BlurRadius = 8, ShadowDepth = 0, Opacity = 0.45 };
+            e.Freeze();
+            GlowCache[c] = e;
+        }
+        return e;
+    }
 
     private static Color C(string hex) => (Color)ColorConverter.ConvertFromString(hex)!;
 }
