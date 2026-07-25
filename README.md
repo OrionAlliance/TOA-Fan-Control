@@ -31,8 +31,6 @@ Years ago I installed SpeedFan, the FanControl of its day, to cool my PC down. A
 
 I never wanted that type of control over my fans. I didn't want the confusion or possibility of changing a setting and cooking my PC. I wanted simplicity. Cooler parts, quiet fans, and nothing to configure. Basically, a "start it and forget it" type of app. Here it is, years later, and with the help of Claude AI, I built exactly what I wanted. Hopefully... it's what you've wanted, too.
 
-The first real test I put it through was Diablo IV. It would continuously push my GPU to 85°C, and sometimes, almost 90°C. Now, fast forward to this app running, it peaks at 75°C, and I barely hear the fans at all. Ten plus degrees cooler, near silent and peace of mind. That's when I knew I had the app I wanted.
-
 ## What it does
 
 The app adjusts **only your PC case fans**, making them follow your hottest component — your CPU or your GPU. Every second it reads both temperatures and sets every case fan to match the hotter of the two, one-to-one: **70°C means 70% fan speed.**
