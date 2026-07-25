@@ -83,6 +83,14 @@ public sealed class HardwareMonitor : IDisposable
         Refresh();
         Discover();
 
+        // LHM appends every reading to a per-sensor history list (up to a day's
+        // worth) on each update. We only ever use the live value, so that's
+        // ~15-25 MB/day of diary nobody reads - measured as the app's slow
+        // memory creep across two soak tests. Zero window = keep nothing.
+        foreach (IHardware h in Flatten(_computer.Hardware))
+            foreach (ISensor s in h.Sensors)
+                s.ValuesTimeWindow = TimeSpan.Zero;
+
         // Hardware models matter for bug reports (fan control lives on the board's
         // Super I/O chip, and its behaviour can shift with a BIOS update) and
         // identify nothing about the person - unlike paths or serial numbers.
