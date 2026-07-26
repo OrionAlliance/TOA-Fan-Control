@@ -301,8 +301,17 @@ public sealed class FanController : IDisposable
 
     // ---- the loop -----------------------------------------------------------
 
+    // 1 while a tick is inside Poll(). A stalled hardware read must not let the
+    // next timer tick pile on top of it - two threads in the sensor library at
+    // once is undefined behaviour. Skipping a beat is harmless: the fans just
+    // hold their speed ~1s longer and the next tick catches up.
+    private int _tickBusy;
+
     private void OnTick(object? sender, ElapsedEventArgs e)
     {
+        if (System.Threading.Interlocked.CompareExchange(ref _tickBusy, 1, 0) != 0)
+            return;
+
         try
         {
             Poll();
@@ -312,6 +321,10 @@ public sealed class FanController : IDisposable
             // An exception here means we can no longer trust our own readings.
             DebugLog.Write("Tick failed - handing the fans back to the BIOS.", ex);
             SafeRelease();
+        }
+        finally
+        {
+            System.Threading.Interlocked.Exchange(ref _tickBusy, 0);
         }
     }
 
