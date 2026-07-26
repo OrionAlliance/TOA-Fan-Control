@@ -4,7 +4,7 @@
         xmlns:ctrl="clr-namespace:FanControlApp.Controls"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="TOA - Fan Control"
-        Icon="Icon.ico"
+        Icon="/Icon.ico"
         SizeToContent="WidthAndHeight"
         WindowStyle="None"
         Background="{DynamicResource Bg}"
@@ -31,7 +31,7 @@
                 Background="{DynamicResource TitleFace}"
                 BorderBrush="{DynamicResource PanelEdge}" BorderThickness="0,0,0,1">
             <DockPanel>
-                <Image Source="Icon.ico" Width="18" Height="18"
+                <Image Source="/Icon.ico" Width="18" Height="18"
                        Margin="10,0,9,0" DockPanel.Dock="Left" VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality" />
 

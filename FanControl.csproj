@@ -35,11 +35,10 @@
                          layout can be looked at instead of guessed at
            GlyphSheet\   renders a labelled sheet of a symbol font, so a glyph
                          gets picked by looking rather than by guessing a hex code -->
-    <Compile Remove="IconGen\**" />
-    <Compile Remove="GaugePreview\**" />
-    <Compile Remove="GlyphSheet\**" />
-    <Page Remove="GaugePreview\**" />
-    <Page Remove="GlyphSheet\**" />
+    <Compile Remove="Tools\**" />
+    <Page Remove="Tools\**" />
+    <Resource Remove="Tools\**" />
+    <None Remove="Tools\**" />
 
     <!-- The installer is its own self-contained project (Setup\Setup.csproj); keep
          its files (and its embedded copy of the app) out of the app's own build. -->

@@ -8,7 +8,7 @@
     <Grid Margin="6,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="46" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
         <Grid x:Name="TrackHost" Grid.Column="0" VerticalAlignment="Center" Height="22">
@@ -47,8 +47,17 @@
         </Grid>
 
         <!-- The reading, outside the bar - coloured by zone like the dials' number. -->
-        <TextBlock x:Name="ValueText" Grid.Column="1" HorizontalAlignment="Left"
-                   Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12.5" FontWeight="Bold"
-                   Foreground="White" Text="--" />
+        <!-- Right-aligned so every row's reading ends on the same vertical line:
+             the temp's "C" sits directly above the RPM's last digit. -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                    Margin="6,0,0,0" VerticalAlignment="Center">
+            <TextBlock x:Name="ValueText" VerticalAlignment="Center"
+                       FontSize="12.5" FontWeight="Bold" Foreground="White" Text="--" />
+            <!-- Optional live secondary reading (a fan's RPM), one space after the
+                 value: "37%  RPM: 706". Its jitter is the bar view's heartbeat. -->
+            <TextBlock x:Name="TrailTextBlock" VerticalAlignment="Center" Margin="5,0,0,0"
+                       FontSize="10.5" Foreground="{DynamicResource TextDim}"
+                       Visibility="Collapsed" />
+        </StackPanel>
     </Grid>
 </UserControl>

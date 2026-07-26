@@ -87,6 +87,21 @@ public partial class StatBar : UserControl
 
     // ---- rendering ----------------------------------------------------------
 
+    /// <summary>
+    /// Live secondary reading shown right after the value ("37%  RPM: 706").
+    /// Null/empty hides it and gives the bar the space back. The value column
+    /// is content-sized, so the bar always gets every pixel the text doesn't use.
+    /// </summary>
+    public string? TrailText
+    {
+        set
+        {
+            bool show = !string.IsNullOrEmpty(value);
+            TrailTextBlock.Text = value ?? "";
+            TrailTextBlock.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
     private void OnLabelChanged()
     {
         LabelTextW.Text = Label;

@@ -31,7 +31,10 @@ public partial class MainWindow : Window
     // A spinning fan tile per running fan, created the first time that fan is seen
     // spinning and kept after (latched, so a momentary dip doesn't make it vanish).
     // Each fan also gets a bar - both display styles stay live, Settings just
-    // picks which panel is visible.
+    // picks which panel is visible. Fan bars carry a live "RPM: n" right after
+    // the % (StatBar.TrailText) - the visible heartbeat that replaces the dial
+    // view's spinning blades (a bar sitting still at a steady % otherwise reads
+    // as "is this thing frozen?").
     private readonly Dictionary<string, FanBlade> _fanGauges = new();
     private readonly Dictionary<string, StatBar> _fanBars = new();
     private readonly List<string> _shownFans = new();
@@ -200,6 +203,7 @@ public partial class MainWindow : Window
             _fanGauges[name].Percent = r.OutputPercent; // driven duty -> the hub number
 
             _fanBars[name].Value = r.OutputPercent;
+            _fanBars[name].TrailText = rpm is > 0 ? $"RPM: {rpm:F0}" : "RPM: --";
         }
 
         if (added) RebuildFanRows();
@@ -238,33 +242,23 @@ public partial class MainWindow : Window
         {
             var row = new Grid();
 
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            StatBar left = _fanBars[_shownFans[i]];
+            left.Margin = new Thickness(0);
+            Grid.SetColumn(left, 0);
+            row.Children.Add(left);
+
             if (i + 1 < _shownFans.Count)
             {
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                StatBar left = _fanBars[_shownFans[i]];
-                left.Margin = new Thickness(0);
-                Grid.SetColumn(left, 0);
-                row.Children.Add(left);
-
                 StatBar right = _fanBars[_shownFans[i + 1]];
                 right.Margin = new Thickness(8, 0, 0, 0);
                 Grid.SetColumn(right, 1);
                 row.Children.Add(right);
             }
-            else
-            {
-                // The odd one out keeps the left slot, same as reading order -
-                // centred was tried and looked wrong ("ewww", 2026-07-23).
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                StatBar lone = _fanBars[_shownFans[i]];
-                lone.Margin = new Thickness(0);
-                Grid.SetColumn(lone, 0);
-                row.Children.Add(lone);
-            }
+            // else: the odd one out keeps the left slot, same as reading order -
+            // centred was tried and looked wrong ("ewww", 2026-07-23).
 
             FanBarRows.Children.Add(row);
         }
