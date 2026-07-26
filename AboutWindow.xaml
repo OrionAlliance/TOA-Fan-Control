@@ -71,7 +71,7 @@
                     <Run Text="© 2026 TOA. Released under the " />
                     <Hyperlink NavigateUri="https://github.com/OrionAlliance/TOA-Fan-Control/blob/main/LICENSE"
                                RequestNavigate="OnLinkClick"
-                               Foreground="{DynamicResource Accent}">MIT License</Hyperlink><Run Text="." />
+                               Foreground="{DynamicResource Accent}">GNU GPLv3</Hyperlink><Run Text=" - free forever, and every fork must stay free and open source too." />
                 </TextBlock>
 
                 <TextBlock Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap"
