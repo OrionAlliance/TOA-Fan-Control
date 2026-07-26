@@ -98,6 +98,9 @@ Windows only, by design. No Linux/SteamOS version is planned — that world alre
 **Why does it need administrator?**
 Fan speed lives on the motherboard's Super I/O chip, which Windows only exposes to elevated processes via a signed kernel driver (PawnIO — the same signed driver modern hardware tools use).
 
+**Why not just use a BIOS fan curve that does what TOA - Fan Control does?**
+Because most BIOS curves can't. On most boards, case-fan curves follow the CPU only — the BIOS can't see your GPU. So in games, when the GPU is the hottest thing in the case, BIOS-driven case fans just idle. This app watches both chips every second and matches the fans to whichever is hotter — no reboots to tweak anything, and if the app ever closes, your BIOS curve takes right back over. (Already have a curve you love? Keep it — this is for everyone who doesn't want that homework.)
+
 **Won't adjusting fans every second wear them out?**
 No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and 1°C = 1% (~15 RPM — inaudible). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
 
