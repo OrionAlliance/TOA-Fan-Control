@@ -37,9 +37,9 @@ public sealed class FanReadings
 
 /// <summary>
 /// The whole engine, in one sentence: every second, take the hotter of the CPU
-/// and GPU and set the fans to that percent. 78C -> 78%. That's it. No modes, no
-/// target, no curve - the rule is its own safety, because hot automatically means
-/// fast.
+/// and GPU and set the fans to that percent - leaning up to +5 ahead of it past
+/// 70C. 65C -> 65%, 78C -> 83%. That's it. No modes, no target, no curve - the
+/// rule is its own safety, because hot automatically means fast.
 ///
 /// Releasing is NOT this class's job when a watchdog is attached. The fan chip
 /// has no "hand back to BIOS" command - the library restores a header by writing
@@ -65,6 +65,12 @@ public sealed class FanController : IDisposable
     // during testing when the floor was briefly a tunable 20%.
     public const float FloorPercent = 30f;
     public const float CeilingPercent = 100f;
+
+    // Hot lean: past 70C the fans run ahead of the temperature, up to +5 by 75C.
+    // Faded in rather than stepped so the target never jumps at a boundary - a
+    // step would make the fans hunt whenever the temp hovers right on it.
+    private const float HotLeanFromC = 70f;
+    private const float HotLeanMax = 5f;
 
     // Ramp up eagerly, coast down gently. Fast down-ramps are what make fan
     // control audibly "pulse", and being slow to quieten costs nothing.
@@ -415,7 +421,9 @@ public sealed class FanController : IDisposable
         DetectForeignWriter(controlled);
 
         // fan % = temperature, floored so no fan stalls and capped at full.
-        float desired = Math.Clamp(temp, FloorPercent, CeilingPercent);
+        // Past 70C the fans lean ahead: 72C -> 74%, 75C -> 80%, 85C -> 90%.
+        float lean = Math.Clamp(temp - HotLeanFromC, 0f, HotLeanMax);
+        float desired = Math.Clamp(temp + lean, FloorPercent, CeilingPercent);
         _currentPercent = Slew(_currentPercent, desired);
 
         foreach (FanChannel f in controlled)
