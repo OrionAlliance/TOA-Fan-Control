@@ -105,11 +105,12 @@ public sealed class FanController : IDisposable
     private int _blindTicks;
     private bool _disposed;
 
-    // Foreign-writer (SignalRGB & friends) tracking.
+    // Foreign-writer (SignalRGB & friends) tracking. Interval stamps are
+    // monotonic (TickCount64) - a wall-clock jump must not fake or swallow one.
     private int _foreignTicks;
     private bool _conflict;
-    private DateTime _lastForeignWrite = DateTime.MinValue;
-    private DateTime _lastSampleLog = DateTime.MinValue;
+    private long _lastForeignWriteMs;
+    private long _lastSampleLogMs;
 
     // Session telemetry. Without this the log records that the app ran and
     // nothing about what it did - useless for tuning, which is the whole reason
@@ -124,7 +125,7 @@ public sealed class FanController : IDisposable
     // The peaks the UI shows (cleared by Reset peaks; the log's stay whole-session).
     private float _dispPeakCpu = float.NaN;
     private float _dispPeakGpu = float.NaN;
-    private readonly DateTime _startedAt = DateTime.Now;
+    private readonly long _startedMs = Environment.TickCount64;
 
     public event EventHandler<FanReadings>? Updated;
 
@@ -439,9 +440,9 @@ public sealed class FanController : IDisposable
         TrackPeaks(cpu, gpu, controlled);
 
         _tickCount++;
-        if ((DateTime.Now - _lastSampleLog).TotalSeconds >= SampleEverySeconds)
+        if (Environment.TickCount64 - _lastSampleLogMs >= SampleEverySeconds * 1000)
         {
-            _lastSampleLog = DateTime.Now;
+            _lastSampleLogMs = Environment.TickCount64;
             LogSample(cpu, gpu, temp, controlled);
         }
 
@@ -453,6 +454,15 @@ public sealed class FanController : IDisposable
     /// persistent mismatch (while we're engaged) means a foreign writer; enter
     /// conflict mode - 4x tick rate - until it's been quiet for 30 seconds.
     /// </summary>
+    // Stop/Start around the change - assigning Interval from inside the Elapsed
+    // callback is a known Timers.Timer quirk zone.
+    private void SetTickRate(double ms)
+    {
+        _timer.Stop();
+        _timer.Interval = ms;
+        _timer.Start();
+    }
+
     private void DetectForeignWriter(List<FanChannel> controlled)
     {
         if (!_engaged) return; // nothing of ours on the chip yet to compare against
@@ -462,13 +472,13 @@ public sealed class FanController : IDisposable
 
         if (foreign)
         {
-            _lastForeignWrite = DateTime.Now;
+            _lastForeignWriteMs = Environment.TickCount64;
             _foreignTicks++;
 
             if (!_conflict && _foreignTicks >= ForeignTicksToConfirm)
             {
                 _conflict = true;
-                _timer.Interval = ConflictTickMs;
+                SetTickRate(ConflictTickMs);
                 DebugLog.Write(
                     "!! Another program is writing fan speeds over ours (chip readback " +
                     "disagrees with our command). Holding control at 4x re-assert rate. " +
@@ -479,10 +489,10 @@ public sealed class FanController : IDisposable
         {
             _foreignTicks = 0;
 
-            if (_conflict && (DateTime.Now - _lastForeignWrite).TotalSeconds > ConflictClearSeconds)
+            if (_conflict && Environment.TickCount64 - _lastForeignWriteMs > ConflictClearSeconds * 1000)
             {
                 _conflict = false;
-                _timer.Interval = TickMs;
+                SetTickRate(TickMs);
                 DebugLog.Write("Foreign fan writes stopped - back to the normal tick rate.");
             }
         }
@@ -514,7 +524,7 @@ public sealed class FanController : IDisposable
     {
         if (_tickCount == 0) return;
 
-        TimeSpan ran = DateTime.Now - _startedAt;
+        TimeSpan ran = TimeSpan.FromMilliseconds(Environment.TickCount64 - _startedMs);
         string rpm = string.Join(" ", _peakRpm.Select(kv => $"[{kv.Key}={kv.Value:F0}]"));
 
         DebugLog.Write(
@@ -546,21 +556,31 @@ public sealed class FanController : IDisposable
         if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) _dispPeakCpu = pc;
         if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
 
-        Updated?.Invoke(this, new FanReadings
+        try
         {
-            CpuTemp = cpu,
-            GpuTemp = gpu,
-            SourceTemp = source,
-            OutputPercent = _currentPercent,
-            PeakCpu = _dispPeakCpu,
-            PeakGpu = _dispPeakGpu,
-            NoControllableFans = noFans,
-            SentinelLost = _sentinelLost,
-            Conflict = _conflict,
-            Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,
-            Fans = _hw.Fans,
-            DrivenFans = ControlledFanNames,
-        });
+            Updated?.Invoke(this, new FanReadings
+            {
+                CpuTemp = cpu,
+                GpuTemp = gpu,
+                SourceTemp = source,
+                OutputPercent = _currentPercent,
+                PeakCpu = _dispPeakCpu,
+                PeakGpu = _dispPeakGpu,
+                NoControllableFans = noFans,
+                SentinelLost = _sentinelLost,
+                Conflict = _conflict,
+                Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,
+                Fans = _hw.Fans,
+                DrivenFans = ControlledFanNames,
+            });
+        }
+        catch (Exception ex)
+        {
+            // A display bug must never cost fan control - without this, an
+            // Updated subscriber's exception unwinds into Poll and OnTick hands
+            // the fans back to the BIOS over a cosmetic failure.
+            DebugLog.Write("An Updated handler threw - display skipped this tick.", ex);
+        }
     }
 
     private static float? Max(float? a, float? b)
@@ -592,6 +612,14 @@ public sealed class FanController : IDisposable
         _disposed = true;
 
         try { _timer.Stop(); _timer.Dispose(); } catch { /* shutting down */ }
+
+        // Stop() doesn't wait for a tick already in flight - let it drain (2s
+        // cap) so the hardware never gets disposed out from under Poll().
+        for (int i = 0; i < 200; i++)
+        {
+            if (System.Threading.Interlocked.CompareExchange(ref _tickBusy, 0, 0) == 0) break;
+            Thread.Sleep(10);
+        }
 
         // Before anything else - if this throws or the release hangs, the numbers
         // from the session are still on disk.
