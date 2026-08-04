@@ -98,11 +98,28 @@ Windows only, by design. No Linux/SteamOS version is planned — that world alre
 **Why does it need administrator?**
 Fan speed lives on the motherboard's Super I/O chip, which Windows only exposes to elevated processes via a signed kernel driver (PawnIO — the same signed driver modern hardware tools use).
 
+**So which PCs does it actually work on?**
+The dividing line is the motherboard:
+- **Retail motherboard** (ASUS, MSI, Gigabyte, ASRock…) → standard fan-control chip → the app works. That covers home builds, and also the gaming-shop prebuilts — iBuyPower, CyberPower, NZXT BLD, Micro Center builds — since they assemble from retail parts.
+- **Big-box machines** (Dell, HP, Lenovo) → custom board, fans on their own locked controller → temp dashboard only, fans stay on the factory's tuning.
+
+**Does it work on laptops?**
+It'll show your temps, but laptop fans are run by the laptop's own embedded controller, which is proprietary per model. The app leaves them alone — the same safety rule that never touches your CPU cooler on a desktop. This app is for desktop case fans.
+
+**It says "no controllable fans found" on my Dell / HP / Lenovo desktop.**
+Same story as laptops: the big brands often skip the standard fan-control chip and run the fans from their own proprietary controller, which they've tuned at the factory and locked down. The app can't safely talk to those, so it leaves your fans on the manufacturer's control and runs as a temperature dashboard instead. It's happiest on a PC where you (or your builder) picked the motherboard.
+
 **Is this related to Rem0o's [Fan Control](https://github.com/Rem0o/FanControl.Releases)?**
 No — no affiliation. That's the powerful, fully-customizable one (and it's excellent). This is the zero-config one. Different apps, different philosophies, same love of quiet and cool PCs.
 
+**Why doesn't it have fan curves, profiles, or settings to tune?**
+Because that's the whole point. The app has one rule: match the case fans to whichever is hotter, your CPU or your GPU. Everything else — the 30% no-stall floor, the gentle ramps, the automatic BIOS hand-back, the watchdog — is built in, with nothing to tune and nothing to get wrong. If you enjoy building custom curves, [FanControl](https://github.com/Rem0o/FanControl.Releases) is fantastic. If you'd rather install it once and never think about it again, that's exactly what this app is for.
+
 **Why not just use a BIOS fan curve that does what TOA - Fan Control does?**
 Because most BIOS curves can't. On most boards, case-fan curves follow the CPU only — the BIOS can't see your GPU. So in games, when the GPU is the hottest thing in the case, BIOS-driven case fans just idle. This app watches both chips every second and matches the fans to whichever is hotter — no reboots to tweak anything, and if the app ever closes, your BIOS curve takes right back over. (Already have a curve you love? Keep it — this is for everyone who doesn't want that homework.)
+
+**Why doesn't it control the CPU fan?**
+On purpose. Your CPU cooler stays on the BIOS so that no failure of this app can ever starve your CPU of cooling. The same rule protects AIO pumps (throttling a pump is the one genuine landmine in fan software) and your GPU's fans (the GPU's own driver runs those best). This app manages the case airflow *around* your components; their own coolers always keep the motherboard as their safety net.
 
 **Won't adjusting fans every second wear them out?**
 No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and 1°C = 1% (~15 RPM — inaudible). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
@@ -111,18 +128,7 @@ No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM
 Never. The app writes fan *motor* speeds on the motherboard's fan-control chip. RGB runs on entirely separate hardware (ARGB headers / USB controllers) that this app can't even see. Your light show is untouched.
 
 **I run SignalRGB / iCUE / Armoury Crate — will they fight?**
-Only if that software *also* has fan control enabled (RGB suites sometimes switch it on after updates). If something else starts overwriting fan speeds, this app detects it within seconds, holds your speeds steady by re-asserting them faster than the other program writes, and shows you a notification naming the fix: turn off fan control in the other app. Lighting features are never affected.
-
-**Does it work on laptops?**
-It'll show your temps, but laptop fans are run by the laptop's own embedded controller, which is proprietary per model. The app leaves them alone — the same safety rule that never touches your CPU cooler on a desktop. This app is for desktop case fans.
-
-**It says "no controllable fans found" on my Dell / HP / Lenovo desktop.**
-Same story as laptops: the big brands often skip the standard fan-control chip and run the fans from their own proprietary controller, which they've tuned at the factory and locked down. The app can't safely talk to those, so it leaves your fans on the manufacturer's control and runs as a temperature dashboard instead. It's happiest on a PC where you (or your builder) picked the motherboard.
-
-**So which PCs does it actually work on?**
-The dividing line is the motherboard:
-- **Retail motherboard** (ASUS, MSI, Gigabyte, ASRock…) → standard fan-control chip → the app works. That covers home builds, and also the gaming-shop prebuilts — iBuyPower, CyberPower, NZXT BLD, Micro Center builds — since they assemble from retail parts.
-- **Big-box machines** (Dell, HP, Lenovo) → custom board, fans on their own locked controller → temp dashboard only, fans stay on the factory's tuning.
+Only if that software *also* has fan control enabled (RGB suites sometimes switch it on after updates). If something else starts overwriting fan speeds, this app detects it within seconds, temporarily polls faster so your chosen fan speeds stay in effect, and shows you a notification naming the fix: turn off fan control in the other app. Lighting features are never affected.
 
 **Some sensors don't show on my brand-new hardware.**
 The sensor library is deliberately version-pinned — it never updates behind your back (silent sensor-library updates breaking PCs overnight is a recurring story with other tools). Brand-new chips can lag behind support; when that happens, the app runs read-only and your BIOS keeps running the fans — nothing breaks. Support arrives via a normal, tested release. Open an [issue](../../issues) with your hardware details.
