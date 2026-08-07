@@ -19,6 +19,10 @@ public sealed class FanReadings
     public float PeakCpu { get; init; } = float.NaN;
     public float PeakGpu { get; init; } = float.NaN;
 
+    /// <summary>Load % captured the moment each peak was set - the peak's context.</summary>
+    public float PeakCpuLoad { get; init; } = float.NaN;
+    public float PeakGpuLoad { get; init; } = float.NaN;
+
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
 
@@ -118,12 +122,16 @@ public sealed class FanController : IDisposable
     private bool _sentinelLost;
     private float _peakCpu = float.NaN;
     private float _peakGpu = float.NaN;
+    private float _peakCpuLoad = float.NaN;
+    private float _peakGpuLoad = float.NaN;
     private float _peakOut;
     private readonly Dictionary<string, float> _peakRpm = new();
 
     // The peaks the UI shows (cleared by Reset peaks; the log's stay whole-session).
     private float _dispPeakCpu = float.NaN;
     private float _dispPeakGpu = float.NaN;
+    private float _dispPeakCpuLoad = float.NaN;
+    private float _dispPeakGpuLoad = float.NaN;
     private readonly long _startedMs = Environment.TickCount64;
 
     public event EventHandler<FanReadings>? Updated;
@@ -259,6 +267,8 @@ public sealed class FanController : IDisposable
     {
         _dispPeakCpu = float.NaN;
         _dispPeakGpu = float.NaN;
+        _dispPeakCpuLoad = float.NaN;
+        _dispPeakGpuLoad = float.NaN;
     }
 
     /// <summary>Stop driving and put the fans back on the BIOS curve.</summary>
@@ -512,8 +522,8 @@ public sealed class FanController : IDisposable
 
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
     {
-        if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) _peakCpu = c;
-        if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) _peakGpu = g;
+        if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) { _peakCpu = c; _peakCpuLoad = _hw.CpuLoad ?? float.NaN; }
+        if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) { _peakGpu = g; _peakGpuLoad = _hw.GpuLoad ?? float.NaN; }
         if (_currentPercent > _peakOut) _peakOut = _currentPercent;
 
         foreach (FanChannel f in controlled)
@@ -538,10 +548,12 @@ public sealed class FanController : IDisposable
 
         TimeSpan ran = TimeSpan.FromMilliseconds(Environment.TickCount64 - _startedMs);
         string rpm = string.Join(" ", _peakRpm.Select(kv => $"[{kv.Key}={kv.Value:F0}]"));
+        string cl = float.IsNaN(_peakCpuLoad) ? "" : $"@{_peakCpuLoad:F0}%load";
+        string gl = float.IsNaN(_peakGpuLoad) ? "" : $"@{_peakGpuLoad:F0}%load";
 
         DebugLog.Write(
             $"SESSION PEAKS after {ran.TotalMinutes:F1} min: " +
-            $"cpu={_peakCpu:F1}C gpu={_peakGpu:F1}C maxOut={_peakOut:F0}% {rpm}");
+            $"cpu={_peakCpu:F1}C{cl} gpu={_peakGpu:F1}C{gl} maxOut={_peakOut:F0}% {rpm}");
     }
 
     private float Slew(float current, float desired, float dt)
@@ -562,8 +574,8 @@ public sealed class FanController : IDisposable
         // switching dial/bar/Game Mode can never show different "peaks". Kept
         // separate from the SESSION PEAKS log values - Reset peaks clears these,
         // but the log keeps reporting the true whole-session maximum for support.
-        if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) _dispPeakCpu = pc;
-        if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
+        if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) { _dispPeakCpu = pc; _dispPeakCpuLoad = _hw.CpuLoad ?? float.NaN; }
+        if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) { _dispPeakGpu = pg; _dispPeakGpuLoad = _hw.GpuLoad ?? float.NaN; }
 
         var readings = new FanReadings
         {
@@ -573,6 +585,8 @@ public sealed class FanController : IDisposable
             OutputPercent = _currentPercent,
             PeakCpu = _dispPeakCpu,
             PeakGpu = _dispPeakGpu,
+            PeakCpuLoad = _dispPeakCpuLoad,
+            PeakGpuLoad = _dispPeakGpuLoad,
             NoControllableFans = noFans,
             SentinelLost = _sentinelLost,
             Conflict = _conflict,

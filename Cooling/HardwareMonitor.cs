@@ -52,11 +52,15 @@ public sealed class HardwareMonitor : IDisposable
 
     private ISensor? _cpuTemp;
     private ISensor? _gpuTemp;
+    private ISensor? _cpuLoad;
+    private ISensor? _gpuLoad;
 
     public List<FanChannel> Fans { get; } = new();
 
     public float? CpuTemp => _cpuTemp?.Value;
     public float? GpuTemp => _gpuTemp?.Value;
+    public float? CpuLoad => _cpuLoad?.Value;
+    public float? GpuLoad => _gpuLoad?.Value;
 
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
@@ -141,6 +145,23 @@ public sealed class HardwareMonitor : IDisposable
         _gpuTemp = gpuTemps.FirstOrDefault(s => s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault(s => s.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault();
+
+        // Utilization, captured with each peak so the tooltip can say "74C (97% load)".
+        _cpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
+                                           && s.Hardware.HardwareType == HardwareType.Cpu
+                                           && s.Name.Contains("Total", StringComparison.OrdinalIgnoreCase))
+                   ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
+                                              && s.Hardware.HardwareType == HardwareType.Cpu);
+
+        _gpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
+                                           && s.Hardware.HardwareType is HardwareType.GpuAmd
+                                               or HardwareType.GpuNvidia
+                                               or HardwareType.GpuIntel
+                                           && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
+                   ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
+                                              && s.Hardware.HardwareType is HardwareType.GpuAmd
+                                                  or HardwareType.GpuNvidia
+                                                  or HardwareType.GpuIntel);
 
         // Pair each Control sensor with the Fan sensor of the same name - that's
         // how the Nuvoton driver names them (e.g. "Chassis Fan #2" appears as both).

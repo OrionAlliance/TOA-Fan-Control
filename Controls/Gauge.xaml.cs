@@ -72,6 +72,10 @@ public partial class Gauge : UserControl
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
     private double _peak = double.NaN;
+    private double _peakLoad = double.NaN;
+
+    /// <summary>Load % the moment the peak was set - the peak tooltip's context. Set before Peak.</summary>
+    public double PeakLoad { set => _peakLoad = value; }
 
     /// <summary>
     /// The session peak, fed by the controller - one truth shared by every view
@@ -557,7 +561,9 @@ public partial class Gauge : UserControl
         // Labels may be stacked on the dial ("Chassis\nFan #2"); flatten it here or
         // the tooltip breaks across two lines mid-sentence.
         string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-        _peakHit.ToolTip = $"{flat} peak this run: {Peak:0}{unit}";
+        _peakHit.ToolTip = double.IsNaN(_peakLoad)
+            ? $"{flat} peak this run: {Peak:0}{unit}"
+            : $"{flat} peak this run: {Peak:0}{unit} ({_peakLoad:0}% load)";
 
         _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
         {

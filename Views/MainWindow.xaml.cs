@@ -163,6 +163,10 @@ public partial class MainWindow : Window
         GpuBar.Value = r.GpuTemp ?? double.NaN;
 
         // Peaks come from the controller - the same numbers in every view.
+        CpuGauge.PeakLoad = r.PeakCpuLoad;
+        GpuGauge.PeakLoad = r.PeakGpuLoad;
+        CpuBar.PeakLoad = r.PeakCpuLoad;
+        GpuBar.PeakLoad = r.PeakGpuLoad;
         CpuGauge.Peak = r.PeakCpu;
         GpuGauge.Peak = r.PeakGpu;
         CpuBar.Peak = r.PeakCpu;

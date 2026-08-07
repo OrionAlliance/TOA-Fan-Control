@@ -15,6 +15,7 @@ namespace FanControlApp.Controls;
 public partial class StatBar : UserControl
 {
     private double _peak = double.NaN;
+    private double _peakLoad = double.NaN;
 
     public StatBar()
     {
@@ -69,6 +70,9 @@ public partial class StatBar : UserControl
 
     /// <summary>Values at or above this fill red; NaN = no red zone.</summary>
     public double RedFrom { get => (double)GetValue(RedFromProperty); set => SetValue(RedFromProperty, value); }
+
+    /// <summary>Load % the moment the peak was set - the peak tooltip's context. Set before Peak.</summary>
+    public double PeakLoad { set => _peakLoad = value; }
 
     /// <summary>
     /// The session peak, fed by the controller - one truth shared by every view.
@@ -147,7 +151,9 @@ public partial class StatBar : UserControl
         {
             double pf = Math.Clamp((_peak - Minimum) / (Maximum - Minimum), 0, 1);
             PeakTick.Margin = new Thickness(Math.Max(0, pf * w - 1), 1, 0, 1);
-            PeakTick.ToolTip = $"Peak this run: {_peak:F0}{unit}";
+            PeakTick.ToolTip = double.IsNaN(_peakLoad)
+                ? $"Peak this run: {_peak:F0}{unit}"
+                : $"Peak this run: {_peak:F0}{unit} ({_peakLoad:F0}% load)";
             PeakTick.Visibility = Visibility.Visible;
         }
         else
