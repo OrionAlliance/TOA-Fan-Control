@@ -537,8 +537,10 @@ public sealed class FanController : IDisposable
     private void LogSample(float? cpu, float? gpu, float hotter, List<FanChannel> controlled)
     {
         string rpm = string.Join(" ", controlled.Select(f => $"[{f.Name}={f.Rpm:F0}]"));
+        string cl = _hw.CpuLoad is { } c ? $"@{c:F0}%" : "";
+        string gl = _hw.GpuLoad is { } g ? $"@{g:F0}%" : "";
         DebugLog.Write(
-            $"SAMPLE cpu={cpu:F1} gpu={gpu:F1} hotter={hotter:F1} " +
+            $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl} hotter={hotter:F1} " +
             $"out={_currentPercent:F1}% {rpm}");
     }
 
