@@ -4,9 +4,10 @@ No — the fans aren't being jerked, they're being nudged, and nudging is what f
 are built for. Here's how it actually works:
 
 **1. A degree isn't a jerk — it's 1%.**
-The rule is 1°C = 1% fan speed. On a ~1500 RPM fan, 1% is ~15 RPM. That's not a
-speed change you can hear or feel — it's less variation than the fan's own bearing
-wobble.
+The rule is 1°C = 1% fan speed (past 70°C the fans lean up to 5 points ahead, so a
+degree there moves them at most 2%). On a ~1500 RPM fan, 1% is ~15 RPM. That's not
+a speed change you can hear or feel — it's less variation than the fan's own
+bearing wobble.
 
 **2. Changes are rate-limited, not instant.**
 The app checks once a second, but the fans are only *allowed* to move **8%/sec up,

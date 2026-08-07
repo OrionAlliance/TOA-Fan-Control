@@ -33,7 +33,7 @@ I never wanted that type of control over my fans. I didn't want the confusion or
 
 ## What it does
 
-The app adjusts **only your PC case fans**, making them follow your hottest component — your CPU or your GPU. Every second it reads both temperatures and sets every case fan to match the hotter of the two, one-to-one: **70°C means 70% fan speed.**
+The app adjusts **only your PC case fans**, making them follow your hottest component — your CPU or your GPU. Every second it reads both temperatures and sets every case fan to match the hotter of the two, one-to-one: **70°C means 70% fan speed.** Past 70°C the fans lean up to 5 points ahead of the temperature (78°C → 83%) — extra push exactly when things are hottest.
 
 - A hard **30% floor** means no case fan ever stalls, and changes are **rate-limited** so fans glide to the needed speed instead of jerking up and down.
 - Your **AIO pumps, CPU coolers, and GPU fans are never touched** — they stay on your motherboard's BIOS control (and your GPU driver's), where they belong.
@@ -122,13 +122,13 @@ Because most BIOS curves can't. On most boards, case-fan curves follow the CPU o
 On purpose. Your CPU cooler stays on the BIOS so that no failure of this app can ever starve your CPU of cooling. The same rule protects AIO pumps (throttling a pump is the one genuine landmine in fan software) and your GPU's fans (the GPU's own driver runs those best). This app manages the case airflow *around* your components; their own coolers always keep the motherboard as their safety net.
 
 **Won't adjusting fans every second wear them out?**
-No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and 1°C = 1% (~15 RPM — inaudible). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
+No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and a degree moves the fans 1% (~15 RPM — inaudible; at most 2% per degree in the 70–75°C hand-off band). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
 
 **Does this touch my RGB lighting?**
 Never. The app writes fan *motor* speeds on the motherboard's fan-control chip. RGB runs on entirely separate hardware (ARGB headers / USB controllers) that this app can't even see. Your light show is untouched.
 
 **I run SignalRGB / iCUE / Armoury Crate — will they fight?**
-Only if that software *also* has fan control enabled (RGB suites sometimes switch it on after updates). If something else starts overwriting fan speeds, this app detects it within seconds, temporarily polls faster so your chosen fan speeds stay in effect, and shows you a notification naming the fix: turn off fan control in the other app. Lighting features are never affected.
+Only if that software *also* has fan control enabled (RGB suites sometimes switch it on after updates). If something else starts overwriting fan speeds, this app detects it within seconds, temporarily re-asserts your chosen speeds faster than the other program writes them, and shows you a notification naming the fix: turn off fan control in the other app. Lighting features are never affected.
 
 **Some sensors don't show on my brand-new hardware.**
 The sensor library is deliberately version-pinned — it never updates behind your back (silent sensor-library updates breaking PCs overnight is a recurring story with other tools). Brand-new chips can lag behind support; when that happens, the app runs read-only and your BIOS keeps running the fans — nothing breaks. Support arrives via a normal, tested release. Open an [issue](../../issues) with your hardware details.

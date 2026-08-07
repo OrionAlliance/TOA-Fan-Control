@@ -66,9 +66,7 @@ public sealed class FanController : IDisposable
     public const float FloorPercent = 30f;
     public const float CeilingPercent = 100f;
 
-    // Hot lean: past 70C the fans run ahead of the temperature, up to +5 by 75C.
-    // Faded in rather than stepped so the target never jumps at a boundary - a
-    // step would make the fans hunt whenever the temp hovers right on it.
+    // Hot lean: past 70C fans run up to +5 ahead of the temp, faded in by 75C so the target never steps at a boundary.
     private const float HotLeanFromC = 70f;
     private const float HotLeanMax = 5f;
 
@@ -86,10 +84,10 @@ public sealed class FanController : IDisposable
     // 0-255 PWM quantization; N consecutive misses avoids one-off flukes.
     private const float ForeignWriteTolerance = 2.5f;
     private const int ForeignTicksToConfirm = 3;
-    private const int ConflictClearSeconds = 30;
+    private const long ConflictClearMs = 30_000;
 
     // A SAMPLE line every 5s (time-based - tick rate varies during conflicts).
-    private const int SampleEverySeconds = 5;
+    private const long SampleEveryMs = 5_000;
 
     private readonly object _gate = new();
     private readonly HardwareMonitor _hw = new();
@@ -103,7 +101,8 @@ public sealed class FanController : IDisposable
     private bool _engaged;
     private bool _paused;
     private int _blindTicks;
-    private bool _disposed;
+    private int _disposedFlag; // Interlocked - Dispose can race in from the UI thread and ProcessExit at once
+    private bool _publishFaulted; // log-on-change gate for subscriber throws
 
     // Foreign-writer (SignalRGB & friends) tracking. Interval stamps are
     // monotonic (TickCount64) - a wall-clock jump must not fake or swallow one.
@@ -321,6 +320,8 @@ public sealed class FanController : IDisposable
 
         try
         {
+            // A queued tick can land after Dispose - it must never touch hardware.
+            if (System.Threading.Volatile.Read(ref _disposedFlag) != 0) return;
             Poll();
         }
         catch (Exception ex)
@@ -357,7 +358,7 @@ public sealed class FanController : IDisposable
 
         if (controlled.Count == 0)
         {
-            Publish(cpu, gpu, source, controlled, noFans: true,
+            Publish(cpu, gpu, source, noFans: true,
                     status: "No controllable fans found - the BIOS is running your fans. See fan_debug.log.");
             return;
         }
@@ -382,7 +383,15 @@ public sealed class FanController : IDisposable
 
         if (paused)
         {
-            Publish(cpu, gpu, source, controlled,
+            // Paused = not writing, so there is no conflict left to win.
+            if (_conflict)
+            {
+                _conflict = false;
+                _foreignTicks = 0;
+                SetTickRate(TickMs);
+                DebugLog.Write("Paused during a conflict - conflict state cleared.");
+            }
+            Publish(cpu, gpu, source,
                     status: "Paused - the BIOS curve has your fans.");
             return;
         }
@@ -397,7 +406,7 @@ public sealed class FanController : IDisposable
                 HandBackToBios();
             }
 
-            Publish(cpu, gpu, null, controlled,
+            Publish(cpu, gpu, null,
                     status: "No temperature reading - BIOS has the fans.");
             return;
         }
@@ -410,10 +419,13 @@ public sealed class FanController : IDisposable
         if (link != null && !link.Ready.WaitOne(0))
         {
             link.Resume.Set();
-            Publish(cpu, gpu, temp, controlled,
+            Publish(cpu, gpu, temp,
                     status: "Waiting for the watchdog to take the fans...");
             return;
         }
+
+        // dt = the interval that scheduled THIS tick, read before DetectForeignWriter can change it.
+        float dt = (float)(_timer.Interval / 1000.0);
 
         // Before this tick's write: is the chip still holding what WE wrote last
         // tick? If not, another program (RGB suites often ship fan control and
@@ -425,7 +437,7 @@ public sealed class FanController : IDisposable
         // Past 70C the fans lean ahead: 72C -> 74%, 75C -> 80%, 85C -> 90%.
         float lean = Math.Clamp(temp - HotLeanFromC, 0f, HotLeanMax);
         float desired = Math.Clamp(temp + lean, FloorPercent, CeilingPercent);
-        _currentPercent = Slew(_currentPercent, desired);
+        _currentPercent = Slew(_currentPercent, desired, dt);
 
         foreach (FanChannel f in controlled)
             f.SetPercent(_currentPercent);
@@ -440,13 +452,13 @@ public sealed class FanController : IDisposable
         TrackPeaks(cpu, gpu, controlled);
 
         _tickCount++;
-        if (Environment.TickCount64 - _lastSampleLogMs >= SampleEverySeconds * 1000)
+        if (Environment.TickCount64 - _lastSampleLogMs >= SampleEveryMs)
         {
             _lastSampleLogMs = Environment.TickCount64;
             LogSample(cpu, gpu, temp, controlled);
         }
 
-        Publish(cpu, gpu, temp, controlled, status: status);
+        Publish(cpu, gpu, temp, status: status);
     }
 
     /// <summary>
@@ -454,15 +466,6 @@ public sealed class FanController : IDisposable
     /// persistent mismatch (while we're engaged) means a foreign writer; enter
     /// conflict mode - 4x tick rate - until it's been quiet for 30 seconds.
     /// </summary>
-    // Stop/Start around the change - assigning Interval from inside the Elapsed
-    // callback is a known Timers.Timer quirk zone.
-    private void SetTickRate(double ms)
-    {
-        _timer.Stop();
-        _timer.Interval = ms;
-        _timer.Start();
-    }
-
     private void DetectForeignWriter(List<FanChannel> controlled)
     {
         if (!_engaged) return; // nothing of ours on the chip yet to compare against
@@ -489,13 +492,22 @@ public sealed class FanController : IDisposable
         {
             _foreignTicks = 0;
 
-            if (_conflict && Environment.TickCount64 - _lastForeignWriteMs > ConflictClearSeconds * 1000)
+            if (_conflict && Environment.TickCount64 - _lastForeignWriteMs > ConflictClearMs)
             {
                 _conflict = false;
                 SetTickRate(TickMs);
                 DebugLog.Write("Foreign fan writes stopped - back to the normal tick rate.");
             }
         }
+    }
+
+    // Stop/Start dodges the assign-Interval-inside-Elapsed Timers.Timer quirk; no-op once disposed.
+    private void SetTickRate(double ms)
+    {
+        if (System.Threading.Volatile.Read(ref _disposedFlag) != 0) return;
+        _timer.Stop();
+        _timer.Interval = ms;
+        _timer.Start();
     }
 
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
@@ -532,11 +544,9 @@ public sealed class FanController : IDisposable
             $"cpu={_peakCpu:F1}C gpu={_peakGpu:F1}C maxOut={_peakOut:F0}% {rpm}");
     }
 
-    private float Slew(float current, float desired)
+    private float Slew(float current, float desired, float dt)
     {
-        // Scale by the live tick interval, so conflict mode's faster ticks keep
-        // the same %/second ramp rates instead of quadrupling them.
-        float dt = (float)(_timer.Interval / 1000.0);
+        // dt scales conflict mode's faster ticks to the same %/second ramp rates.
         float up = SlewUpPerSec * dt;
         float down = SlewDownPerSec * dt;
 
@@ -546,8 +556,7 @@ public sealed class FanController : IDisposable
         return current + delta;
     }
 
-    private void Publish(float? cpu, float? gpu, float? source, IReadOnlyList<FanChannel> fans,
-                         string status, bool noFans = false)
+    private void Publish(float? cpu, float? gpu, float? source, string status, bool noFans = false)
     {
         // Display peaks live here, not in the views: every view renders these, so
         // switching dial/bar/Game Mode can never show different "peaks". Kept
@@ -556,30 +565,41 @@ public sealed class FanController : IDisposable
         if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) _dispPeakCpu = pc;
         if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
 
+        var readings = new FanReadings
+        {
+            CpuTemp = cpu,
+            GpuTemp = gpu,
+            SourceTemp = source,
+            OutputPercent = _currentPercent,
+            PeakCpu = _dispPeakCpu,
+            PeakGpu = _dispPeakGpu,
+            NoControllableFans = noFans,
+            SentinelLost = _sentinelLost,
+            Conflict = _conflict,
+            Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,
+            Fans = _hw.Fans,
+            DrivenFans = ControlledFanNames,
+        };
+
+        // A synchronous subscriber throw must not unwind into Poll and cost fan control.
         try
         {
-            Updated?.Invoke(this, new FanReadings
-            {
-                CpuTemp = cpu,
-                GpuTemp = gpu,
-                SourceTemp = source,
-                OutputPercent = _currentPercent,
-                PeakCpu = _dispPeakCpu,
-                PeakGpu = _dispPeakGpu,
-                NoControllableFans = noFans,
-                SentinelLost = _sentinelLost,
-                Conflict = _conflict,
-                Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,
-                Fans = _hw.Fans,
-                DrivenFans = ControlledFanNames,
-            });
+            Updated?.Invoke(this, readings);
         }
         catch (Exception ex)
         {
-            // A display bug must never cost fan control - without this, an
-            // Updated subscriber's exception unwinds into Poll and OnTick hands
-            // the fans back to the BIOS over a cosmetic failure.
-            DebugLog.Write("An Updated handler threw - display skipped this tick.", ex);
+            if (!_publishFaulted)
+            {
+                _publishFaulted = true;
+                DebugLog.Write("An Updated subscriber threw - suppressing repeats until it recovers.", ex);
+            }
+            return;
+        }
+
+        if (_publishFaulted)
+        {
+            _publishFaulted = false;
+            DebugLog.Write("Updated subscribers recovered.");
         }
     }
 
@@ -608,18 +628,20 @@ public sealed class FanController : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (System.Threading.Interlocked.Exchange(ref _disposedFlag, 1) != 0) return;
 
-        try { _timer.Stop(); _timer.Dispose(); } catch { /* shutting down */ }
+        try { _timer.Stop(); } catch { /* shutting down */ }
 
-        // Stop() doesn't wait for a tick already in flight - let it drain (2s
-        // cap) so the hardware never gets disposed out from under Poll().
+        // Drain the in-flight tick (2s cap) before the hardware goes away under it.
+        bool drained = false;
         for (int i = 0; i < 200; i++)
         {
-            if (System.Threading.Interlocked.CompareExchange(ref _tickBusy, 0, 0) == 0) break;
+            if (System.Threading.Interlocked.CompareExchange(ref _tickBusy, 0, 0) == 0) { drained = true; break; }
             Thread.Sleep(10);
         }
+        if (!drained) DebugLog.Write("A tick is still stuck in a hardware read after 2s - skipping hardware close.");
+
+        try { _timer.Dispose(); } catch { /* shutting down */ }
 
         // Before anything else - if this throws or the release hangs, the numbers
         // from the session are still on disk.
@@ -631,7 +653,7 @@ public sealed class FanController : IDisposable
         // back before this process - and its driver handle - goes away.
         Thread.Sleep(400);
 
-        _hw.Dispose();
+        if (drained) _hw.Dispose();
         DebugLog.Write("Controller disposed.");
     }
 }
