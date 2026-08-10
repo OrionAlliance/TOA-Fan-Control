@@ -549,9 +549,10 @@ public sealed class FanController : IDisposable
         if (_hw.GpuFan?.Rpm is { } gr) rpm += $" [{_hw.GpuFan.Name}={gr:F0}]";
         string cl = _hw.CpuLoad is { } c ? $"@{c:F0}%" : "";
         string gl = _hw.GpuLoad is { } g ? $"@{g:F0}%" : "";
+        string bt = _hw.BoardTemp is { } b ? $" board={b:F1}" : "";
         DebugLog.Write(bios
-            ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl} hotter={hotter:F1} {rpm}"
-            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
+            ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{bt} hotter={hotter:F1} {rpm}"
+            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{bt} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
     }
 
     private void LogSessionSummary()

@@ -54,6 +54,7 @@ public sealed class HardwareMonitor : IDisposable
     private ISensor? _gpuTemp;
     private ISensor? _cpuLoad;
     private ISensor? _gpuLoad;
+    private ISensor? _boardTemp;
 
     public List<FanChannel> Fans { get; } = new();
 
@@ -61,6 +62,8 @@ public sealed class HardwareMonitor : IDisposable
     public float? GpuTemp => _gpuTemp?.Value;
     public float? CpuLoad => _cpuLoad?.Value;
     public float? GpuLoad => _gpuLoad?.Value;
+    public float? BoardTemp => _boardTemp?.Value;
+    public string BoardTempName => _boardTemp?.Name ?? "-";
 
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
@@ -112,7 +115,7 @@ public sealed class HardwareMonitor : IDisposable
         catch { /* SMBIOS can be unreadable on odd systems - never block startup for a log line */ }
 
         DebugLog.Write($"Hardware: board='{board?.Name ?? "-"}' bios='{bios}' chip='{chip}' cpu='{cpu}' gpu='{gpu}'");
-        DebugLog.Write($"Hardware opened. cpuTemp='{CpuTempName}' gpuTemp='{GpuTempName}' " +
+        DebugLog.Write($"Hardware opened. cpuTemp='{CpuTempName}' gpuTemp='{GpuTempName}' boardTemp='{BoardTempName}' " +
                        $"fans=[{string.Join(", ", Fans.Select(f => $"{f.Name}{(f.CanControl ? "*" : "")}"))}]");
     }
 
@@ -145,6 +148,15 @@ public sealed class HardwareMonitor : IDisposable
         _gpuTemp = gpuTemps.FirstOrDefault(s => s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault(s => s.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault();
+
+        // Case-ambient proxy: the board's own temp - the weather every other
+        // reading happens in. Named sensors first; any plausible one as fallback.
+        ISensor[] boardTemps = all.Where(s => s.SensorType == SensorType.Temperature
+                                              && s.Hardware.HardwareType is HardwareType.Motherboard
+                                                  or HardwareType.SuperIO).ToArray();
+        _boardTemp = boardTemps.FirstOrDefault(s => s.Name.Contains("System", StringComparison.OrdinalIgnoreCase))
+                     ?? boardTemps.FirstOrDefault(s => s.Name.Contains("Motherboard", StringComparison.OrdinalIgnoreCase))
+                     ?? boardTemps.FirstOrDefault(s => s.Value is > 5 and < 80);
 
         // Utilization, captured with each peak so the tooltip can say "74C (97% load)".
         _cpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
