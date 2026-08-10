@@ -183,7 +183,15 @@ public sealed class HardwareMonitor : IDisposable
         // (so the UI can show them greyed) but they'll read 0 RPM forever.
         foreach (ISensor r in rpms.Where(r => Fans.All(f => f.Name != r.Name)))
             Fans.Add(new FanChannel { Name = r.Name, RpmSensor = r });
+
+        // Context fans for the log - never driven, but their effort tells the thermal story.
+        GpuFan = Fans.FirstOrDefault(f => f.Name.Contains("gpu", StringComparison.OrdinalIgnoreCase));
+        CpuFan = Fans.FirstOrDefault(f => f.Name.Equals("CPU Fan", StringComparison.OrdinalIgnoreCase))
+                 ?? Fans.FirstOrDefault(f => f.Name.Contains("cpu", StringComparison.OrdinalIgnoreCase));
     }
+
+    public FanChannel? GpuFan { get; private set; }
+    public FanChannel? CpuFan { get; private set; }
 
     public FanChannel? FindFan(string name) =>
         Fans.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));

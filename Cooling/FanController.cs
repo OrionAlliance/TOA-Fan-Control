@@ -545,6 +545,8 @@ public sealed class FanController : IDisposable
     private void LogSample(float? cpu, float? gpu, float? hotter, List<FanChannel> controlled, bool bios = false)
     {
         string rpm = string.Join(" ", controlled.Select(f => $"[{f.Name}={f.Rpm:F0}]"));
+        if (_hw.CpuFan?.Rpm is { } cr) rpm += $" [{_hw.CpuFan.Name}={cr:F0}]";
+        if (_hw.GpuFan?.Rpm is { } gr) rpm += $" [{_hw.GpuFan.Name}={gr:F0}]";
         string cl = _hw.CpuLoad is { } c ? $"@{c:F0}%" : "";
         string gl = _hw.GpuLoad is { } g ? $"@{g:F0}%" : "";
         DebugLog.Write(bios
