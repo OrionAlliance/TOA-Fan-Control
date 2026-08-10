@@ -401,6 +401,14 @@ public sealed class FanController : IDisposable
                 SetTickRate(TickMs);
                 DebugLog.Write("Paused during a conflict - conflict state cleared.");
             }
+            // Paused is not blind: the log keeps recording what the BIOS does.
+            TrackPeaks(cpu, gpu, controlled);
+            if (Environment.TickCount64 - _lastSampleLogMs >= SampleEveryMs)
+            {
+                _lastSampleLogMs = Environment.TickCount64;
+                LogSample(cpu, gpu, source, controlled, bios: true);
+            }
+
             Publish(cpu, gpu, source,
                     status: "Paused - the BIOS curve has your fans.");
             return;
@@ -534,14 +542,14 @@ public sealed class FanController : IDisposable
         }
     }
 
-    private void LogSample(float? cpu, float? gpu, float hotter, List<FanChannel> controlled)
+    private void LogSample(float? cpu, float? gpu, float? hotter, List<FanChannel> controlled, bool bios = false)
     {
         string rpm = string.Join(" ", controlled.Select(f => $"[{f.Name}={f.Rpm:F0}]"));
         string cl = _hw.CpuLoad is { } c ? $"@{c:F0}%" : "";
         string gl = _hw.GpuLoad is { } g ? $"@{g:F0}%" : "";
-        DebugLog.Write(
-            $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl} hotter={hotter:F1} " +
-            $"out={_currentPercent:F1}% {rpm}");
+        DebugLog.Write(bios
+            ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl} hotter={hotter:F1} {rpm}"
+            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
     }
 
     private void LogSessionSummary()
