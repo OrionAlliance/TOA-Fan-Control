@@ -120,6 +120,9 @@ public partial class MainWindow : Window
         Show();
         WindowState = WindowState.Normal;
         Activate();
+
+        // The user came looking - surface any update they missed while hidden.
+        _ = ((App)Application.Current).CheckOnUserReturnAsync();
     }
 
     private void OnUpdated(object? sender, FanReadings r) => Dispatcher.BeginInvoke(() => Render(r));
