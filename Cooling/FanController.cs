@@ -199,9 +199,18 @@ public sealed class FanController : IDisposable
     public void BeginControl()
     {
         _currentPercent = FloorPercent;
+        BlankLoadPeaks(); // our own startup render is not the user's workload
         _timer.Start();
         DebugLog.Write("Controller started.");
     }
+
+    // The app must not award its OWN render bursts a load-peak trophy - the UI
+    // calls this when it just caused GPU work (restore, view switch, Game Mode).
+    private long _loadPeakBlankUntilMs;
+    public void BlankLoadPeaks(int seconds = 5) =>
+        _loadPeakBlankUntilMs = Environment.TickCount64 + seconds * 1000;
+
+    private bool LoadPeaksBlanked => Environment.TickCount64 < _loadPeakBlankUntilMs;
 
     // Fans we must NOT drive with case-fan logic, matched by name (case-insensitive
     // substring). Everything else on the board is a case/system fan and is safe to
@@ -539,8 +548,11 @@ public sealed class FanController : IDisposable
     {
         if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) _peakCpu = c;
         if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) _peakGpu = g;
-        if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_peakCpuLoad) || _susCpuLoad > _peakCpuLoad)) _peakCpuLoad = _susCpuLoad;
-        if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_peakGpuLoad) || _susGpuLoad > _peakGpuLoad)) _peakGpuLoad = _susGpuLoad;
+        if (!LoadPeaksBlanked)
+        {
+            if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_peakCpuLoad) || _susCpuLoad > _peakCpuLoad)) _peakCpuLoad = _susCpuLoad;
+            if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_peakGpuLoad) || _susGpuLoad > _peakGpuLoad)) _peakGpuLoad = _susGpuLoad;
+        }
         if (_currentPercent > _peakOut) _peakOut = _currentPercent;
 
         foreach (FanChannel f in controlled)
@@ -607,8 +619,11 @@ public sealed class FanController : IDisposable
         _prevCpuLoad = curCl;
         _prevGpuLoad = curGl;
 
-        if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_dispPeakCpuLoad) || _susCpuLoad > _dispPeakCpuLoad)) _dispPeakCpuLoad = _susCpuLoad;
-        if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_dispPeakGpuLoad) || _susGpuLoad > _dispPeakGpuLoad)) _dispPeakGpuLoad = _susGpuLoad;
+        if (!LoadPeaksBlanked)
+        {
+            if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_dispPeakCpuLoad) || _susCpuLoad > _dispPeakCpuLoad)) _dispPeakCpuLoad = _susCpuLoad;
+            if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_dispPeakGpuLoad) || _susGpuLoad > _dispPeakGpuLoad)) _dispPeakGpuLoad = _susGpuLoad;
+        }
 
         var readings = new FanReadings
         {

@@ -117,6 +117,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        _controller.BlankLoadPeaks(); // the restore render is our load, not theirs
         Show();
         WindowState = WindowState.Normal;
         Activate();
@@ -340,6 +341,7 @@ public partial class MainWindow : Window
     /// <summary>Dials or bars - same numbers, different dashboard. Saved like the theme.</summary>
     private void ToggleDisplayStyle()
     {
+        _controller.BlankLoadPeaks(); // the view-switch render is our load, not theirs
         string next = BarsPanel.Visibility == Visibility.Visible ? "Dials" : "Bars";
         ApplyDisplayStyle(next);
         _controller.UpdateSettings(s => s.DisplayStyle = next, reresolve: false);
@@ -458,6 +460,7 @@ public partial class MainWindow : Window
 
     private void LeaveGameMode()
     {
+        _controller.BlankLoadPeaks(); // the main-window re-render is our load, not theirs
         _overlay?.SavePlacement();
         _overlay?.Hide();
         Show();
