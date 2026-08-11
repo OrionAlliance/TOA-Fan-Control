@@ -74,8 +74,10 @@ public sealed class FanController : IDisposable
     private const float HotLeanFromC = 70f;
     private const float HotLeanMax = 5f;
 
-    // Below this core clock the GPU is idling - its load % is the idle-clock quirk, not effort.
-    private const float GpuLoadClockFloorMhz = 1000f;
+    // Below this core clock the GPU is idling - its load % is the idle-clock
+    // quirk, not effort. Measured on the 6700 XT: idle sits at 12-133 MHz
+    // (flapping 0-54% fake load), video playback at ~490, gaming at 2000+.
+    private const float GpuLoadClockFloorMhz = 300f;
 
     // Ramp up eagerly, coast down gently. Fast down-ramps are what make fan
     // control audibly "pulse", and being slow to quieten costs nothing.
