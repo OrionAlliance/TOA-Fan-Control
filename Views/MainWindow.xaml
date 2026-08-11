@@ -72,9 +72,9 @@
                     <StackPanel x:Name="DialsPanel">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C" Width="200" Height="195"
-                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
+                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="75" RedFrom="90" />
                             <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C" Width="200" Height="195"
-                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="70" RedFrom="90" />
+                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="75" RedFrom="90" />
                         </StackPanel>
 
                         <StackPanel x:Name="FanRows" Margin="0,4,0,0" />
@@ -88,9 +88,9 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <ctrl:StatBar x:Name="CpuBar" Grid.Column="0" Label="CPU" Unit="C"
-                                          GreenTo="70" RedFrom="90" />
+                                          GreenTo="75" RedFrom="90" />
                             <ctrl:StatBar x:Name="GpuBar" Grid.Column="1" Label="GPU" Unit="C"
-                                          GreenTo="70" RedFrom="90"
+                                          GreenTo="75" RedFrom="90"
                                           Margin="8,0,0,0" />
                         </Grid>
 
