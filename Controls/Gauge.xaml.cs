@@ -130,6 +130,12 @@ public partial class Gauge : UserControl
         Canvas.SetTop(e, _cy - radius);
     }
 
+    // Band tooltips are sentences - wrap them into a readable block, not a ribbon.
+    private static ToolTip Tip(string text) => new()
+    {
+        Content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, MaxWidth = 230 },
+    };
+
     private Path Arc(double a0, double a1, double radius, Brush stroke, double thickness)
     {
         var fig = new PathFigure { StartPoint = PointAt(a0, radius) };
@@ -268,7 +274,7 @@ public partial class Gauge : UserControl
             {
                 Color = C("#3FB950"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.5,
             };
-            green.ToolTip = "Safe and full speed - the chip boosts unhindered here.";
+            green.ToolTip = Tip("Safe and full speed - the chip boosts unhindered here.");
             Face.Children.Add(green);
         }
 
@@ -280,7 +286,7 @@ public partial class Gauge : UserControl
             {
                 Color = C("#E8D44C"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.45,
             };
-            amber.ToolTip = "Safe, but the tax zone - no damage, yet every degree here quietly costs a little boost speed.";
+            amber.ToolTip = Tip("Safe, but the tax zone - no damage, yet every degree here quietly costs a little boost speed.");
             Face.Children.Add(amber);
         }
 
@@ -291,7 +297,7 @@ public partial class Gauge : UserControl
             {
                 Color = C("#F85149"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.55,
             };
-            red.ToolTip = "Hard throttle - the chip slams its own brakes to protect itself. Don't live here.";
+            red.ToolTip = Tip("Hard throttle - the chip slams its own brakes to protect itself. Don't live here.");
             Face.Children.Add(red);
         }
 
