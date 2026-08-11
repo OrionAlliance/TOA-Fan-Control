@@ -132,6 +132,13 @@ public sealed class FanController : IDisposable
     private float _dispPeakGpu = float.NaN;
     private float _dispPeakCpuLoad = float.NaN;
     private float _dispPeakGpuLoad = float.NaN;
+
+    // A load must hold 2 consecutive ticks to count as effort - one-frame bursts
+    // (our own view-switch render, background blips) can't warm anything.
+    private float _prevCpuLoad = float.NaN;
+    private float _prevGpuLoad = float.NaN;
+    private float _susCpuLoad = float.NaN;
+    private float _susGpuLoad = float.NaN;
     private readonly long _startedMs = Environment.TickCount64;
 
     public event EventHandler<FanReadings>? Updated;
@@ -532,8 +539,8 @@ public sealed class FanController : IDisposable
     {
         if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) _peakCpu = c;
         if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) _peakGpu = g;
-        if (_hw.CpuLoad is { } cl2 && (float.IsNaN(_peakCpuLoad) || cl2 > _peakCpuLoad)) _peakCpuLoad = cl2;
-        if (_hw.GpuLoad is { } gl2 && (float.IsNaN(_peakGpuLoad) || gl2 > _peakGpuLoad)) _peakGpuLoad = gl2;
+        if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_peakCpuLoad) || _susCpuLoad > _peakCpuLoad)) _peakCpuLoad = _susCpuLoad;
+        if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_peakGpuLoad) || _susGpuLoad > _peakGpuLoad)) _peakGpuLoad = _susGpuLoad;
         if (_currentPercent > _peakOut) _peakOut = _currentPercent;
 
         foreach (FanChannel f in controlled)
@@ -592,8 +599,16 @@ public sealed class FanController : IDisposable
         // but the log keeps reporting the true whole-session maximum for support.
         if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) _dispPeakCpu = pc;
         if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
-        if (_hw.CpuLoad is { } pcl && (float.IsNaN(_dispPeakCpuLoad) || pcl > _dispPeakCpuLoad)) _dispPeakCpuLoad = pcl;
-        if (_hw.GpuLoad is { } pgl && (float.IsNaN(_dispPeakGpuLoad) || pgl > _dispPeakGpuLoad)) _dispPeakGpuLoad = pgl;
+
+        float curCl = _hw.CpuLoad ?? float.NaN;
+        float curGl = _hw.GpuLoad ?? float.NaN;
+        _susCpuLoad = MathF.Min(curCl, _prevCpuLoad); // NaN or a blip poisons the pair
+        _susGpuLoad = MathF.Min(curGl, _prevGpuLoad);
+        _prevCpuLoad = curCl;
+        _prevGpuLoad = curGl;
+
+        if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_dispPeakCpuLoad) || _susCpuLoad > _dispPeakCpuLoad)) _dispPeakCpuLoad = _susCpuLoad;
+        if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_dispPeakGpuLoad) || _susGpuLoad > _dispPeakGpuLoad)) _dispPeakGpuLoad = _susGpuLoad;
 
         var readings = new FanReadings
         {
