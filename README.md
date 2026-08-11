@@ -121,6 +121,13 @@ Because most BIOS curves can't. On most boards, case-fan curves follow the CPU o
 **Why doesn't it control the CPU fan?**
 On purpose. Your CPU cooler stays on the BIOS so that no failure of this app can ever starve your CPU of cooling. The same rule protects AIO pumps (throttling a pump is the one genuine landmine in fan software) and your GPU's fans (the GPU's own driver runs those best). This app manages the case airflow *around* your components; their own coolers always keep the motherboard as their safety net.
 
+**What do the color zones on the dials mean?**
+They're about speed first and safety second.<br>
+**Green** = cool enough that your chip runs at full speed.<br>
+**Yellow** = still safe, no damage, but hot chips quietly slow themselves down a little more with each degree.<br>
+**Red** = the chip hits its own emergency brake to protect itself.<br>
+Hover any zone in the app and it explains itself. The bonus that rides along free: cooler parts simply last longer. Cool is fast now and alive later.
+
 **Won't adjusting fans every second wear them out?**
 No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and a degree moves the fans 1% (~15 RPM — inaudible; at most 2% per degree in the 70–75°C hand-off band). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
 
