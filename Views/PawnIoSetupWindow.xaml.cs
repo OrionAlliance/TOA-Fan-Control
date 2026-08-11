@@ -22,6 +22,10 @@ public partial class PawnIoSetupWindow : Window
     private Func<IProgress<string>, Task<PawnIoSetup.InstallResult>> _installer =
         PawnIoSetup.DownloadVerifyInstallAsync;
 
+    // Updates restart the app so they take effect NOW, not "eventually". First-run
+    // PawnIO install keeps its Continue flow; the app updater restarts itself.
+    private bool _restartAppOnSuccess;
+
     public PawnIoSetupWindow()
     {
         InitializeComponent();
@@ -42,7 +46,8 @@ public partial class PawnIoSetupWindow : Window
             "check its signature before running it. Nothing changes without your OK.";
         InstallButton.Content = "Update PawnIO";
         LaterButton.Content = "Not now";
-        HintText.Text = "You can keep using the current version if you'd rather not.";
+        HintText.Text = "The app restarts itself when the update finishes. Or keep the current version - your call.";
+        _restartAppOnSuccess = true;
     }
 
     /// <summary>App-update variant: downloads the latest GitHub release installer.</summary>
@@ -82,7 +87,8 @@ public partial class PawnIoSetupWindow : Window
             "before running it. Nothing changes without your OK.";
         InstallButton.Content = "Update .NET";
         LaterButton.Content = "Not now";
-        HintText.Text = "The update takes effect the next time the app starts.";
+        HintText.Text = "The app restarts itself when the update finishes, so it takes effect right away.";
+        _restartAppOnSuccess = true;
     }
 
     private async void OnInstallClick(object sender, RoutedEventArgs e)
@@ -102,7 +108,15 @@ public partial class PawnIoSetupWindow : Window
         {
             Installed = true;
             RebootRequired = result.RebootRequired;
-            DebugLog.Write($"PawnIO install succeeded (rebootRequired={result.RebootRequired}).");
+            DebugLog.Write($"Update installed (rebootRequired={result.RebootRequired}).");
+
+            if (_restartAppOnSuccess)
+            {
+                DebugLog.Write("Restarting the app so the update takes effect now.");
+                AppRestart.AfterExit();
+                Application.Current.Shutdown();
+                return;
+            }
 
             InstallButton.Content = "Continue";
             InstallButton.IsEnabled = true;
