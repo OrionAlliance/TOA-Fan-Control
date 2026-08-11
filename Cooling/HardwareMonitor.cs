@@ -54,6 +54,7 @@ public sealed class HardwareMonitor : IDisposable
     private ISensor? _gpuTemp;
     private ISensor? _cpuLoad;
     private ISensor? _gpuLoad;
+    private ISensor? _gpuClock;
     private ISensor? _boardTemp;
 
     public List<FanChannel> Fans { get; } = new();
@@ -64,6 +65,7 @@ public sealed class HardwareMonitor : IDisposable
     public float? GpuLoad => _gpuLoad?.Value;
     public float? BoardTemp => _boardTemp?.Value;
     public string BoardTempName => _boardTemp?.Name ?? "-";
+    public float? GpuCoreClockMhz => _gpuClock?.Value;
 
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
@@ -174,6 +176,14 @@ public sealed class HardwareMonitor : IDisposable
                                               && s.Hardware.HardwareType is HardwareType.GpuAmd
                                                   or HardwareType.GpuNvidia
                                                   or HardwareType.GpuIntel);
+
+        // Core clock, to tell real effort from the idle-clock quirk: a sleeping
+        // GPU reports 50%+ "load" for desktop crumbs because the clock is near zero.
+        _gpuClock = all.FirstOrDefault(s => s.SensorType == SensorType.Clock
+                                            && s.Hardware.HardwareType is HardwareType.GpuAmd
+                                                or HardwareType.GpuNvidia
+                                                or HardwareType.GpuIntel
+                                            && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase));
 
         // Pair each Control sensor with the Fan sensor of the same name - that's
         // how the Nuvoton driver names them (e.g. "Chassis Fan #2" appears as both).

@@ -74,6 +74,9 @@ public sealed class FanController : IDisposable
     private const float HotLeanFromC = 70f;
     private const float HotLeanMax = 5f;
 
+    // Below this core clock the GPU is idling - its load % is the idle-clock quirk, not effort.
+    private const float GpuLoadClockFloorMhz = 1000f;
+
     // Ramp up eagerly, coast down gently. Fast down-ramps are what make fan
     // control audibly "pulse", and being slow to quieten costs nothing.
     // Per SECOND, not per tick - the tick rate changes during a conflict, and
@@ -570,10 +573,11 @@ public sealed class FanController : IDisposable
         if (_hw.GpuFan?.Rpm is { } gr) rpm += $" [{_hw.GpuFan.Name}={gr:F0}]";
         string cl = _hw.CpuLoad is { } c ? $"@{c:F0}%" : "";
         string gl = _hw.GpuLoad is { } g ? $"@{g:F0}%" : "";
+        string gc = _hw.GpuCoreClockMhz is { } k ? $" gclk={k:F0}" : "";
         string bt = _hw.BoardTemp is { } b ? $" board={b:F1}" : "";
         DebugLog.Write(bios
-            ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{bt} hotter={hotter:F1} {rpm}"
-            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{bt} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
+            ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{bt} hotter={hotter:F1} {rpm}"
+            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{bt} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
     }
 
     private void LogSessionSummary()
@@ -614,6 +618,10 @@ public sealed class FanController : IDisposable
 
         float curCl = _hw.CpuLoad ?? float.NaN;
         float curGl = _hw.GpuLoad ?? float.NaN;
+
+        // AMD idle-clock quirk: a sleeping GPU reports 50%+ "load" for desktop
+        // crumbs. Load only counts as effort at working clocks.
+        if (_hw.GpuCoreClockMhz is { } mhz && mhz < GpuLoadClockFloorMhz) curGl = float.NaN;
         _susCpuLoad = MathF.Min(curCl, _prevCpuLoad); // NaN or a blip poisons the pair
         _susGpuLoad = MathF.Min(curGl, _prevGpuLoad);
         _prevCpuLoad = curCl;
