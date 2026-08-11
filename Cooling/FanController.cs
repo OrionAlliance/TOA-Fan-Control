@@ -19,7 +19,7 @@ public sealed class FanReadings
     public float PeakCpu { get; init; } = float.NaN;
     public float PeakGpu { get; init; } = float.NaN;
 
-    /// <summary>Load % captured the moment each peak was set - the peak's context.</summary>
+    /// <summary>Session peak load % - its own maximum, independent of peak temp.</summary>
     public float PeakCpuLoad { get; init; } = float.NaN;
     public float PeakGpuLoad { get; init; } = float.NaN;
 
@@ -530,8 +530,10 @@ public sealed class FanController : IDisposable
 
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
     {
-        if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) { _peakCpu = c; _peakCpuLoad = _hw.CpuLoad ?? float.NaN; }
-        if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) { _peakGpu = g; _peakGpuLoad = _hw.GpuLoad ?? float.NaN; }
+        if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) _peakCpu = c;
+        if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) _peakGpu = g;
+        if (_hw.CpuLoad is { } cl2 && (float.IsNaN(_peakCpuLoad) || cl2 > _peakCpuLoad)) _peakCpuLoad = cl2;
+        if (_hw.GpuLoad is { } gl2 && (float.IsNaN(_peakGpuLoad) || gl2 > _peakGpuLoad)) _peakGpuLoad = gl2;
         if (_currentPercent > _peakOut) _peakOut = _currentPercent;
 
         foreach (FanChannel f in controlled)
@@ -561,12 +563,13 @@ public sealed class FanController : IDisposable
 
         TimeSpan ran = TimeSpan.FromMilliseconds(Environment.TickCount64 - _startedMs);
         string rpm = string.Join(" ", _peakRpm.Select(kv => $"[{kv.Key}={kv.Value:F0}]"));
-        string cl = float.IsNaN(_peakCpuLoad) ? "" : $"@{_peakCpuLoad:F0}%load";
-        string gl = float.IsNaN(_peakGpuLoad) ? "" : $"@{_peakGpuLoad:F0}%load";
+        string loads = "";
+        if (!float.IsNaN(_peakCpuLoad)) loads += $" cpuLoad={_peakCpuLoad:F0}%";
+        if (!float.IsNaN(_peakGpuLoad)) loads += $" gpuLoad={_peakGpuLoad:F0}%";
 
         DebugLog.Write(
             $"SESSION PEAKS after {ran.TotalMinutes:F1} min: " +
-            $"cpu={_peakCpu:F1}C{cl} gpu={_peakGpu:F1}C{gl} maxOut={_peakOut:F0}% {rpm}");
+            $"cpu={_peakCpu:F1}C gpu={_peakGpu:F1}C{loads} maxOut={_peakOut:F0}% {rpm}");
     }
 
     private float Slew(float current, float desired, float dt)
@@ -587,8 +590,10 @@ public sealed class FanController : IDisposable
         // switching dial/bar/Game Mode can never show different "peaks". Kept
         // separate from the SESSION PEAKS log values - Reset peaks clears these,
         // but the log keeps reporting the true whole-session maximum for support.
-        if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) { _dispPeakCpu = pc; _dispPeakCpuLoad = _hw.CpuLoad ?? float.NaN; }
-        if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) { _dispPeakGpu = pg; _dispPeakGpuLoad = _hw.GpuLoad ?? float.NaN; }
+        if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) _dispPeakCpu = pc;
+        if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
+        if (_hw.CpuLoad is { } pcl && (float.IsNaN(_dispPeakCpuLoad) || pcl > _dispPeakCpuLoad)) _dispPeakCpuLoad = pcl;
+        if (_hw.GpuLoad is { } pgl && (float.IsNaN(_dispPeakGpuLoad) || pgl > _dispPeakGpuLoad)) _dispPeakGpuLoad = pgl;
 
         var readings = new FanReadings
         {

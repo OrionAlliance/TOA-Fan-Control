@@ -151,14 +151,24 @@ public partial class StatBar : UserControl
         {
             double pf = Math.Clamp((_peak - Minimum) / (Maximum - Minimum), 0, 1);
             PeakTick.Margin = new Thickness(Math.Max(0, pf * w - 1), 1, 0, 1);
-            PeakTick.ToolTip = double.IsNaN(_peakLoad)
-                ? $"Peak this run: {_peak:F0}{unit}"
-                : $"Peak this run: {_peak:F0}{unit} ({_peakLoad:F0}% load)";
+            PeakTick.ToolTip = $"Peak temp this run: {_peak:F0}{unit}";
             PeakTick.Visibility = Visibility.Visible;
         }
         else
         {
             PeakTick.Visibility = Visibility.Collapsed;
+        }
+
+        if (!double.IsNaN(_peakLoad))
+        {
+            double lf = Math.Clamp(_peakLoad / 100.0, 0, 1);
+            LoadTri.Margin = new Thickness(Math.Max(0, 1 + lf * w - 4.5), 4, 0, 0);
+            LoadTri.ToolTip = $"Peak load this run: {_peakLoad:F0}%";
+            LoadTri.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            LoadTri.Visibility = Visibility.Collapsed;
         }
     }
 

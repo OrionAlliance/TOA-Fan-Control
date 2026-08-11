@@ -27,6 +27,9 @@ public partial class Gauge : UserControl
     private Path? _peakMark;
     private Path? _peakHit;
     private RotateTransform? _peakRotate;
+    private Polygon? _loadMark;
+    private Polygon? _loadHit;
+    private RotateTransform? _loadRotate;
     private TextBlock? _valueText;
 
     private double _cx, _cy, _r;
@@ -165,6 +168,9 @@ public partial class Gauge : UserControl
         _peakMark = null;
         _peakHit = null;
         _peakRotate = null;
+        _loadMark = null;
+        _loadHit = null;
+        _loadRotate = null;
         _valueText = null;
 
         if (ActualWidth <= 20 || ActualHeight <= 20) return;
@@ -459,6 +465,43 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_peakMark);
 
+        // Peak-load bug: a small triangle riding OUTSIDE the band, tip pointing at
+        // the load position - its own lane, so a load never reads as a temperature.
+        _loadRotate = new RotateTransform(StartAngle);
+        var loadTransform = new TransformGroup
+        {
+            Children = { _loadRotate, new TranslateTransform(_cx, _cy) },
+        };
+        var loadPoints = new PointCollection
+        {
+            new Point(BandR + 4, 0),
+            new Point(BandR + 12, -4.5),
+            new Point(BandR + 12, 4.5),
+        };
+        _loadHit = new Polygon
+        {
+            Points = loadPoints,
+            Fill = Brushes.Transparent,
+            Stroke = Brushes.Transparent,
+            StrokeThickness = 14,
+            RenderTransform = loadTransform,
+            Cursor = Cursors.Hand,
+        };
+        Moving.Children.Add(_loadHit);
+
+        _loadMark = new Polygon
+        {
+            Points = loadPoints,
+            Fill = B("#00A3C4"),
+            IsHitTestVisible = false,
+            Effect = new DropShadowEffect
+            {
+                Color = C("#00A3C4"), BlurRadius = 6, ShadowDepth = 0, Opacity = 0.8,
+            },
+            RenderTransform = loadTransform,
+        };
+        Moving.Children.Add(_loadMark);
+
         // White needle. The gradient across its width reads as a rounded edge;
         // the shadow lifts it off the face.
         _needleRotate = new RotateTransform(StartAngle);
@@ -554,6 +597,24 @@ public partial class Gauge : UserControl
         _peakMark.Visibility = peakVis;
         _peakHit.Visibility = peakVis;
 
+        if (_loadMark != null && _loadHit != null && _loadRotate != null)
+        {
+            bool hasLoad = !double.IsNaN(_peakLoad);
+            Visibility loadVis = hasLoad ? Visibility.Visible : Visibility.Collapsed;
+            _loadMark.Visibility = loadVis;
+            _loadHit.Visibility = loadVis;
+            if (hasLoad)
+            {
+                string lflat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+                _loadHit.ToolTip = $"{lflat} peak load this run: {_peakLoad:0}%";
+                _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
+                {
+                    To = AngleFor(_peakLoad),
+                    Duration = TimeSpan.FromMilliseconds(350),
+                });
+            }
+        }
+
         if (!hasPeak) return;
 
         string unit = string.IsNullOrEmpty(Unit) ? "" : " " + Unit;
@@ -561,9 +622,7 @@ public partial class Gauge : UserControl
         // Labels may be stacked on the dial ("Chassis\nFan #2"); flatten it here or
         // the tooltip breaks across two lines mid-sentence.
         string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-        _peakHit.ToolTip = double.IsNaN(_peakLoad)
-            ? $"{flat} peak this run: {Peak:0}{unit}"
-            : $"{flat} peak this run: {Peak:0}{unit} ({_peakLoad:0}% load)";
+        _peakHit.ToolTip = $"{flat} peak temp this run: {Peak:0}{unit}";
 
         _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
         {
