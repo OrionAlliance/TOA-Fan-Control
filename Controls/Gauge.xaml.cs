@@ -275,10 +275,10 @@ public partial class Gauge : UserControl
         // The tax zone: safe, but boost quietly erodes as the heat climbs.
         if (!double.IsNaN(GreenTo) && !double.IsNaN(RedFrom) && RedFrom > GreenTo)
         {
-            Path amber = Arc(AngleFor(GreenTo), AngleFor(RedFrom), BandR, B("#D29922"), 7);
+            Path amber = Arc(AngleFor(GreenTo), AngleFor(RedFrom), BandR, B("#E8D44C"), 7);
             amber.Effect = new DropShadowEffect
             {
-                Color = C("#D29922"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.45,
+                Color = C("#E8D44C"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.45,
             };
             amber.ToolTip = "Safe, but the tax zone - no damage, yet every degree here quietly costs a little boost speed.";
             Face.Children.Add(amber);
@@ -396,6 +396,7 @@ public partial class Gauge : UserControl
             FontWeight = FontWeights.SemiBold,
             TextAlignment = TextAlignment.Center,
             Width = _r * 1.6,
+            IsHitTestVisible = false, // its invisible layout box must not eat band tooltips
             Effect = new DropShadowEffect
             {
                 Color = Colors.Black, BlurRadius = 4, ShadowDepth = 1.5,
@@ -413,6 +414,7 @@ public partial class Gauge : UserControl
             FontSize = 10,
             TextAlignment = TextAlignment.Center,
             Width = _r * 1.6,
+            IsHitTestVisible = false, // same - the label's box overlaps the red band's arc
             LineHeight = 12,
             LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
         };
