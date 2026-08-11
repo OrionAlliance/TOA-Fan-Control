@@ -10,7 +10,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>TOA - Fan Control</AssemblyName>
     <RootNamespace>FanControlApp</RootNamespace>
-    <Version>1.15.5</Version>
+    <Version>1.15.6</Version>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
 

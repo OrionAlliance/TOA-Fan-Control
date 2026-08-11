@@ -268,7 +268,20 @@ public partial class Gauge : UserControl
             {
                 Color = C("#3FB950"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.5,
             };
+            green.ToolTip = "Safe and full speed - the chip boosts unhindered here.";
             Face.Children.Add(green);
+        }
+
+        // The tax zone: safe, but boost quietly erodes as the heat climbs.
+        if (!double.IsNaN(GreenTo) && !double.IsNaN(RedFrom) && RedFrom > GreenTo)
+        {
+            Path amber = Arc(AngleFor(GreenTo), AngleFor(RedFrom), BandR, B("#D29922"), 7);
+            amber.Effect = new DropShadowEffect
+            {
+                Color = C("#D29922"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.45,
+            };
+            amber.ToolTip = "Safe, but the tax zone - no damage, yet every degree here quietly costs a little boost speed.";
+            Face.Children.Add(amber);
         }
 
         if (!double.IsNaN(RedFrom) && RedFrom < Maximum)
@@ -278,6 +291,7 @@ public partial class Gauge : UserControl
             {
                 Color = C("#F85149"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.55,
             };
+            red.ToolTip = "Hard throttle - the chip slams its own brakes to protect itself. Don't live here.";
             Face.Children.Add(red);
         }
 
