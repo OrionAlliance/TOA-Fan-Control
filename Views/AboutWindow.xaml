@@ -49,7 +49,7 @@
 
                         <TextBlock Margin="0,8,0,0" FontSize="11.5" TextWrapping="Wrap"
                                    Foreground="{DynamicResource Text}"
-                                   Text="The PawnIO driver (signed, by namazso) provides hardware access, and both PawnIO and .NET are checked for updates automatically - never during a game." />
+                                   Text="The PawnIO driver (signed, by namazso) provides hardware access. PawnIO, .NET, and the app itself are checked for updates automatically - never during a game - and the app restarts itself so updates take effect right away." />
                     </StackPanel>
                 </Border>
 
