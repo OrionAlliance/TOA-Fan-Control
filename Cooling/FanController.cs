@@ -74,11 +74,6 @@ public sealed class FanController : IDisposable
     private const float HotLeanFromC = 70f;
     private const float HotLeanMax = 5f;
 
-    // Below this core clock the GPU is idling - its load % is the idle-clock
-    // quirk, not effort. Measured on the 6700 XT: idle sits at 12-133 MHz
-    // (flapping 0-54% fake load), video playback at ~490, gaming at 2000+.
-    private const float GpuLoadClockFloorMhz = 300f;
-
     // Ramp up eagerly, coast down gently. Fast down-ramps are what make fan
     // control audibly "pulse", and being slow to quieten costs nothing.
     // Per SECOND, not per tick - the tick rate changes during a conflict, and
@@ -574,7 +569,7 @@ public sealed class FanController : IDisposable
         if (_hw.CpuFan?.Rpm is { } cr) rpm += $" [{_hw.CpuFan.Name}={cr:F0}]";
         if (_hw.GpuFan?.Rpm is { } gr) rpm += $" [{_hw.GpuFan.Name}={gr:F0}]";
         string cl = _hw.CpuLoad is { } c ? $"@{c:F0}%" : "";
-        string gl = _hw.GpuLoad is { } g ? $"@{g:F0}%" : "";
+        string gl = _hw.GpuEngineLoad is { } g ? $"@{g:F0}%" : "";
         string gc = _hw.GpuCoreClockMhz is { } k ? $" gclk={k:F0}" : "";
         string bt = _hw.BoardTemp is { } b ? $" board={b:F1}" : "";
         DebugLog.Write(bios
@@ -619,11 +614,10 @@ public sealed class FanController : IDisposable
         if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
 
         float curCl = _hw.CpuLoad ?? float.NaN;
-        float curGl = _hw.GpuLoad ?? float.NaN;
-
-        // AMD idle-clock quirk: a sleeping GPU reports 50%+ "load" for desktop
-        // crumbs. Load only counts as effort at working clocks.
-        if (_hw.GpuCoreClockMhz is { } mhz && mhz < GpuLoadClockFloorMhz) curGl = float.NaN;
+        // GPU load = the D3D engine counters (Task Manager's number): true
+        // utilization, clock-independent, honest at idle. CPU load is time-based
+        // and already honest, so both are used raw - no clock-weighting needed.
+        float curGl = _hw.GpuEngineLoad ?? float.NaN;
         _susCpuLoad = MathF.Min(curCl, _prevCpuLoad); // NaN or a blip poisons the pair
         _susGpuLoad = MathF.Min(curGl, _prevGpuLoad);
         _prevCpuLoad = curCl;

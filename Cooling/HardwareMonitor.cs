@@ -54,6 +54,7 @@ public sealed class HardwareMonitor : IDisposable
     private ISensor? _gpuTemp;
     private ISensor? _cpuLoad;
     private ISensor? _gpuLoad;
+    private ISensor[] _gpuEngineLoads = Array.Empty<ISensor>();
     private ISensor? _gpuClock;
     private ISensor? _boardTemp;
 
@@ -66,6 +67,20 @@ public sealed class HardwareMonitor : IDisposable
     public float? BoardTemp => _boardTemp?.Value;
     public string BoardTempName => _boardTemp?.Name ?? "-";
     public float? GpuCoreClockMhz => _gpuClock?.Value;
+
+    /// <summary>True GPU utilization: max across the Windows D3D engine counters
+    /// (clock-independent, matches Task Manager). Falls back to the clock-relative
+    /// GPU Core load only if no engine counters exist.</summary>
+    public float? GpuEngineLoad
+    {
+        get
+        {
+            float max = float.NaN;
+            foreach (ISensor s in _gpuEngineLoads)
+                if (s.Value is { } v && (float.IsNaN(max) || v > max)) max = v;
+            return float.IsNaN(max) ? _gpuLoad?.Value : max;
+        }
+    }
 
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
@@ -118,6 +133,7 @@ public sealed class HardwareMonitor : IDisposable
 
         DebugLog.Write($"Hardware: board='{board?.Name ?? "-"}' bios='{bios}' chip='{chip}' cpu='{cpu}' gpu='{gpu}'");
         DebugLog.Write($"Hardware opened. cpuTemp='{CpuTempName}' gpuTemp='{GpuTempName}' boardTemp='{BoardTempName}' " +
+                       $"gpuEngines={_gpuEngineLoads.Length} " +
                        $"fans=[{string.Join(", ", Fans.Select(f => $"{f.Name}{(f.CanControl ? "*" : "")}"))}]");
     }
 
@@ -176,6 +192,19 @@ public sealed class HardwareMonitor : IDisposable
                                               && s.Hardware.HardwareType is HardwareType.GpuAmd
                                                   or HardwareType.GpuNvidia
                                                   or HardwareType.GpuIntel);
+
+        // The Windows D3D engine counters (Task Manager's numbers): true
+        // utilization, NOT clock-relative, honest at any clock, identical on every
+        // GPU. Use ONLY the 3D + Compute engines - the real graphics/compute
+        // horsepower. Excludes the fixed-function video-decode/copy blocks, which
+        // peg high during a video but use almost no power (why TM over-reports).
+        _gpuEngineLoads = all.Where(s => s.SensorType == SensorType.Load
+                                         && s.Hardware.HardwareType is HardwareType.GpuAmd
+                                             or HardwareType.GpuNvidia
+                                             or HardwareType.GpuIntel
+                                         && s.Name.StartsWith("D3D", StringComparison.OrdinalIgnoreCase)
+                                         && (s.Name.EndsWith("3D", StringComparison.OrdinalIgnoreCase)
+                                             || s.Name.Contains("Compute", StringComparison.OrdinalIgnoreCase))).ToArray();
 
         // Core clock, to tell real effort from the idle-clock quirk: a sleeping
         // GPU reports 50%+ "load" for desktop crumbs because the clock is near zero.
