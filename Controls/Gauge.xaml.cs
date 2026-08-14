@@ -77,8 +77,17 @@ public partial class Gauge : UserControl
     private double _peak = double.NaN;
     private double _peakLoad = double.NaN;
 
-    /// <summary>Load % the moment the peak was set - the peak tooltip's context. Set before Peak.</summary>
-    public double PeakLoad { set => _peakLoad = value; }
+    /// <summary>Independent session peak load % (0-100), fed by the controller.
+    /// NaN hides the cyan marker.</summary>
+    public double PeakLoad
+    {
+        set
+        {
+            if (value.Equals(_peakLoad)) return; // double.Equals: NaN equals NaN
+            _peakLoad = value;
+            UpdatePeakMarks();
+        }
+    }
 
     /// <summary>
     /// The session peak, fed by the controller - one truth shared by every view
@@ -90,9 +99,9 @@ public partial class Gauge : UserControl
         get => _peak;
         set
         {
-            if (value.Equals(_peak) || (double.IsNaN(value) && double.IsNaN(_peak))) return;
+            if (value.Equals(_peak)) return; // double.Equals: NaN equals NaN
             _peak = value;
-            UpdateMoving();
+            UpdatePeakMarks();
         }
     }
 
@@ -192,6 +201,7 @@ public partial class Gauge : UserControl
         DrawText();
         BuildMoving();
         UpdateMoving();
+        UpdatePeakMarks();
     }
 
     /// <summary>Machined ring, dished face, and the shadow the rim casts inward.</summary>
@@ -611,45 +621,48 @@ public partial class Gauge : UserControl
             Duration = TimeSpan.FromMilliseconds(350),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
         });
+    }
 
+    // Markers repaint only when a peak actually changes - never on value ticks.
+    private void UpdatePeakMarks()
+    {
         if (_peakMark == null || _peakRotate == null || _peakHit == null) return;
+
+        // Labels may be stacked on the dial ("Chassis\nFan #2"); flatten it here or
+        // the tooltips break across two lines mid-sentence.
+        string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
 
         bool hasPeak = !double.IsNaN(Peak);
         Visibility peakVis = hasPeak ? Visibility.Visible : Visibility.Collapsed;
         _peakMark.Visibility = peakVis;
         _peakHit.Visibility = peakVis;
-
-        if (_loadMark != null && _loadHit != null && _loadRotate != null)
+        if (hasPeak)
         {
-            bool hasLoad = !double.IsNaN(_peakLoad);
-            Visibility loadVis = hasLoad ? Visibility.Visible : Visibility.Collapsed;
-            _loadMark.Visibility = loadVis;
-            _loadHit.Visibility = loadVis;
-            if (hasLoad)
+            string unit = string.IsNullOrEmpty(Unit) ? "" : " " + Unit;
+            _peakHit.ToolTip = $"{flat} peak temp this run: {Peak:0}{unit}";
+            _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
             {
-                string lflat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-                _loadHit.ToolTip = $"{lflat} peak load this run: {_peakLoad:0}%";
-                _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
-                {
-                    To = AngleFor(_peakLoad),
-                    Duration = TimeSpan.FromMilliseconds(350),
-                });
-            }
+                To = AngleFor(Peak),
+                Duration = TimeSpan.FromMilliseconds(350),
+            });
         }
 
-        if (!hasPeak) return;
+        if (_loadMark == null || _loadHit == null || _loadRotate == null) return;
 
-        string unit = string.IsNullOrEmpty(Unit) ? "" : " " + Unit;
-
-        // Labels may be stacked on the dial ("Chassis\nFan #2"); flatten it here or
-        // the tooltip breaks across two lines mid-sentence.
-        string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-        _peakHit.ToolTip = $"{flat} peak temp this run: {Peak:0}{unit}";
-
-        _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
+        bool hasLoad = !double.IsNaN(_peakLoad);
+        Visibility loadVis = hasLoad ? Visibility.Visible : Visibility.Collapsed;
+        _loadMark.Visibility = loadVis;
+        _loadHit.Visibility = loadVis;
+        if (hasLoad)
         {
-            To = AngleFor(Peak),
-            Duration = TimeSpan.FromMilliseconds(350),
-        });
+            _loadHit.ToolTip = $"{flat} peak load this run: {_peakLoad:0}%";
+            // Load is a % of the WHOLE sweep (a tachometer fraction), not a point
+            // on the temperature axis - identical only while the dial runs 0-100.
+            _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
+            {
+                To = StartAngle + Math.Clamp(_peakLoad / 100.0, 0, 1) * SweepAngle,
+                Duration = TimeSpan.FromMilliseconds(350),
+            });
+        }
     }
 }

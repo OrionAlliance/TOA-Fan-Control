@@ -71,8 +71,18 @@ public partial class StatBar : UserControl
     /// <summary>Values at or above this fill red; NaN = no red zone.</summary>
     public double RedFrom { get => (double)GetValue(RedFromProperty); set => SetValue(RedFromProperty, value); }
 
-    /// <summary>Load % the moment the peak was set - the peak tooltip's context. Set before Peak.</summary>
-    public double PeakLoad { set => _peakLoad = value; }
+    /// <summary>Independent session peak load % (0-100), fed by the controller.
+    /// NaN hides the triangle marker.</summary>
+    public double PeakLoad
+    {
+        set
+        {
+            if (value.Equals(_peakLoad)) return; // double.Equals: NaN equals NaN
+            _peakLoad = value;
+            LoadTri.ToolTip = double.IsNaN(value) ? null : $"Peak load this run: {value:F0}%";
+            UpdateVisual();
+        }
+    }
 
     /// <summary>
     /// The session peak, fed by the controller - one truth shared by every view.
@@ -83,8 +93,10 @@ public partial class StatBar : UserControl
         get => _peak;
         set
         {
-            if (value.Equals(_peak) || (double.IsNaN(value) && double.IsNaN(_peak))) return;
+            if (value.Equals(_peak)) return; // double.Equals: NaN equals NaN
             _peak = value;
+            string unit = Unit == "%" ? "%" : string.IsNullOrEmpty(Unit) ? "" : $" {Unit}";
+            PeakTick.ToolTip = double.IsNaN(value) ? null : $"Peak temp this run: {value:F0}{unit}";
             UpdateVisual();
         }
     }
@@ -147,11 +159,12 @@ public partial class StatBar : UserControl
         _clip.Rect = new Rect(0, 0, Math.Max(0, Fill.Width + 1), TrackHost.ActualHeight);
         TextBlackLayer.Clip ??= _clip;
 
+        // Marker tooltips are set in the Peak/PeakLoad setters - only position
+        // and visibility belong here, so value ticks allocate nothing.
         if (!double.IsNaN(_peak))
         {
             double pf = Math.Clamp((_peak - Minimum) / (Maximum - Minimum), 0, 1);
             PeakTick.Margin = new Thickness(Math.Max(0, pf * w - 1), 1, 0, 1);
-            PeakTick.ToolTip = $"Peak temp this run: {_peak:F0}{unit}";
             PeakTick.Visibility = Visibility.Visible;
         }
         else
@@ -161,9 +174,10 @@ public partial class StatBar : UserControl
 
         if (!double.IsNaN(_peakLoad))
         {
+            // Load is a % of the WHOLE track (a tachometer fraction), not a point
+            // on the temperature axis - identical only while the bar runs 0-100.
             double lf = Math.Clamp(_peakLoad / 100.0, 0, 1);
             LoadTri.Margin = new Thickness(Math.Max(0, 1 + lf * w - 4.5), 4, 0, 0);
-            LoadTri.ToolTip = $"Peak load this run: {_peakLoad:F0}%";
             LoadTri.Visibility = Visibility.Visible;
         }
         else
