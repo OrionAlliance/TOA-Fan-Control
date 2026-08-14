@@ -63,14 +63,14 @@ public sealed class HardwareMonitor : IDisposable
     public float? CpuTemp => _cpuTemp?.Value;
     public float? GpuTemp => _gpuTemp?.Value;
     public float? CpuLoad => _cpuLoad?.Value;
-    public float? GpuLoad => _gpuLoad?.Value;
     public float? BoardTemp => _boardTemp?.Value;
     public string BoardTempName => _boardTemp?.Name ?? "-";
     public float? GpuCoreClockMhz => _gpuClock?.Value;
 
     /// <summary>True GPU utilization: max across the Windows D3D engine counters
     /// (clock-independent, matches Task Manager). Falls back to the clock-relative
-    /// GPU Core load only if no engine counters exist.</summary>
+    /// GPU Core load when no engine counter has a value - logged once, because the
+    /// fallback number is idle-inflated and the log must say which one it shows.</summary>
     public float? GpuEngineLoad
     {
         get
@@ -78,9 +78,18 @@ public sealed class HardwareMonitor : IDisposable
             float max = float.NaN;
             foreach (ISensor s in _gpuEngineLoads)
                 if (s.Value is { } v && (float.IsNaN(max) || v > max)) max = v;
-            return float.IsNaN(max) ? _gpuLoad?.Value : max;
+            if (!float.IsNaN(max)) return max;
+
+            if (!_engineFallbackLogged && _gpuLoad != null)
+            {
+                _engineFallbackLogged = true;
+                DebugLog.Write("GPU engine counters unavailable - load falls back to the clock-relative GPU Core sensor.");
+            }
+            return _gpuLoad?.Value;
         }
     }
+
+    private bool _engineFallbackLogged;
 
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
@@ -167,6 +176,11 @@ public sealed class HardwareMonitor : IDisposable
                    ?? gpuTemps.FirstOrDefault(s => s.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault();
 
+        // Every other GPU sensor is scoped to the SAME chip as the temp - on an
+        // iGPU+dGPU machine, mixing chips would pair one GPU's load or clock with
+        // the other GPU's temperature.
+        bool SameGpu(ISensor s) => _gpuTemp == null || s.Hardware == _gpuTemp.Hardware;
+
         // Case-ambient proxy: the board's own temp - the weather every other
         // reading happens in. Named sensors first; any plausible one as fallback.
         ISensor[] boardTemps = all.Where(s => s.SensorType == SensorType.Temperature
@@ -176,39 +190,47 @@ public sealed class HardwareMonitor : IDisposable
                      ?? boardTemps.FirstOrDefault(s => s.Name.Contains("Motherboard", StringComparison.OrdinalIgnoreCase))
                      ?? boardTemps.FirstOrDefault(s => s.Value is > 5 and < 80);
 
-        // Utilization, captured with each peak so the tooltip can say "74C (97% load)".
+        // CPU load feeds the peak-load marker directly (time-based, honest as-is).
         _cpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                            && s.Hardware.HardwareType == HardwareType.Cpu
                                            && s.Name.Contains("Total", StringComparison.OrdinalIgnoreCase))
                    ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                               && s.Hardware.HardwareType == HardwareType.Cpu);
 
+        // Kept ONLY as GpuEngineLoad's fallback - this sensor is "% busy at the
+        // CURRENT clock", which reads 50%+ at idle. Never surface it directly.
         _gpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
+                                           && SameGpu(s)
+                                           && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase)
                                            && s.Hardware.HardwareType is HardwareType.GpuAmd
                                                or HardwareType.GpuNvidia
-                                               or HardwareType.GpuIntel
-                                           && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
+                                               or HardwareType.GpuIntel)
                    ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
+                                              && SameGpu(s)
                                               && s.Hardware.HardwareType is HardwareType.GpuAmd
                                                   or HardwareType.GpuNvidia
                                                   or HardwareType.GpuIntel);
 
         // The Windows D3D engine counters (Task Manager's numbers): true
         // utilization, NOT clock-relative, honest at any clock, identical on every
-        // GPU. Use ONLY the 3D + Compute engines - the real graphics/compute
-        // horsepower. Excludes the fixed-function video-decode/copy blocks, which
-        // peg high during a video but use almost no power (why TM over-reports).
+        // GPU. Use ONLY the 3D + compute engines (NVIDIA names its compute node
+        // "Cuda") - the real graphics/compute horsepower. Excludes the
+        // fixed-function video-decode/copy blocks, which peg high during a video
+        // but use almost no power (why TM over-reports).
         _gpuEngineLoads = all.Where(s => s.SensorType == SensorType.Load
+                                         && SameGpu(s)
                                          && s.Hardware.HardwareType is HardwareType.GpuAmd
                                              or HardwareType.GpuNvidia
                                              or HardwareType.GpuIntel
                                          && s.Name.StartsWith("D3D", StringComparison.OrdinalIgnoreCase)
                                          && (s.Name.EndsWith("3D", StringComparison.OrdinalIgnoreCase)
-                                             || s.Name.Contains("Compute", StringComparison.OrdinalIgnoreCase))).ToArray();
+                                             || s.Name.Contains("Compute", StringComparison.OrdinalIgnoreCase)
+                                             || s.Name.Contains("Cuda", StringComparison.OrdinalIgnoreCase))).ToArray();
 
         // Core clock, to tell real effort from the idle-clock quirk: a sleeping
         // GPU reports 50%+ "load" for desktop crumbs because the clock is near zero.
         _gpuClock = all.FirstOrDefault(s => s.SensorType == SensorType.Clock
+                                            && SameGpu(s)
                                             && s.Hardware.HardwareType is HardwareType.GpuAmd
                                                 or HardwareType.GpuNvidia
                                                 or HardwareType.GpuIntel
