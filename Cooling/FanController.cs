@@ -204,18 +204,9 @@ public sealed class FanController : IDisposable
     public void BeginControl()
     {
         _currentPercent = FloorPercent;
-        BlankLoadPeaks(); // our own startup render is not the user's workload
         _timer.Start();
         DebugLog.Write("Controller started.");
     }
-
-    // The app must not award its OWN render bursts a load-peak trophy - the UI
-    // calls this when it just caused GPU work (restore, view switch, Game Mode).
-    private long _loadPeakBlankUntilMs;
-    public void BlankLoadPeaks(int seconds = 5) =>
-        _loadPeakBlankUntilMs = Environment.TickCount64 + seconds * 1000;
-
-    private bool LoadPeaksBlanked => Environment.TickCount64 < _loadPeakBlankUntilMs;
 
     // Fans we must NOT drive with case-fan logic, matched by name (case-insensitive
     // substring). Everything else on the board is a case/system fan and is safe to
@@ -579,11 +570,8 @@ public sealed class FanController : IDisposable
     {
         MaxInto(ref _peakCpu, cpu ?? float.NaN);
         MaxInto(ref _peakGpu, gpu ?? float.NaN);
-        if (!LoadPeaksBlanked)
-        {
-            MaxInto(ref _peakCpuLoad, _susCpuLoad);
-            MaxInto(ref _peakGpuLoad, _susGpuLoad);
-        }
+        MaxInto(ref _peakCpuLoad, _susCpuLoad);
+        MaxInto(ref _peakGpuLoad, _susGpuLoad);
         if (_currentPercent > _peakOut) _peakOut = _currentPercent;
 
         foreach (FanChannel f in controlled)
@@ -643,12 +631,8 @@ public sealed class FanController : IDisposable
         // but the log keeps reporting the true whole-session maximum for support.
         MaxInto(ref _dispPeakCpu, cpu ?? float.NaN);
         MaxInto(ref _dispPeakGpu, gpu ?? float.NaN);
-
-        if (!LoadPeaksBlanked)
-        {
-            MaxInto(ref _dispPeakCpuLoad, _susCpuLoad);
-            MaxInto(ref _dispPeakGpuLoad, _susGpuLoad);
-        }
+        MaxInto(ref _dispPeakCpuLoad, _susCpuLoad);
+        MaxInto(ref _dispPeakGpuLoad, _susGpuLoad);
 
         var readings = new FanReadings
         {
