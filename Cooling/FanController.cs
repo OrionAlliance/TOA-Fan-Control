@@ -133,12 +133,13 @@ public sealed class FanController : IDisposable
     private float _dispPeakCpuLoad = float.NaN;
     private float _dispPeakGpuLoad = float.NaN;
 
-    // A load must hold 2 consecutive ticks to count as effort - one-frame bursts
-    // (our own view-switch render, background blips) can't warm anything.
+    // A load must hold 2 consecutive ~1s captures to count as effort - one-poll
+    // bursts (our own view-switch render, background blips) can't warm anything.
     private float _prevCpuLoad = float.NaN;
     private float _prevGpuLoad = float.NaN;
     private float _susCpuLoad = float.NaN;
     private float _susGpuLoad = float.NaN;
+    private long _lastLoadCaptureMs;
     private readonly long _startedMs = Environment.TickCount64;
 
     public event EventHandler<FanReadings>? Updated;
@@ -365,6 +366,7 @@ public sealed class FanController : IDisposable
     private void Poll()
     {
         _hw.Refresh();
+        CaptureLoads(); // before ANY peak tracking, so log and display agree
 
         List<FanChannel> controlled;
         WatchdogLink? link;
@@ -544,14 +546,39 @@ public sealed class FanController : IDisposable
         _timer.Start();
     }
 
+    // "Track the max, NaN-safe" - the one fold every peak in this file uses.
+    private static void MaxInto(ref float peak, float v)
+    {
+        if (!float.IsNaN(v) && (float.IsNaN(peak) || v > peak)) peak = v;
+    }
+
+    // Sustained load = min of the last two ~1s captures, so a one-poll blip can't
+    // become a peak. Captured on its own ~1s cadence, NOT per tick - conflict
+    // mode's 250ms ticks must not shrink the two-capture window to half a second.
+    private void CaptureLoads()
+    {
+        if (Environment.TickCount64 - _lastLoadCaptureMs < 900) return;
+        _lastLoadCaptureMs = Environment.TickCount64;
+
+        float curCl = _hw.CpuLoad ?? float.NaN;
+        // GPU load = the D3D engine counters (Task Manager's number): true
+        // utilization, clock-independent, honest at idle. CPU load is time-based
+        // and already honest, so both are used raw - no clock-weighting needed.
+        float curGl = _hw.GpuEngineLoad ?? float.NaN;
+        _susCpuLoad = MathF.Min(curCl, _prevCpuLoad); // NaN or a blip poisons the pair
+        _susGpuLoad = MathF.Min(curGl, _prevGpuLoad);
+        _prevCpuLoad = curCl;
+        _prevGpuLoad = curGl;
+    }
+
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
     {
-        if (cpu is { } c && (float.IsNaN(_peakCpu) || c > _peakCpu)) _peakCpu = c;
-        if (gpu is { } g && (float.IsNaN(_peakGpu) || g > _peakGpu)) _peakGpu = g;
+        MaxInto(ref _peakCpu, cpu ?? float.NaN);
+        MaxInto(ref _peakGpu, gpu ?? float.NaN);
         if (!LoadPeaksBlanked)
         {
-            if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_peakCpuLoad) || _susCpuLoad > _peakCpuLoad)) _peakCpuLoad = _susCpuLoad;
-            if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_peakGpuLoad) || _susGpuLoad > _peakGpuLoad)) _peakGpuLoad = _susGpuLoad;
+            MaxInto(ref _peakCpuLoad, _susCpuLoad);
+            MaxInto(ref _peakGpuLoad, _susGpuLoad);
         }
         if (_currentPercent > _peakOut) _peakOut = _currentPercent;
 
@@ -610,23 +637,13 @@ public sealed class FanController : IDisposable
         // switching dial/bar/Game Mode can never show different "peaks". Kept
         // separate from the SESSION PEAKS log values - Reset peaks clears these,
         // but the log keeps reporting the true whole-session maximum for support.
-        if (cpu is { } pc && (float.IsNaN(_dispPeakCpu) || pc > _dispPeakCpu)) _dispPeakCpu = pc;
-        if (gpu is { } pg && (float.IsNaN(_dispPeakGpu) || pg > _dispPeakGpu)) _dispPeakGpu = pg;
-
-        float curCl = _hw.CpuLoad ?? float.NaN;
-        // GPU load = the D3D engine counters (Task Manager's number): true
-        // utilization, clock-independent, honest at idle. CPU load is time-based
-        // and already honest, so both are used raw - no clock-weighting needed.
-        float curGl = _hw.GpuEngineLoad ?? float.NaN;
-        _susCpuLoad = MathF.Min(curCl, _prevCpuLoad); // NaN or a blip poisons the pair
-        _susGpuLoad = MathF.Min(curGl, _prevGpuLoad);
-        _prevCpuLoad = curCl;
-        _prevGpuLoad = curGl;
+        MaxInto(ref _dispPeakCpu, cpu ?? float.NaN);
+        MaxInto(ref _dispPeakGpu, gpu ?? float.NaN);
 
         if (!LoadPeaksBlanked)
         {
-            if (!float.IsNaN(_susCpuLoad) && (float.IsNaN(_dispPeakCpuLoad) || _susCpuLoad > _dispPeakCpuLoad)) _dispPeakCpuLoad = _susCpuLoad;
-            if (!float.IsNaN(_susGpuLoad) && (float.IsNaN(_dispPeakGpuLoad) || _susGpuLoad > _dispPeakGpuLoad)) _dispPeakGpuLoad = _susGpuLoad;
+            MaxInto(ref _dispPeakCpuLoad, _susCpuLoad);
+            MaxInto(ref _dispPeakGpuLoad, _susGpuLoad);
         }
 
         var readings = new FanReadings
