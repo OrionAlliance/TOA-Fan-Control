@@ -105,8 +105,12 @@
                  uninstall. -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button x:Name="GameModeButton" Content="Game Mode" Click="OnGameModeClick"
-                        Margin="0,0,8,0"
-                        ToolTip="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
+                        Margin="0,0,8,0">
+                    <Button.ToolTip>
+                        <TextBlock TextWrapping="Wrap" MaxWidth="230"
+                                   Text="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
+                    </Button.ToolTip>
+                </Button>
                 <Button x:Name="ResetPeaksButton" Content="Reset peaks"
                         Click="OnResetPeaksClick" Margin="0,0,8,0" />
                 <!-- Explicit TextBlock: a string Content would get the implicit
