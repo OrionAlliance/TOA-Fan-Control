@@ -518,12 +518,13 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_peakMark);
 
-        // Peak-load tick: the load lane's telltale - a cyan line that stays at the
-        // highest point the live triangle reached. Drawn before the triangle so
-        // the moving part wins on overlap, same as the needle over the yellow tick.
+        // Peak-load mark: the yellow peak line's twin, in load blue - same band-
+        // crossing geometry so it reads instantly, parked at the highest load the
+        // live triangle reached. The triangle rides outside the band, so the two
+        // never hide each other even at the same angle.
         _loadPeakRotate = new RotateTransform(StartAngle);
-        var loadPeakFig = new PathFigure { StartPoint = new Point(BandR + 4, 0) };
-        loadPeakFig.Segments.Add(new LineSegment(new Point(BandR + 13, 0), true));
+        var loadPeakFig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
+        loadPeakFig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
         var loadPeakGeo = new PathGeometry();
         loadPeakGeo.Figures.Add(loadPeakFig);
 

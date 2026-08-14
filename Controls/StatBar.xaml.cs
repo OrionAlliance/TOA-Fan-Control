@@ -192,7 +192,7 @@ public partial class StatBar : UserControl
         if (!double.IsNaN(_peakLoad))
         {
             double pk = Math.Clamp(_peakLoad / 100.0, 0, 1);
-            LoadPeakTick.Margin = new Thickness(Math.Max(0, 1 + pk * w - 1), 2, 0, 0);
+            LoadPeakTick.Margin = new Thickness(Math.Max(0, pk * w - 1), 1, 0, 1);
             LoadPeakTick.Visibility = Visibility.Visible;
         }
         else
