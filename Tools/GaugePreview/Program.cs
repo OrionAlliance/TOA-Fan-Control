@@ -48,10 +48,10 @@ internal static class Program
         var cluster = new UniformGrid { Columns = 4 };
         host.Children.Add(cluster);
 
-        cluster.Children.Add(Make("CPU", "C", 0, 100, 20, 37, greenTo: 70, redFrom: 90,
-                                  peak: 55, loadValue: 25, peakLoad: 60));
-        cluster.Children.Add(Make("GPU", "C", 0, 100, 20, 38, greenTo: 70, redFrom: 90,
-                                  peak: 72, loadValue: 5, peakLoad: 95));
+        cluster.Children.Add(Make("CPU", "C", 0, 100, 20, 36, greenTo: 70, redFrom: 90,
+                                  peak: 40, loadValue: 13, peakLoad: 15));
+        cluster.Children.Add(Make("GPU", "C", 0, 100, 20, 40, greenTo: 70, redFrom: 90,
+                                  peak: 40, loadValue: 11, peakLoad: 14));
         cluster.Children.Add(Make("Chassis\nFan #2", "", 0, 2000, 1000, 418));
         cluster.Children.Add(Make("Chassis\nFan #3", "", 0, 2000, 1000, 559));
 

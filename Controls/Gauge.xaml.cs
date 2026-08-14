@@ -546,12 +546,15 @@ public partial class Gauge : UserControl
         _loadPeakMark = new Path
         {
             Data = loadPeakGeo,
-            Stroke = B("#00A3C4"),
+            // Electric cyan, NOT the triangle's deep cyan: this line crosses the
+            // bright green band, where dark cyan melts invisibly at 2-3px. Same
+            // reason the temp tick is luminous yellow.
+            Stroke = B("#4DEEFF"),
             StrokeThickness = 3,
             IsHitTestVisible = false,
             Effect = new DropShadowEffect
             {
-                Color = C("#00A3C4"), BlurRadius = 7, ShadowDepth = 0, Opacity = 0.85,
+                Color = C("#00A3C4"), BlurRadius = 7, ShadowDepth = 0, Opacity = 0.9,
             },
             RenderTransform = loadPeakTransform,
         };

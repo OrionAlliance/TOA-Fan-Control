@@ -46,10 +46,12 @@
                        ToolTipService.InitialShowDelay="200" />
 
             <!-- Peak-load marker: the yellow tick's twin in load blue - stays at
-                 the session's highest load while the triangle above moves live. -->
+                 the session's highest load while the triangle above moves live.
+                 Electric cyan, not the triangle's deep cyan: it sits on the green
+                 fill, where dark cyan disappears at 2px. -->
             <Rectangle x:Name="LoadPeakTick" Width="2" RadiusX="1" RadiusY="1"
                        HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="0,1"
-                       Fill="#00A3C4" Visibility="Collapsed"
+                       Fill="#4DEEFF" Visibility="Collapsed"
                        ToolTipService.InitialShowDelay="200" />
 
         </Grid>
