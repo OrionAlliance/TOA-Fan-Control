@@ -17,6 +17,10 @@ public partial class PawnIoSetupWindow : Window
     /// <summary>The installer asked for a reboot to finish.</summary>
     public bool RebootRequired { get; private set; }
 
+    /// <summary>Update installed and a restart would apply it now. The update
+    /// orchestrator restarts ONCE after all checks - not each dialog mid-run.</summary>
+    public bool RestartWanted { get; private set; }
+
     // What the Install/Update button actually runs. PawnIO by default; the .NET
     // update reuses this same window with its own installer plugged in.
     private Func<IProgress<string>, Task<PawnIoSetup.InstallResult>> _installer =
@@ -110,14 +114,15 @@ public partial class PawnIoSetupWindow : Window
             RebootRequired = result.RebootRequired;
             DebugLog.Write($"Update installed (rebootRequired={result.RebootRequired}).");
 
-            if (_restartAppOnSuccess)
+            if (_restartAppOnSuccess && !result.RebootRequired)
             {
-                DebugLog.Write("Restarting the app so the update takes effect now.");
-                AppRestart.AfterExit();
-                Application.Current.Shutdown();
+                RestartWanted = true;
+                Close();
                 return;
             }
 
+            // First-run flow, or a reboot-pending update where a restart is
+            // pointless - leave the result message on screen behind Continue.
             InstallButton.Content = "Continue";
             InstallButton.IsEnabled = true;
             InstallButton.Click -= OnInstallClick;

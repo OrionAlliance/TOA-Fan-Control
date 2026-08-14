@@ -272,6 +272,7 @@ public partial class App : Application
         _lastCheckRan = DateTime.Now;
         DebugLog.Write("Checking PawnIO and .NET for updates.");
         bool offered = false;
+        bool restartWanted = false; // restart ONCE after all checks, never mid-run
 
         try
         {
@@ -280,7 +281,9 @@ public partial class App : Application
             {
                 DebugLog.Write($"PawnIO update available: {pawnIo.Installed} -> {pawnIo.Latest}.");
                 offered = true;
-                new PawnIoSetupWindow(pawnIo).ShowDialog();
+                var dlg = new PawnIoSetupWindow(pawnIo);
+                dlg.ShowDialog();
+                restartWanted |= dlg.RestartWanted;
             }
         }
         catch (Exception ex)
@@ -295,7 +298,9 @@ public partial class App : Application
             {
                 DebugLog.Write($".NET update available: {dotnet.Installed} -> {dotnet.Latest}.");
                 offered = true;
-                new PawnIoSetupWindow(dotnet).ShowDialog();
+                var dlg = new PawnIoSetupWindow(dotnet);
+                dlg.ShowDialog();
+                restartWanted |= dlg.RestartWanted;
             }
         }
         catch (Exception ex)
@@ -310,12 +315,23 @@ public partial class App : Application
             {
                 DebugLog.Write($"App update available: v{app.Installed} -> v{app.Latest}.");
                 offered = true;
-                new PawnIoSetupWindow(app).ShowDialog();
+                var dlg = new PawnIoSetupWindow(app);
+                dlg.ShowDialog();
+                // The app updater's installer owns close-and-relaunch itself -
+                // don't stack a second restart on top of it.
+                if (dlg.Installed) restartWanted = false;
             }
         }
         catch (Exception ex)
         {
             DebugLog.Write("App update check failed.", ex);
+        }
+
+        if (restartWanted)
+        {
+            DebugLog.Write("Restarting the app so the installed updates take effect now.");
+            AppRestart.AfterExit();
+            Current.Shutdown();
         }
 
         return offered;
