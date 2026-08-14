@@ -333,6 +333,7 @@ public partial class MainWindow : Window
 
     private void ToggleTheme()
     {
+        _controller.BlankLoadPeaks(); // the full-window repaint is our load, not theirs
         AppTheme next = ThemeManager.Current == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
         ThemeManager.Apply(next);
         _controller.UpdateSettings(s => s.Theme = next.ToString());
@@ -446,6 +447,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnGameModeClick(object sender, RoutedEventArgs e)
     {
+        _controller.BlankLoadPeaks(); // the overlay's first render is our load, not theirs
         if (_overlay == null)
         {
             _overlay = new GameModeWindow(_controller);
