@@ -30,6 +30,9 @@ public partial class Gauge : UserControl
     private Polygon? _loadMark;
     private Polygon? _loadHit;
     private RotateTransform? _loadRotate;
+    private Path? _loadPeakMark;
+    private Path? _loadPeakHit;
+    private RotateTransform? _loadPeakRotate;
     private TextBlock? _valueText;
 
     private double _cx, _cy, _r;
@@ -76,9 +79,23 @@ public partial class Gauge : UserControl
 
     private double _peak = double.NaN;
     private double _peakLoad = double.NaN;
+    private double _loadValue = double.NaN;
 
-    /// <summary>Independent session peak load % (0-100), fed by the controller.
-    /// NaN hides the cyan marker.</summary>
+    /// <summary>Live load % right now (0-100) - the cyan triangle sweeps with it,
+    /// the load lane's needle. NaN hides the triangle.</summary>
+    public double LoadValue
+    {
+        set
+        {
+            if (value.Equals(_loadValue)) return; // double.Equals: NaN equals NaN
+            _loadValue = value;
+            UpdateLiveLoad();
+        }
+    }
+
+    /// <summary>Independent session peak load % (0-100), fed by the controller -
+    /// the cyan tick that stays at the highest point the triangle reached.
+    /// NaN hides the tick.</summary>
     public double PeakLoad
     {
         set
@@ -186,6 +203,9 @@ public partial class Gauge : UserControl
         _loadMark = null;
         _loadHit = null;
         _loadRotate = null;
+        _loadPeakMark = null;
+        _loadPeakHit = null;
+        _loadPeakRotate = null;
         _valueText = null;
 
         if (ActualWidth <= 20 || ActualHeight <= 20) return;
@@ -202,6 +222,7 @@ public partial class Gauge : UserControl
         BuildMoving();
         UpdateMoving();
         UpdatePeakMarks();
+        UpdateLiveLoad();
     }
 
     /// <summary>Machined ring, dished face, and the shadow the rim casts inward.</summary>
@@ -497,8 +518,46 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_peakMark);
 
-        // Peak-load bug: a small triangle riding OUTSIDE the band, tip pointing at
-        // the load position - its own lane, so a load never reads as a temperature.
+        // Peak-load tick: the load lane's telltale - a cyan line that stays at the
+        // highest point the live triangle reached. Drawn before the triangle so
+        // the moving part wins on overlap, same as the needle over the yellow tick.
+        _loadPeakRotate = new RotateTransform(StartAngle);
+        var loadPeakFig = new PathFigure { StartPoint = new Point(BandR + 4, 0) };
+        loadPeakFig.Segments.Add(new LineSegment(new Point(BandR + 13, 0), true));
+        var loadPeakGeo = new PathGeometry();
+        loadPeakGeo.Figures.Add(loadPeakFig);
+
+        var loadPeakTransform = new TransformGroup
+        {
+            Children = { _loadPeakRotate, new TranslateTransform(_cx, _cy) },
+        };
+
+        _loadPeakHit = new Path
+        {
+            Data = loadPeakGeo,
+            Stroke = Brushes.Transparent,
+            StrokeThickness = 14,
+            RenderTransform = loadPeakTransform,
+            Cursor = Cursors.Hand,
+        };
+        Moving.Children.Add(_loadPeakHit);
+
+        _loadPeakMark = new Path
+        {
+            Data = loadPeakGeo,
+            Stroke = B("#00A3C4"),
+            StrokeThickness = 3,
+            IsHitTestVisible = false,
+            Effect = new DropShadowEffect
+            {
+                Color = C("#00A3C4"), BlurRadius = 7, ShadowDepth = 0, Opacity = 0.85,
+            },
+            RenderTransform = loadPeakTransform,
+        };
+        Moving.Children.Add(_loadPeakMark);
+
+        // Live load: a small triangle riding OUTSIDE the band, tip pointing at the
+        // current load - its own lane, so a load never reads as a temperature.
         _loadRotate = new RotateTransform(StartAngle);
         var loadTransform = new TransformGroup
         {
@@ -647,22 +706,47 @@ public partial class Gauge : UserControl
             });
         }
 
-        if (_loadMark == null || _loadHit == null || _loadRotate == null) return;
+        if (_loadPeakMark == null || _loadPeakHit == null || _loadPeakRotate == null) return;
 
         bool hasLoad = !double.IsNaN(_peakLoad);
         Visibility loadVis = hasLoad ? Visibility.Visible : Visibility.Collapsed;
-        _loadMark.Visibility = loadVis;
-        _loadHit.Visibility = loadVis;
+        _loadPeakMark.Visibility = loadVis;
+        _loadPeakHit.Visibility = loadVis;
         if (hasLoad)
         {
-            _loadHit.ToolTip = $"{flat} peak load this run: {_peakLoad:0}%";
-            // Load is a % of the WHOLE sweep (a tachometer fraction), not a point
-            // on the temperature axis - identical only while the dial runs 0-100.
-            _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
+            _loadPeakHit.ToolTip = $"{flat} peak load this run: {_peakLoad:0}%";
+            _loadPeakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
             {
-                To = StartAngle + Math.Clamp(_peakLoad / 100.0, 0, 1) * SweepAngle,
+                To = LoadAngle(_peakLoad),
                 Duration = TimeSpan.FromMilliseconds(350),
             });
         }
     }
+
+    // The live cyan triangle - the load lane's needle. Sweeps with the current
+    // load every capture, so it animates like the temp needle does.
+    private void UpdateLiveLoad()
+    {
+        if (_loadMark == null || _loadHit == null || _loadRotate == null) return;
+
+        bool has = !double.IsNaN(_loadValue);
+        Visibility vis = has ? Visibility.Visible : Visibility.Collapsed;
+        _loadMark.Visibility = vis;
+        _loadHit.Visibility = vis;
+        if (!has) return;
+
+        string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+        _loadHit.ToolTip = $"{flat} load right now: {_loadValue:0}%";
+        _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
+        {
+            To = LoadAngle(_loadValue),
+            Duration = TimeSpan.FromMilliseconds(350),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        });
+    }
+
+    // Load is a % of the WHOLE sweep (a tachometer fraction), not a point on the
+    // temperature axis - identical only while the dial runs 0-100.
+    private double LoadAngle(double pct) =>
+        StartAngle + Math.Clamp(pct / 100.0, 0, 1) * SweepAngle;
 }

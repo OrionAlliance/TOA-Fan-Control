@@ -47,7 +47,15 @@
 
         </Grid>
 
-        <!-- Peak-load marker: floats ABOVE the bar, tip down at the load position -
+        <!-- Peak-load tick: the load lane's telltale - stays at the session's
+             highest load while the triangle moves live. Before the triangle in
+             the tree so the moving part wins on overlap. -->
+        <Rectangle x:Name="LoadPeakTick" Grid.Column="0" Width="2" Height="9" RadiusX="1" RadiusY="1"
+                   HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0"
+                   Fill="#00A3C4" Visibility="Collapsed" Cursor="Hand"
+                   ToolTipService.InitialShowDelay="200" />
+
+        <!-- Live-load marker: floats ABOVE the bar, tip down at the current load -
              its own lane, same as the dial's outside-the-band triangle. -->
         <Polygon x:Name="LoadTri" Grid.Column="0" Points="0,0 9,0 4.5,7" Fill="#00A3C4"
                  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,1,0,0"

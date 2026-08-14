@@ -166,7 +166,12 @@ public partial class MainWindow : Window
         CpuBar.Value = r.CpuTemp ?? double.NaN;
         GpuBar.Value = r.GpuTemp ?? double.NaN;
 
-        // Peaks come from the controller - the same numbers in every view.
+        // Live load rides the cyan triangle; peaks come from the controller -
+        // the same numbers in every view.
+        CpuGauge.LoadValue = r.CpuLoad;
+        GpuGauge.LoadValue = r.GpuLoad;
+        CpuBar.LoadValue = r.CpuLoad;
+        GpuBar.LoadValue = r.GpuLoad;
         CpuGauge.PeakLoad = r.PeakCpuLoad;
         GpuGauge.PeakLoad = r.PeakGpuLoad;
         CpuBar.PeakLoad = r.PeakCpuLoad;

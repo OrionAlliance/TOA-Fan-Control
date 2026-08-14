@@ -23,6 +23,10 @@ public sealed class FanReadings
     public float PeakCpuLoad { get; init; } = float.NaN;
     public float PeakGpuLoad { get; init; } = float.NaN;
 
+    /// <summary>Live load % right now (latest ~1s capture) - the cyan triangle's needle.</summary>
+    public float CpuLoad { get; init; } = float.NaN;
+    public float GpuLoad { get; init; } = float.NaN;
+
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
 
@@ -656,6 +660,8 @@ public sealed class FanController : IDisposable
             PeakGpu = _dispPeakGpu,
             PeakCpuLoad = _dispPeakCpuLoad,
             PeakGpuLoad = _dispPeakGpuLoad,
+            CpuLoad = _prevCpuLoad,
+            GpuLoad = _prevGpuLoad,
             NoControllableFans = noFans,
             SentinelLost = _sentinelLost,
             Conflict = _conflict,

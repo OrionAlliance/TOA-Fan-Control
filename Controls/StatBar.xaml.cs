@@ -16,6 +16,7 @@ public partial class StatBar : UserControl
 {
     private double _peak = double.NaN;
     private double _peakLoad = double.NaN;
+    private double _loadValue = double.NaN;
 
     public StatBar()
     {
@@ -71,15 +72,29 @@ public partial class StatBar : UserControl
     /// <summary>Values at or above this fill red; NaN = no red zone.</summary>
     public double RedFrom { get => (double)GetValue(RedFromProperty); set => SetValue(RedFromProperty, value); }
 
-    /// <summary>Independent session peak load % (0-100), fed by the controller.
-    /// NaN hides the triangle marker.</summary>
+    /// <summary>Live load % right now (0-100) - the cyan triangle slides with it,
+    /// the load lane's needle. NaN hides the triangle.</summary>
+    public double LoadValue
+    {
+        set
+        {
+            if (value.Equals(_loadValue)) return; // double.Equals: NaN equals NaN
+            _loadValue = value;
+            LoadTri.ToolTip = double.IsNaN(value) ? null : $"Load right now: {value:F0}%";
+            UpdateVisual();
+        }
+    }
+
+    /// <summary>Independent session peak load % (0-100), fed by the controller -
+    /// the cyan tick that stays at the highest point the triangle reached.
+    /// NaN hides the tick.</summary>
     public double PeakLoad
     {
         set
         {
             if (value.Equals(_peakLoad)) return; // double.Equals: NaN equals NaN
             _peakLoad = value;
-            LoadTri.ToolTip = double.IsNaN(value) ? null : $"Peak load this run: {value:F0}%";
+            LoadPeakTick.ToolTip = double.IsNaN(value) ? null : $"Peak load this run: {value:F0}%";
             UpdateVisual();
         }
     }
@@ -172,11 +187,22 @@ public partial class StatBar : UserControl
             PeakTick.Visibility = Visibility.Collapsed;
         }
 
+        // Load is a % of the WHOLE track (a tachometer fraction), not a point
+        // on the temperature axis - identical only while the bar runs 0-100.
         if (!double.IsNaN(_peakLoad))
         {
-            // Load is a % of the WHOLE track (a tachometer fraction), not a point
-            // on the temperature axis - identical only while the bar runs 0-100.
-            double lf = Math.Clamp(_peakLoad / 100.0, 0, 1);
+            double pk = Math.Clamp(_peakLoad / 100.0, 0, 1);
+            LoadPeakTick.Margin = new Thickness(Math.Max(0, 1 + pk * w - 1), 2, 0, 0);
+            LoadPeakTick.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            LoadPeakTick.Visibility = Visibility.Collapsed;
+        }
+
+        if (!double.IsNaN(_loadValue))
+        {
+            double lf = Math.Clamp(_loadValue / 100.0, 0, 1);
             LoadTri.Margin = new Thickness(Math.Max(0, 1 + lf * w - 4.5), 4, 0, 0);
             LoadTri.Visibility = Visibility.Visible;
         }
