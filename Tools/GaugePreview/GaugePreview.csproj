@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <!-- The REAL Gauge control, not a copy - a copy would only prove the copy. -->
-    <ProjectReference Include="..\FanControl.csproj" />
+    <ProjectReference Include="..\..\FanControl.csproj" />
   </ItemGroup>
 
 </Project>

@@ -48,17 +48,42 @@ internal static class Program
         var cluster = new UniformGrid { Columns = 4 };
         host.Children.Add(cluster);
 
-        cluster.Children.Add(Make("CPU", "C", 0, 100, 20, 37, greenTo: 70, redFrom: 90));
-        cluster.Children.Add(Make("GPU", "C", 0, 100, 20, 38, greenTo: 70, redFrom: 90));
+        cluster.Children.Add(Make("CPU", "C", 0, 100, 20, 37, greenTo: 70, redFrom: 90,
+                                  peak: 55, loadValue: 25, peakLoad: 60));
+        cluster.Children.Add(Make("GPU", "C", 0, 100, 20, 38, greenTo: 70, redFrom: 90,
+                                  peak: 72, loadValue: 5, peakLoad: 95));
         cluster.Children.Add(Make("Chassis\nFan #2", "", 0, 2000, 1000, 418));
         cluster.Children.Add(Make("Chassis\nFan #3", "", 0, 2000, 1000, 559));
 
-        host.Measure(new Size(w, h));
-        host.Arrange(new Rect(0, 0, w, h));
-        host.UpdateLayout();
+        // Animations only tick inside a real window's composition loop - a bare
+        // offscreen visual captures everything at its rest position. Park a
+        // borderless window far off-screen, let the 350ms sweeps finish, capture.
+        var win = new Window
+        {
+            WindowStyle = WindowStyle.None,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            ShowActivated = false,
+            Left = -4000,
+            Top = -4000,
+            Width = w,
+            Height = h,
+            Content = host,
+        };
+        win.Show();
+
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(700),
+        };
+        timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+        timer.Start();
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
 
         var rtb = new RenderTargetBitmap((int)w, (int)h, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(host);
+        win.Close();
 
         var enc = new PngBitmapEncoder();
         enc.Frames.Add(BitmapFrame.Create(rtb));
@@ -73,7 +98,9 @@ internal static class Program
 
     private static Gauge Make(string label, string unit, double min, double max,
                               double major, double value,
-                              double greenTo = double.NaN, double redFrom = double.NaN)
+                              double greenTo = double.NaN, double redFrom = double.NaN,
+                              double peak = double.NaN, double loadValue = double.NaN,
+                              double peakLoad = double.NaN)
     {
         var g = new Gauge
         {
@@ -88,6 +115,9 @@ internal static class Program
 
         // After the properties, so the rebuild it triggers sees them all.
         g.Value = value;
+        g.Peak = peak;
+        g.LoadValue = loadValue;
+        g.PeakLoad = peakLoad;
         return g;
     }
 }
