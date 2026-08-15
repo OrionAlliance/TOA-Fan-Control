@@ -323,6 +323,9 @@ public partial class MainWindow : Window
 
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("About", ShowAbout));
+        menu.Items.Add(Item("Donate ♥", () =>
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                "https://ko-fi.com/orionailliance") { UseShellExecute = true })));
         menu.Items.Add(Item("Uninstall…", ConfirmUninstall));
 
         menu.IsOpen = true;
