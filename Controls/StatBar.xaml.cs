@@ -80,7 +80,7 @@ public partial class StatBar : UserControl
         {
             if (value.Equals(_loadValue)) return; // double.Equals: NaN equals NaN
             _loadValue = value;
-            LoadTri.ToolTip = double.IsNaN(value) ? null : $"Load/busy time right now: {value:F0}%";
+            LoadTri.ToolTip = double.IsNaN(value) ? null : $"Busy time right now: {value:F0}%";
             UpdateVisual();
         }
     }
@@ -94,7 +94,7 @@ public partial class StatBar : UserControl
         {
             if (value.Equals(_peakLoad)) return; // double.Equals: NaN equals NaN
             _peakLoad = value;
-            LoadPeakTick.ToolTip = double.IsNaN(value) ? null : $"Peak load/busy time this run: {value:F0}%";
+            LoadPeakTick.ToolTip = double.IsNaN(value) ? null : $"Peak busy time this run: {value:F0}%";
             UpdateVisual();
         }
     }
