@@ -76,9 +76,26 @@ public sealed class HardwareMonitor : IDisposable
         get
         {
             float max = float.NaN;
+            ISensor? top = null;
             foreach (ISensor s in _gpuEngineLoads)
-                if (s.Value is { } v && (float.IsNaN(max) || v > max)) max = v;
-            if (!float.IsNaN(max)) return max;
+                if (s.Value is { } v && (float.IsNaN(max) || v > max)) { max = v; top = s; }
+            if (!float.IsNaN(max))
+            {
+                // Windows' busy-time accounting can overshoot on bursty engines
+                // (field-seen: a CUDA node at 123% during a media-server nightly
+                // job). Over 100% is impossible - clamp, and name the engine once
+                // so the log can explain the reading.
+                if (max > 100f)
+                {
+                    if (!_engineOverflowLogged)
+                    {
+                        _engineOverflowLogged = true;
+                        DebugLog.Write($"GPU engine '{top!.Name}' reported {max:F0}% - counter overshoot, clamped to 100.");
+                    }
+                    max = 100f;
+                }
+                return max;
+            }
 
             if (!_engineFallbackLogged && _gpuLoad != null)
             {
@@ -90,6 +107,7 @@ public sealed class HardwareMonitor : IDisposable
     }
 
     private bool _engineFallbackLogged;
+    private bool _engineOverflowLogged;
 
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
