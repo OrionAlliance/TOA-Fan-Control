@@ -718,7 +718,7 @@ public partial class Gauge : UserControl
         _loadPeakHit.Visibility = loadVis;
         if (hasLoad)
         {
-            _loadPeakHit.ToolTip = $"{flat} peak load this run: {_peakLoad:0}%";
+            _loadPeakHit.ToolTip = $"{flat} peak load/busy time this run: {_peakLoad:0}%";
             _loadPeakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
             {
                 To = LoadAngle(_peakLoad),
@@ -740,7 +740,7 @@ public partial class Gauge : UserControl
         if (!has) return;
 
         string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-        _loadHit.ToolTip = $"{flat} load right now: {_loadValue:0}%";
+        _loadHit.ToolTip = $"{flat} load/busy time right now: {_loadValue:0}%";
         _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
         {
             To = LoadAngle(_loadValue),
