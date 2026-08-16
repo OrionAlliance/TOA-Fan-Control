@@ -587,7 +587,7 @@ public sealed class FanController : IDisposable
         _lastLoadCaptureMs = Environment.TickCount64;
 
         // CPU load is time-based busy - honest as-is for a CPU (no readable
-        // per-chip power ceiling exists to do better; probed 2026-08-15).
+        // per-chip power ceiling exists to do better).
         float curCl = _hw.CpuLoad ?? float.NaN;
 
         // GPU: TRUE LOAD when possible - watts against the card's reference max
