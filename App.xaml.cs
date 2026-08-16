@@ -232,11 +232,12 @@ public partial class App : Application
     /// </summary>
     private async Task MaybeShowGpuLibraryNoticeAsync(MainWindow main)
     {
-        // Same manners as the update popups: retry gently until the screen is
-        // free (game, video, Game Mode), then decide once and stop.
+        // First look as soon as the window has settled; if the screen is busy
+        // (game, video, Game Mode), retry gently - same manners as the update
+        // popups - then decide once and stop.
         for (int i = 0; i < 40; i++)
         {
-            await Task.Delay(TimeSpan.FromSeconds(15));
+            await Task.Delay(TimeSpan.FromSeconds(i == 0 ? 4 : 15));
             if (!ScreenState.PopupsSafe() || GameModeActive()) continue;
 
             string? gpu = Controller.GpuName;
