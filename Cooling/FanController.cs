@@ -27,6 +27,10 @@ public sealed class FanReadings
     public float CpuLoad { get; init; } = float.NaN;
     public float GpuLoad { get; init; } = float.NaN;
 
+    /// <summary>True = GPU markers show real load (watts vs card max); false = busy-time
+    /// fallback. Drives the tooltip wording - the gauge must say what it measures.</summary>
+    public bool GpuLoadIsTrue { get; init; }
+
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
 
@@ -547,6 +551,10 @@ public sealed class FanController : IDisposable
         if (!float.IsNaN(v) && (float.IsNaN(peak) || v > peak)) peak = v;
     }
 
+    /// <summary>True when the GPU markers show real load (watts vs the card's max)
+    /// rather than busy time - the card has a power sensor AND a library entry.</summary>
+    public bool GpuLoadIsTrue => _hw.GpuMaxWatts != null && _hw.GpuPowerW != null;
+
     // Sustained load = min of the last two ~1s captures, so a one-poll blip can't
     // become a peak. Captured on its own ~1s cadence, NOT per tick - conflict
     // mode's 250ms ticks must not shrink the two-capture window to half a second.
@@ -555,11 +563,19 @@ public sealed class FanController : IDisposable
         if (Environment.TickCount64 - _lastLoadCaptureMs < 900) return;
         _lastLoadCaptureMs = Environment.TickCount64;
 
+        // CPU load is time-based busy - honest as-is for a CPU (no readable
+        // per-chip power ceiling exists to do better; probed 2026-08-15).
         float curCl = _hw.CpuLoad ?? float.NaN;
-        // GPU load = the D3D engine counters (Task Manager's number): true
-        // utilization, clock-independent, honest at idle. CPU load is time-based
-        // and already honest, so both are used raw - no clock-weighting needed.
-        float curGl = _hw.GpuEngineLoad ?? float.NaN;
+
+        // GPU: TRUE LOAD when possible - watts against the card's reference max
+        // (the trailer up the hill, not the revs). Falls back to the D3D engine
+        // counters (busy time) when the card lacks a power sensor or library row.
+        float curGl;
+        if (_hw.GpuPowerW is { } watts && _hw.GpuMaxWatts is { } max && max > 0)
+            curGl = MathF.Min(watts / max * 100f, 100f);
+        else
+            curGl = _hw.GpuEngineLoad ?? float.NaN;
+
         _susCpuLoad = MathF.Min(curCl, _prevCpuLoad); // NaN or a blip poisons the pair
         _susGpuLoad = MathF.Min(curGl, _prevGpuLoad);
         _prevCpuLoad = curCl;
@@ -590,10 +606,13 @@ public sealed class FanController : IDisposable
         string cl = _hw.CpuLoad is { } c ? $"@{c:F0}%" : "";
         string gl = _hw.GpuEngineLoad is { } g ? $"@{g:F0}%" : "";
         string gc = _hw.GpuCoreClockMhz is { } k ? $" gclk={k:F0}" : "";
+        string gp = _hw.GpuPowerW is { } pw
+            ? $" gpw={pw:F0}{(_hw.GpuMaxWatts is { } mx ? $"/{mx}" : "")}"
+            : "";
         string bt = _hw.BoardTemp is { } b ? $" board={b:F1}" : "";
         DebugLog.Write(bios
-            ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{bt} hotter={hotter:F1} {rpm}"
-            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{bt} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
+            ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1} {rpm}"
+            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
     }
 
     private void LogSessionSummary()
@@ -646,6 +665,7 @@ public sealed class FanController : IDisposable
             PeakGpuLoad = _dispPeakGpuLoad,
             CpuLoad = _prevCpuLoad,
             GpuLoad = _prevGpuLoad,
+            GpuLoadIsTrue = GpuLoadIsTrue,
             NoControllableFans = noFans,
             SentinelLost = _sentinelLost,
             Conflict = _conflict,

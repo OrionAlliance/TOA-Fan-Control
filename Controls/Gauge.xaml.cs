@@ -80,6 +80,22 @@ public partial class Gauge : UserControl
     private double _peak = double.NaN;
     private double _peakLoad = double.NaN;
     private double _loadValue = double.NaN;
+    private bool _trueLoad;
+
+    /// <summary>True = the load lane shows real load (watts vs the card's max);
+    /// false = busy time. Only changes the words - a gauge must say what it measures.</summary>
+    public bool TrueLoad
+    {
+        set
+        {
+            if (value == _trueLoad) return;
+            _trueLoad = value;
+            UpdatePeakMarks();
+            UpdateLiveLoad();
+        }
+    }
+
+    private string LoadWord => _trueLoad ? "load" : "busy time";
 
     /// <summary>Live load % right now (0-100) - the cyan triangle sweeps with it,
     /// the load lane's needle. NaN hides the triangle.</summary>
@@ -718,7 +734,7 @@ public partial class Gauge : UserControl
         _loadPeakHit.Visibility = loadVis;
         if (hasLoad)
         {
-            _loadPeakHit.ToolTip = $"{flat} peak busy time this run: {_peakLoad:0}%";
+            _loadPeakHit.ToolTip = $"{flat} peak {LoadWord} this run: {_peakLoad:0}%";
             _loadPeakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
             {
                 To = LoadAngle(_peakLoad),
@@ -740,7 +756,7 @@ public partial class Gauge : UserControl
         if (!has) return;
 
         string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-        _loadHit.ToolTip = $"{flat} busy time right now: {_loadValue:0}%";
+        _loadHit.ToolTip = $"{flat} {LoadWord} right now: {_loadValue:0}%";
         _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
         {
             To = LoadAngle(_loadValue),

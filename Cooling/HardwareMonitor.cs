@@ -56,6 +56,7 @@ public sealed class HardwareMonitor : IDisposable
     private ISensor? _gpuLoad;
     private ISensor[] _gpuEngineLoads = Array.Empty<ISensor>();
     private ISensor? _gpuClock;
+    private ISensor? _gpuPower;
     private ISensor? _boardTemp;
 
     public List<FanChannel> Fans { get; } = new();
@@ -115,6 +116,13 @@ public sealed class HardwareMonitor : IDisposable
     /// <summary>The card's sensor-reported model name - the GPU library's lookup key.</summary>
     public string? GpuName => _gpuTemp?.Hardware.Name;
 
+    /// <summary>Live GPU board power draw in watts, or null if the card has no power sensor.</summary>
+    public float? GpuPowerW => _gpuPower?.Value;
+
+    /// <summary>This card's reference max watts from the GPU library - the true-load
+    /// gauge's denominator. Null = unknown card or library not loaded (busy-time fallback).</summary>
+    public int? GpuMaxWatts { get; private set; }
+
     public HardwareMonitor()
     {
         _computer = new Computer
@@ -171,9 +179,9 @@ public sealed class HardwareMonitor : IDisposable
         // the watchdog process, which opens hardware but never loads the library.
         if (GpuLibrary.IsLoaded)
         {
-            int? maxW = GpuLibrary.MaxWattsFor(gpu);
-            DebugLog.Write(maxW is { } w
-                ? $"GPU library match: '{gpu}' = {w}W reference max."
+            GpuMaxWatts = GpuLibrary.MaxWattsFor(gpu);
+            DebugLog.Write(GpuMaxWatts is { } w
+                ? $"GPU library match: '{gpu}' = {w}W reference max (power sensor: {_gpuPower?.Name ?? "NONE"})."
                 : $"GPU library: no entry for '{gpu}' - true-load falls back to busy time.");
         }
     }
@@ -267,6 +275,17 @@ public sealed class HardwareMonitor : IDisposable
                                                 or HardwareType.GpuNvidia
                                                 or HardwareType.GpuIntel
                                             && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase));
+
+        // Board power draw - the true-load gauge's live numerator. Prefer the
+        // whole-board reading ("GPU Package"/"GPU Power") over per-rail ones.
+        ISensor[] gpuPowers = all.Where(s => s.SensorType == SensorType.Power
+                                             && SameGpu(s)
+                                             && s.Hardware.HardwareType is HardwareType.GpuAmd
+                                                 or HardwareType.GpuNvidia
+                                                 or HardwareType.GpuIntel).ToArray();
+        _gpuPower = gpuPowers.FirstOrDefault(s => s.Name.Contains("Package", StringComparison.OrdinalIgnoreCase))
+                    ?? gpuPowers.FirstOrDefault(s => s.Name.Contains("Board", StringComparison.OrdinalIgnoreCase))
+                    ?? gpuPowers.FirstOrDefault();
 
         // Pair each Control sensor with the Fan sensor of the same name - that's
         // how the Nuvoton driver names them (e.g. "Chassis Fan #2" appears as both).

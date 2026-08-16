@@ -166,7 +166,10 @@ public partial class MainWindow : Window
         GpuBar.Value = r.GpuTemp ?? double.NaN;
 
         // Live load rides the cyan triangle; peaks come from the controller -
-        // the same numbers in every view.
+        // the same numbers in every view. Wording flag first, so the first
+        // tooltip a marker ever gets already uses the right word.
+        GpuGauge.TrueLoad = r.GpuLoadIsTrue;
+        GpuBar.TrueLoad = r.GpuLoadIsTrue;
         CpuGauge.LoadValue = r.CpuLoad;
         GpuGauge.LoadValue = r.GpuLoad;
         CpuBar.LoadValue = r.CpuLoad;

@@ -17,6 +17,25 @@ public partial class StatBar : UserControl
     private double _peak = double.NaN;
     private double _peakLoad = double.NaN;
     private double _loadValue = double.NaN;
+    private bool _trueLoad;
+
+    /// <summary>True = the load lane shows real load (watts vs the card's max);
+    /// false = busy time. Only changes the words - a bar must say what it measures.</summary>
+    public bool TrueLoad
+    {
+        set
+        {
+            if (value == _trueLoad) return;
+            _trueLoad = value;
+            if (!double.IsNaN(_loadValue))
+                LoadTri.ToolTip = $"{CapLoadWord} right now: {_loadValue:F0}%";
+            if (!double.IsNaN(_peakLoad))
+                LoadPeakTick.ToolTip = $"Peak {LoadWord} this run: {_peakLoad:F0}%";
+        }
+    }
+
+    private string LoadWord => _trueLoad ? "load" : "busy time";
+    private string CapLoadWord => _trueLoad ? "Load" : "Busy time";
 
     public StatBar()
     {
@@ -80,7 +99,7 @@ public partial class StatBar : UserControl
         {
             if (value.Equals(_loadValue)) return; // double.Equals: NaN equals NaN
             _loadValue = value;
-            LoadTri.ToolTip = double.IsNaN(value) ? null : $"Busy time right now: {value:F0}%";
+            LoadTri.ToolTip = double.IsNaN(value) ? null : $"{CapLoadWord} right now: {value:F0}%";
             UpdateVisual();
         }
     }
@@ -94,7 +113,7 @@ public partial class StatBar : UserControl
         {
             if (value.Equals(_peakLoad)) return; // double.Equals: NaN equals NaN
             _peakLoad = value;
-            LoadPeakTick.ToolTip = double.IsNaN(value) ? null : $"Peak busy time this run: {value:F0}%";
+            LoadPeakTick.ToolTip = double.IsNaN(value) ? null : $"Peak {LoadWord} this run: {value:F0}%";
             UpdateVisual();
         }
     }
