@@ -112,6 +112,9 @@ public sealed class HardwareMonitor : IDisposable
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
 
+    /// <summary>The card's sensor-reported model name - the GPU library's lookup key.</summary>
+    public string? GpuName => _gpuTemp?.Hardware.Name;
+
     public HardwareMonitor()
     {
         _computer = new Computer
@@ -162,6 +165,17 @@ public sealed class HardwareMonitor : IDisposable
         DebugLog.Write($"Hardware opened. cpuTemp='{CpuTempName}' gpuTemp='{GpuTempName}' boardTemp='{BoardTempName}' " +
                        $"gpuEngines={_gpuEngineLoads.Length} " +
                        $"fans=[{string.Join(", ", Fans.Select(f => $"{f.Name}{(f.CanControl ? "*" : "")}"))}]");
+
+        // The true-load gauge's denominator, resolved fresh every startup - so a
+        // swapped card re-matches on its own with no stale carry-over. Silent in
+        // the watchdog process, which opens hardware but never loads the library.
+        if (GpuLibrary.IsLoaded)
+        {
+            int? maxW = GpuLibrary.MaxWattsFor(gpu);
+            DebugLog.Write(maxW is { } w
+                ? $"GPU library match: '{gpu}' = {w}W reference max."
+                : $"GPU library: no entry for '{gpu}' - true-load falls back to busy time.");
+        }
     }
 
     public void Refresh()

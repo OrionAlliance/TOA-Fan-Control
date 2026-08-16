@@ -100,6 +100,10 @@ public partial class App : Application
         // Theme before any window exists, so even the first-run dialog matches.
         ThemeManager.Apply(settings.Theme);
 
+        // GPU power library from cache (no network) - loaded before the hardware
+        // opens so discovery can log this card's match alongside its sensors.
+        GpuLibrary.LoadCache();
+
         // PawnIO is REQUIRED - without it the app can't see or drive a single fan.
         // So it's mandatory, not optional: if it's missing and the user declines to
         // install it, there's nothing for the app to do, and it closes.
@@ -273,6 +277,10 @@ public partial class App : Application
         DebugLog.Write("Checking PawnIO and .NET for updates.");
         bool offered = false;
         bool restartWanted = false; // restart ONCE after all checks, never mid-run
+
+        // The GPU power library rides the same daily cadence - a whole-file
+        // fetch that carries nothing about this PC, silent when offline.
+        await GpuLibrary.RefreshAsync();
 
         try
         {
