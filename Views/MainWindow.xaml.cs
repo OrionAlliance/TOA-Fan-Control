@@ -297,9 +297,17 @@ public partial class MainWindow : Window
 
     // ---- settings (the cog) --------------------------------------------------
 
+    // When the menu is open, a click on the cog dismisses the menu FIRST and
+    // then fires the button - which would reopen it instantly, making the cog
+    // impossible to toggle shut. Remember when the menu closed; a click landing
+    // a blink later IS that dismissal, so swallow it.
+    private long _settingsMenuClosedAt;
+
     /// <summary>Rebuilt on every open so each header reflects the current state.</summary>
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
+        if (Environment.TickCount64 - _settingsMenuClosedAt < 250) return;
+
         // Opens UPWARDS - the cog sits at the bottom edge of the window, so a
         // downward menu would hang off the app over the desktop.
         var menu = new ContextMenu
@@ -307,6 +315,7 @@ public partial class MainWindow : Window
             PlacementTarget = SettingsButton,
             Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
         };
+        menu.Closed += (_, _) => _settingsMenuClosedAt = Environment.TickCount64;
 
         menu.Items.Add(Item(
             ThemeManager.Current == AppTheme.Dark ? "Switch to light theme" : "Switch to dark theme",
