@@ -220,6 +220,60 @@ public partial class App : Application
         _updateTimer.Tick += async (_, _) => await MaybeCheckForUpdatesAsync();
         _updateTimer.Start();
         _ = MaybeCheckForUpdatesAsync(); // first check now, not in 15 minutes
+
+        _ = MaybeShowGpuLibraryNoticeAsync(main);
+    }
+
+    /// <summary>
+    /// One-time honesty notice: if this card has no GPU-library row, the load
+    /// markers silently run on busy time - the user deserves to know, once, at a
+    /// popup-safe moment. The flip side fires when a later library update adds
+    /// their card: a small balloon, and the stored flag clears.
+    /// </summary>
+    private async Task MaybeShowGpuLibraryNoticeAsync(MainWindow main)
+    {
+        // Same manners as the update popups: retry gently until the screen is
+        // free (game, video, Game Mode), then decide once and stop.
+        for (int i = 0; i < 40; i++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(15));
+            if (!ScreenState.PopupsSafe() || GameModeActive()) continue;
+
+            string? gpu = Controller.GpuName;
+            if (gpu == null || !GpuLibrary.IsLoaded) return;
+
+            bool listed = GpuLibrary.MaxWattsFor(gpu) != null;
+            string? shownFor = Controller.Settings.GpuNoticeShownFor;
+
+            bool userSet = Controller.Settings.GpuUserMaxWattsFor == gpu
+                           && Controller.Settings.GpuUserMaxWatts != null;
+
+            if (!listed && !userSet && shownFor != gpu)
+            {
+                DebugLog.Write($"GPU library notice: '{gpu}' unlisted - asking the user for its max watts (once).");
+                var dlg = new GpuWattsWindow(main, gpu);
+                dlg.ShowDialog();
+                Controller.UpdateSettings(s =>
+                {
+                    s.GpuNoticeShownFor = gpu;
+                    if (dlg.Watts is { } w)
+                    {
+                        s.GpuUserMaxWattsFor = gpu;
+                        s.GpuUserMaxWatts = w;
+                    }
+                }, reresolve: false);
+                if (dlg.Watts is { } watts) Controller.SetGpuMaxWattsOverride(watts);
+            }
+            else if (listed && !userSet && shownFor == gpu)
+            {
+                DebugLog.Write($"GPU library notice: '{gpu}' now listed - markers show true load.");
+                main.ShowTrayBalloon("TOA - Fan Control",
+                    $"Good news: your {gpu} was added to the GPU library - " +
+                    "the cyan markers now show its true load.");
+                Controller.UpdateSettings(s => s.GpuNoticeShownFor = null, reresolve: false);
+            }
+            return;
+        }
     }
 
     private DispatcherTimer? _updateTimer;

@@ -192,7 +192,27 @@ public sealed class FanController : IDisposable
     public void OpenHardware()
     {
         _hw.Open();
+
+        // A user-entered max (for a card the library doesn't know) outranks the
+        // library - but only while the same card is installed. A swap makes the
+        // stored name mismatch and the number is ignored, never inherited.
+        lock (_gate)
+        {
+            if (_settings.GpuUserMaxWatts is { } w && _settings.GpuUserMaxWattsFor == _hw.GpuName)
+            {
+                _hw.GpuMaxWatts = w;
+                DebugLog.Write($"GPU max watts: user-set {w}W for '{_hw.GpuName}'.");
+            }
+        }
+
         ResolveControlledFans();
+    }
+
+    /// <summary>Apply a just-entered user max immediately - no restart needed.</summary>
+    public void SetGpuMaxWattsOverride(int watts)
+    {
+        _hw.GpuMaxWatts = watts;
+        DebugLog.Write($"GPU max watts: user-set {watts}W for '{_hw.GpuName}' (live).");
     }
 
     public void AttachWatchdog(WatchdogLink? link)
@@ -554,6 +574,9 @@ public sealed class FanController : IDisposable
     /// <summary>True when the GPU markers show real load (watts vs the card's max)
     /// rather than busy time - the card has a power sensor AND a library entry.</summary>
     public bool GpuLoadIsTrue => _hw.GpuMaxWatts != null && _hw.GpuPowerW != null;
+
+    /// <summary>The card's sensor-reported name - for the library notice popup.</summary>
+    public string? GpuName => _hw.GpuName;
 
     // Sustained load = min of the last two ~1s captures, so a one-poll blip can't
     // become a peak. Captured on its own ~1s cadence, NOT per tick - conflict

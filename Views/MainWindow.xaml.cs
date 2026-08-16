@@ -107,6 +107,10 @@ public partial class MainWindow : Window
         _tray.ContextMenuStrip = menu;
     }
 
+    /// <summary>Small non-modal tray notice - good news never needs a modal.</summary>
+    public void ShowTrayBalloon(string title, string text) =>
+        _tray?.ShowBalloonTip(8000, title, text, System.Windows.Forms.ToolTipIcon.Info);
+
     private void ShowFromTray()
     {
         // If they're in Game Mode, bring back the full window rather than stacking

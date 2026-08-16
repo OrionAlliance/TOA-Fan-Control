@@ -65,6 +65,11 @@ public static class GpuLibrary
         }
     }
 
+    // A match that's immediately followed by one of these is a BIGGER variant
+    // whose own row is missing - "…RX 6700 XT" must never fall into "RX 6700"'s
+    // row and quietly get the wrong watts. No match = the honest popup instead.
+    private static readonly string[] VariantTokens = { "XT", "XTX", "Ti", "SUPER", "GRE", "D" };
+
     /// <summary>Reference max watts for this card, or null if unknown. Longest
     /// library key contained in the sensor-reported name wins - "RTX 3080 Ti"
     /// must never fall into "RTX 3080"'s row.</summary>
@@ -73,9 +78,18 @@ public static class GpuLibrary
         if (cardName == null || _gpus == null) return null;
         string? best = null;
         foreach (string key in _gpus.Keys)
-            if (cardName.Contains(key, StringComparison.OrdinalIgnoreCase)
-                && (best == null || key.Length > best.Length))
-                best = key;
+        {
+            int at = cardName.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+            if (at < 0) continue;
+
+            // What follows the match? A variant token disqualifies it.
+            string rest = cardName[(at + key.Length)..].TrimStart();
+            string firstWord = rest.Split(' ', 2)[0];
+            if (VariantTokens.Any(v => firstWord.Equals(v, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            if (best == null || key.Length > best.Length) best = key;
+        }
         return best == null ? null : _gpus[best];
     }
 

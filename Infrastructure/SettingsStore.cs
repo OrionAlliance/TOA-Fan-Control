@@ -36,6 +36,22 @@ public sealed class FanSettings
     /// coolers are excluded before this list is even consulted.
     /// </summary>
     public List<string>? SelectedFans { get; set; }
+
+    /// <summary>
+    /// The card name the "your GPU isn't in the library yet" notice was already
+    /// shown for - so it fires once per distinct card, never nags. Cleared when
+    /// that card later gains a library row, which triggers the one-time
+    /// "now supported" balloon instead. Null = nothing shown or pending.
+    /// </summary>
+    public string? GpuNoticeShownFor { get; set; }
+
+    /// <summary>
+    /// User-entered max watts for an unlisted card, keyed by the card's name so
+    /// a GPU swap can never inherit a stale number. The user's value outranks
+    /// the library - they know their exact card, the library knows the reference.
+    /// </summary>
+    public string? GpuUserMaxWattsFor { get; set; }
+    public int? GpuUserMaxWatts { get; set; }
 }
 
 public static class SettingsStore
