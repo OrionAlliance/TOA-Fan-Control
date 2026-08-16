@@ -241,7 +241,8 @@ public partial class App : Application
             if (!ScreenState.PopupsSafe() || GameModeActive()) continue;
 
             string? gpu = Controller.GpuName;
-            if (gpu == null || !GpuLibrary.IsLoaded) return;
+            if (gpu == null) return;
+            if (!GpuLibrary.IsLoaded) continue; // first fetch still in flight - retry
 
             bool listed = GpuLibrary.MaxWattsFor(gpu) != null;
             string? shownFor = Controller.Settings.GpuNoticeShownFor;
@@ -341,8 +342,9 @@ public partial class App : Application
         bool restartWanted = false; // restart ONCE after all checks, never mid-run
 
         // The GPU power library rides the same daily cadence - a whole-file
-        // fetch that carries nothing about this PC, silent when offline.
-        await GpuLibrary.RefreshAsync();
+        // fetch that carries nothing about this PC, silent when offline. A fresh
+        // fetch re-matches the card so a first session isn't stuck on busy time.
+        if (await GpuLibrary.RefreshAsync()) Controller.RefreshGpuMaxFromLibrary();
 
         try
         {

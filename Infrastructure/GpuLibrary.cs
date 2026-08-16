@@ -46,8 +46,9 @@ public static class GpuLibrary
     }
 
     /// <summary>Refresh the cache from GitHub. Rides the daily update check;
-    /// silent on failure - offline is normal and the cached copy keeps working.</summary>
-    public static async Task RefreshAsync()
+    /// silent on failure - offline is normal and the cached copy keeps working.
+    /// Returns true when a fresh copy landed, so the caller can re-match the card.</summary>
+    public static async Task<bool> RefreshAsync()
     {
         try
         {
@@ -58,10 +59,12 @@ public static class GpuLibrary
             AppPaths.EnsureSettingsDir();
             File.WriteAllText(CacheFile, json);
             DebugLog.Write($"GPU library: refreshed from GitHub - {_gpus?.Count ?? 0} cards (updated {_updated ?? "?"}).");
+            return true;
         }
         catch (Exception ex)
         {
             DebugLog.Write("GPU library: refresh failed (offline?) - cached copy stays.", ex);
+            return false;
         }
     }
 

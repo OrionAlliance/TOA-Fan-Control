@@ -215,6 +215,22 @@ public sealed class FanController : IDisposable
         DebugLog.Write($"GPU max watts: user-set {watts}W for '{_hw.GpuName}' (live).");
     }
 
+    /// <summary>Re-match the card after a library fetch - a fresh install's first
+    /// session gets true load the moment the library lands, not next launch.</summary>
+    public void RefreshGpuMaxFromLibrary()
+    {
+        lock (_gate)
+        {
+            // A user-entered value stands, and an already-matched card needs nothing.
+            if (_settings.GpuUserMaxWatts is { } w && _settings.GpuUserMaxWattsFor == _hw.GpuName) return;
+        }
+        if (_hw.GpuMaxWatts == null && GpuLibrary.MaxWattsFor(_hw.GpuName) is { } max)
+        {
+            _hw.GpuMaxWatts = max;
+            DebugLog.Write($"GPU library match (post-fetch): '{_hw.GpuName}' = {max}W reference max.");
+        }
+    }
+
     public void AttachWatchdog(WatchdogLink? link)
     {
         lock (_gate) _link = link;
