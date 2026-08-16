@@ -61,7 +61,7 @@
                         <TextBlock Text="Your data stays yours." FontSize="12.5" FontWeight="SemiBold" />
                         <TextBlock Margin="0,6,0,0" FontSize="11.5" TextWrapping="Wrap"
                                    Foreground="{DynamicResource Text}"
-                                   Text="This app collects NOTHING and transmits NOTHING: no telemetry, no analytics, no accounts, no personal data - there isn't even a server to send anything to. Temperatures and fan speeds are read from your hardware, shown on screen, and written only to a local log file next to the app. The app's only internet use is checking for updates (PawnIO from its author's GitHub, .NET from Microsoft and the app itself from GitHub), and those requests send nothing about you or your PC." />
+                                   Text="This app collects NOTHING and transmits NOTHING: no telemetry, no analytics, no accounts, no personal data - there isn't even a server to send anything to. Temperatures and fan speeds are read from your hardware, shown on screen, and written only to a local log file next to the app. The app's only internet use is checking for updates (PawnIO from its author's GitHub, .NET from Microsoft and the app itself from GitHub) and fetching the whole GPU power library from the app's GitHub - never a lookup about YOUR card - and those requests send nothing about you or your PC." />
                     </StackPanel>
                 </Border>
 

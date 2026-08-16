@@ -60,6 +60,8 @@ There's nothing you *have* to do — it sits in the system tray and does its job
 
   <p align="center"><img src="Docs/images/settings-menu.png" width="220" alt="Settings menu" /></p>
 
+- **The load telltale** — the cyan triangle sweeps with your GPU's load *right now*, and a cyan line parks at the highest load of the run, like a race tach's telltale pointer. On the GPU it's TRUE load — watts pulled versus your card's maximum, from a built-in library of ~160 cards. Card not listed? The app asks once: a one-click search finds your card's TDP, you type one number, done forever.
+
 - **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily (if you leave your PC on continuously) and at app launch. The app only downloads official signed installers, verifies their signatures and never interrupts you mid-game with a popup.
 
 ## If the app ever fails, your BIOS takes over. Every time.
@@ -129,6 +131,9 @@ They're about speed first and safety second.<br>
 **Yellow** = still safe, no damage, but hot chips quietly slow themselves down a little more with each degree.<br>
 **Red** = the chip hits its own emergency brake to protect itself.<br>
 Hover any zone in the app and it explains itself. The bonus that rides along free: cooler parts simply last longer. Cool is fast now and alive later.
+
+**What's the difference between "load" and "busy time" in the marker tooltips?**
+Busy time is revving your pickup in neutral — the engine never rests, but nothing's being asked of it. Load is towing a loaded trailer up a grade — that's where the heat and the wear actually happen. Windows' usual "GPU utilization" number (Task Manager's too) only measures *busy*. This app shows the GPU's true **load** — watts pulled versus the card's maximum — because heat follows load, and heat is this app's whole business. The CPU's markers say "busy time" because no honest per-chip power ceiling exists to compute true load from — and this app never shows a number it can't back.
 
 **Won't adjusting fans every second wear them out?**
 No — it's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and a degree moves the fans 1% (~15 RPM — inaudible; at most 2% per degree in the 70–75°C hand-off band). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
