@@ -263,7 +263,14 @@ public partial class App : Application
                         s.GpuUserMaxWatts = w;
                     }
                 }, reresolve: false);
-                if (dlg.Watts is { } watts) Controller.SetGpuMaxWattsOverride(watts);
+                if (dlg.Watts is { } watts)
+                {
+                    Controller.SetGpuMaxWattsOverride(watts);
+                    MessageWindow.Show(main, "You're all set",
+                        $"{gpu} is saved at {watts}W max.\n\n" +
+                        "The cyan markers now show TRUE load - watts pulled versus your " +
+                        "card's maximum - starting right now. No restart needed.");
+                }
             }
             else if (listed && !userSet && shownFor == gpu)
             {
