@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using FanControlApp.Controls;
 using FanControlApp.Cooling;
@@ -297,16 +298,26 @@ public partial class MainWindow : Window
 
     // ---- settings (the cog) --------------------------------------------------
 
-    // When the menu is open, a click on the cog dismisses the menu FIRST and
-    // then fires the button - which would reopen it instantly, making the cog
-    // impossible to toggle shut. Remember when the menu closed; a click landing
-    // a blink later IS that dismissal, so swallow it.
-    private long _settingsMenuClosedAt;
+    // When the menu is open, a click on the cog dismisses the menu FIRST (on the
+    // press) and then fires the button (on the release) - which would reopen it
+    // instantly, making the cog impossible to toggle shut. Closed fires with the
+    // pointer still on the cog ONLY for that dismiss-press, so exactly that close
+    // arms a one-shot swallow of the coming Click - no timers, no guessing.
+    private bool _swallowNextSettingsClick;
+
+    // Pressed the cog but released elsewhere: the armed swallow's Click never
+    // comes, so leaving the button disarms it.
+    private void OnSettingsMouseLeave(object sender, MouseEventArgs e)
+        => _swallowNextSettingsClick = false;
 
     /// <summary>Rebuilt on every open so each header reflects the current state.</summary>
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
-        if (Environment.TickCount64 - _settingsMenuClosedAt < 250) return;
+        if (_swallowNextSettingsClick)
+        {
+            _swallowNextSettingsClick = false;
+            return;
+        }
 
         // Opens UPWARDS - the cog sits at the bottom edge of the window, so a
         // downward menu would hang off the app over the desktop.
@@ -315,7 +326,7 @@ public partial class MainWindow : Window
             PlacementTarget = SettingsButton,
             Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
         };
-        menu.Closed += (_, _) => _settingsMenuClosedAt = Environment.TickCount64;
+        menu.Closed += (_, _) => _swallowNextSettingsClick = SettingsButton.IsMouseOver;
 
         menu.Items.Add(Item(
             ThemeManager.Current == AppTheme.Dark ? "Switch to light theme" : "Switch to dark theme",
@@ -395,7 +406,13 @@ public partial class MainWindow : Window
     /// <summary>Manual check. Silence would read as broken, so "current" says so.</summary>
     private async void CheckForUpdates()
     {
-        bool offered = await ((App)Application.Current).CheckForUpdatesNowAsync();
+        // A flaky connection can take ~30s before anything shows - a wait cursor
+        // over THIS window says "working" (window-scoped, so any update dialog
+        // that opens mid-check keeps its normal arrow).
+        Cursor = Cursors.Wait;
+        bool offered;
+        try { offered = await ((App)Application.Current).CheckForUpdatesNowAsync(); }
+        finally { Cursor = null; }
         if (offered) return;
 
         Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version

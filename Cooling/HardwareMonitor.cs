@@ -125,8 +125,14 @@ public sealed class HardwareMonitor : IDisposable
 
     /// <summary>This card's max watts - the true-load gauge's denominator. Set from
     /// the GPU library at open; a user-entered value (unlisted card) overwrites it.
-    /// Null = unknown, markers fall back to busy time.</summary>
-    public int? GpuMaxWatts { get; set; }
+    /// Null = unknown, markers fall back to busy time. Backed by a plain int
+    /// (0 = unknown) so the timer thread can never tear a cross-thread read.</summary>
+    public int? GpuMaxWatts
+    {
+        get { int v = _gpuMaxWatts; return v == 0 ? null : v; }
+        set => _gpuMaxWatts = value ?? 0;
+    }
+    private int _gpuMaxWatts;
 
     public HardwareMonitor()
     {

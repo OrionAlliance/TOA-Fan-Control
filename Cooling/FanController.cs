@@ -152,6 +152,8 @@ public sealed class FanController : IDisposable
 
     public event EventHandler<FanReadings>? Updated;
 
+    // Hands out the LIVE instance - safe only while every mutation and every
+    // multi-field read stays on the dispatcher thread (they all do; keep it so).
     public FanSettings Settings
     {
         get { lock (_gate) return _settings; }
@@ -198,7 +200,7 @@ public sealed class FanController : IDisposable
         // stored name mismatch and the number is ignored, never inherited.
         lock (_gate)
         {
-            if (_settings.GpuUserMaxWatts is { } w && _settings.GpuUserMaxWattsFor == _hw.GpuName)
+            if (UserGpuOverrideFor() is { } w)
             {
                 _hw.GpuMaxWatts = w;
                 DebugLog.Write($"GPU max watts: user-set {w}W for '{_hw.GpuName}'.");
@@ -207,6 +209,14 @@ public sealed class FanController : IDisposable
 
         ResolveControlledFans();
     }
+
+    // The ONE precedence rule, written once: a user-entered max stands while the
+    // same card is installed - library values never outrank it. Call under _gate.
+    private int? UserGpuOverrideFor() =>
+        _settings.GpuUserMaxWattsFor == _hw.GpuName ? _settings.GpuUserMaxWatts : null;
+
+    /// <summary>Same rule, for the notice flow's branch logic.</summary>
+    public bool GpuUserOverrideActive { get { lock (_gate) return UserGpuOverrideFor() != null; } }
 
     /// <summary>Apply a just-entered user max immediately - no restart needed.</summary>
     public void SetGpuMaxWattsOverride(int watts)
@@ -224,7 +234,7 @@ public sealed class FanController : IDisposable
         lock (_gate)
         {
             // A user-entered value stands.
-            if (_settings.GpuUserMaxWatts != null && _settings.GpuUserMaxWattsFor == _hw.GpuName) return;
+            if (UserGpuOverrideFor() != null) return;
         }
         int? max = GpuLibrary.MaxWattsFor(_hw.GpuName);
         if (_hw.GpuMaxWatts == max) return;

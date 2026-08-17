@@ -116,7 +116,8 @@
                 <!-- Explicit TextBlock: a string Content would get the implicit
                      TextBlock style's Segoe UI and render the gear as a tofu box. -->
                 <Button x:Name="SettingsButton" Padding="8,6"
-                        Click="OnSettingsClick" ToolTip="Settings">
+                        Click="OnSettingsClick" MouseLeave="OnSettingsMouseLeave"
+                        ToolTip="Settings">
                     <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
                 </Button>
             </StackPanel>

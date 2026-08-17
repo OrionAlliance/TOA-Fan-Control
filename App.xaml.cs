@@ -265,8 +265,7 @@ public partial class App : Application
             bool listed = GpuLibrary.MaxWattsFor(gpu) != null;
             string? shownFor = Controller.Settings.GpuNoticeShownFor;
 
-            bool userSet = Controller.Settings.GpuUserMaxWattsFor == gpu
-                           && Controller.Settings.GpuUserMaxWatts != null;
+            bool userSet = Controller.GpuUserOverrideActive;
 
             if (!listed && !userSet && shownFor != gpu)
             {
@@ -367,7 +366,16 @@ public partial class App : Application
         // The GPU power library rides the same daily cadence - a whole-file
         // fetch that carries nothing about this PC, silent when offline. A fresh
         // fetch re-matches the card so a first session isn't stuck on busy time.
-        if (await GpuLibrary.RefreshAsync()) Controller.RefreshGpuMaxFromLibrary();
+        // Guarded like its siblings: a library problem must never kill the check
+        // run - or, on the timer path, the whole app.
+        try
+        {
+            if (await GpuLibrary.RefreshAsync()) Controller.RefreshGpuMaxFromLibrary();
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("GPU library refresh/re-match failed.", ex);
+        }
 
         try
         {

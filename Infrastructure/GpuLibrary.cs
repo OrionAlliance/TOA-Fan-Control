@@ -60,22 +60,34 @@ public static class GpuLibrary
 
     private static async Task<bool> RefreshCoreAsync()
     {
+        string json;
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
-            string json = await http.GetStringAsync(LibraryUrl);
+            json = await http.GetStringAsync(LibraryUrl);
             Parse(json); // parse FIRST - a bad download must never clobber a good cache
-            AppPaths.EnsureSettingsDir();
-            File.WriteAllText(CacheFile, json);
-            DebugLog.Write($"GPU library: refreshed from GitHub - {_gpus?.Count ?? 0} cards (updated {_updated ?? "?"}).");
-            return true;
         }
         catch (Exception ex)
         {
             DebugLog.Write("GPU library: refresh failed (offline?) - cached copy stays.", ex);
             return false;
         }
+
+        // The fresh library is LIVE in memory either way - a failed cache write
+        // only costs the next launch, never this session's re-match.
+        try
+        {
+            AppPaths.EnsureSettingsDir();
+            File.WriteAllText(CacheFile, json);
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("GPU library: fresh copy loaded, but caching it failed - next launch reuses the old cache.", ex);
+        }
+
+        DebugLog.Write($"GPU library: refreshed from GitHub - {_gpus?.Count ?? 0} cards (updated {_updated ?? "?"}).");
+        return true;
     }
 
     // A match immediately followed by one of these is a DIFFERENT card whose own
@@ -89,9 +101,10 @@ public static class GpuLibrary
     /// must never fall into "RTX 3080"'s row.</summary>
     public static int? MaxWattsFor(string? cardName)
     {
-        if (cardName == null || _gpus == null) return null;
+        var gpus = _gpus; // one snapshot - Parse swaps the field wholesale
+        if (cardName == null || gpus == null) return null;
         string? best = null;
-        foreach (string key in _gpus.Keys)
+        foreach (string key in gpus.Keys)
         {
             int at = cardName.IndexOf(key, StringComparison.OrdinalIgnoreCase);
             if (at < 0) continue;
@@ -109,7 +122,7 @@ public static class GpuLibrary
 
             if (best == null || key.Length > best.Length) best = key;
         }
-        return best == null ? null : _gpus[best];
+        return best == null ? null : gpus[best];
     }
 
     private static void Parse(string json)
