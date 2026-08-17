@@ -233,7 +233,11 @@ public partial class App : Application
     private async Task MaybeShowGpuLibraryNoticeAsync(MainWindow main)
     {
         string? gpu = Controller.GpuName;
-        if (gpu == null) return;
+        if (gpu == null)
+        {
+            DebugLog.Write("GPU library notice: no GPU detected - nothing to ask.");
+            return;
+        }
 
         // No power sensor = true load is impossible no matter what watts get
         // stored - asking for them would be a false promise.
@@ -295,8 +299,13 @@ public partial class App : Application
                     "the cyan markers now show its true load.");
                 Controller.UpdateSettings(s => s.GpuNoticeShownFor = null, reresolve: false);
             }
+            else
+            {
+                DebugLog.Write($"GPU library notice: '{gpu}' - nothing to show (listed={listed}, userSet={userSet}).");
+            }
             return;
         }
+        DebugLog.Write($"GPU library notice: no popup-safe moment in 10 minutes (library loaded: {GpuLibrary.IsLoaded}) - next launch retries.");
     }
 
     private DispatcherTimer? _updateTimer;

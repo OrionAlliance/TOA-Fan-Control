@@ -211,24 +211,28 @@ public sealed class FanController : IDisposable
     /// <summary>Apply a just-entered user max immediately - no restart needed.</summary>
     public void SetGpuMaxWattsOverride(int watts)
     {
+        if (_hw.GpuMaxWatts != watts) ResetGpuLoadStream();
         _hw.GpuMaxWatts = watts;
         DebugLog.Write($"GPU max watts: user-set {watts}W for '{_hw.GpuName}' (live).");
     }
 
-    /// <summary>Re-match the card after a library fetch - a fresh install's first
-    /// session gets true load the moment the library lands, not next launch.</summary>
+    /// <summary>Re-match the card after a library fetch - a fresh install gets
+    /// true load the moment the library lands, and a corrected (or removed) row
+    /// takes effect without a restart instead of lying until one.</summary>
     public void RefreshGpuMaxFromLibrary()
     {
         lock (_gate)
         {
-            // A user-entered value stands, and an already-matched card needs nothing.
-            if (_settings.GpuUserMaxWatts is { } w && _settings.GpuUserMaxWattsFor == _hw.GpuName) return;
+            // A user-entered value stands.
+            if (_settings.GpuUserMaxWatts != null && _settings.GpuUserMaxWattsFor == _hw.GpuName) return;
         }
-        if (_hw.GpuMaxWatts == null && GpuLibrary.MaxWattsFor(_hw.GpuName) is { } max)
-        {
-            _hw.GpuMaxWatts = max;
-            DebugLog.Write($"GPU library match (post-fetch): '{_hw.GpuName}' = {max}W reference max.");
-        }
+        int? max = GpuLibrary.MaxWattsFor(_hw.GpuName);
+        if (_hw.GpuMaxWatts == max) return;
+        ResetGpuLoadStream();
+        _hw.GpuMaxWatts = max;
+        DebugLog.Write(max is { } m
+            ? $"GPU library match (post-fetch): '{_hw.GpuName}' = {m}W reference max."
+            : $"GPU library (post-fetch): '{_hw.GpuName}' no longer listed - markers fall back to busy time.");
     }
 
     public void AttachWatchdog(WatchdogLink? link)
@@ -588,8 +592,9 @@ public sealed class FanController : IDisposable
     }
 
     /// <summary>True when the GPU markers show real load (watts vs the card's max)
-    /// rather than busy time - the card has a power sensor AND a library entry.</summary>
-    public bool GpuLoadIsTrue => _hw.GpuMaxWatts != null && _hw.GpuPowerW != null;
+    /// rather than busy time - the card has a power sensor AND a known max. Sensor
+    /// PRESENCE, not this tick's value, so the label can't flicker on a blip.</summary>
+    public bool GpuLoadIsTrue => _hw.GpuMaxWatts != null && _hw.GpuHasPowerSensor;
 
     /// <summary>The card's sensor-reported name - for the library notice popup.</summary>
     public string? GpuName => _hw.GpuName;
@@ -613,9 +618,11 @@ public sealed class FanController : IDisposable
         // GPU: TRUE LOAD when possible - watts against the card's reference max
         // (the trailer up the hill, not the revs). Falls back to the D3D engine
         // counters (busy time) when the card lacks a power sensor or library row.
+        // The mode is decided by sensor PRESENCE, not this tick's value: a blip
+        // must poison the pair (NaN), never slip a busy sample into the stream.
         float curGl;
-        if (_hw.GpuPowerW is { } watts && _hw.GpuMaxWatts is { } max && max > 0)
-            curGl = MathF.Min(watts / max * 100f, 100f);
+        if (_hw.GpuHasPowerSensor && _hw.GpuMaxWatts is { } max && max > 0)
+            curGl = _hw.GpuPowerW is { } watts ? MathF.Min(watts / max * 100f, 100f) : float.NaN;
         else
             curGl = _hw.GpuEngineLoad ?? float.NaN;
 
@@ -623,6 +630,16 @@ public sealed class FanController : IDisposable
         _susGpuLoad = MathF.Min(curGl, _prevGpuLoad);
         _prevCpuLoad = curCl;
         _prevGpuLoad = curGl;
+    }
+
+    // The GPU load measure just switched (busy time <-> true load, or a new
+    // denominator): samples of the old measure must not survive as "peaks".
+    private void ResetGpuLoadStream()
+    {
+        _prevGpuLoad = float.NaN;
+        _susGpuLoad = float.NaN;
+        _peakGpuLoad = float.NaN;
+        _dispPeakGpuLoad = float.NaN;
     }
 
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
