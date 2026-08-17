@@ -89,6 +89,11 @@ public sealed class FanController : IDisposable
     private const float SlewUpPerSec = 8f;
     private const float SlewDownPerSec = 3f;
 
+    // Fans track the hottest reading over this many seconds, not the instant's.
+    // Bursty loads (video encoding) sawtooth the CPU temp; holding the recent
+    // peak keeps the fans steady instead of surfing every spike and dip.
+    private const float PeakHoldSeconds = 15f;
+
     private const int MaxBlindTicks = 3;
 
     // Conflict detection: the chip reporting a duty that differs from what we
@@ -110,6 +115,9 @@ public sealed class FanController : IDisposable
     private List<FanChannel> _controlled = new();
     private List<FanChannel> _candidates = new();
     private float _currentPercent = FloorPercent;
+    // Rolling peak-hold of the driving temp over PeakHoldSeconds (see the tick).
+    private readonly Queue<(long Ms, float Temp)> _peakWindow = new();
+    private float _drivingTemp;
     private bool _engaged;
     private bool _paused;
     private int _blindTicks;
@@ -498,6 +506,18 @@ public sealed class FanController : IDisposable
 
         _blindTicks = 0;
 
+        // Peak-hold: drive off the hottest reading in the last PeakHoldSeconds,
+        // not this instant's. Bursty loads (video encoding) sawtooth the CPU temp;
+        // matched 1:1 the fans would surf it. Holding the recent peak keeps them
+        // steady, and the spike still lands instantly - only quietening waits.
+        long nowMs = Environment.TickCount64;
+        _peakWindow.Enqueue((nowMs, temp));
+        long cutoff = nowMs - (long)(PeakHoldSeconds * 1000f);
+        while (_peakWindow.Peek().Ms < cutoff) _peakWindow.Dequeue();
+        float driving = temp;
+        foreach ((_, float t) in _peakWindow) driving = MathF.Max(driving, t);
+        _drivingTemp = driving;
+
         // Never write before the watchdog holds these headers. If we got in first
         // it would be left with nothing to restore, and a force-kill would strand
         // the fans - the exact thing it exists to prevent.
@@ -520,8 +540,8 @@ public sealed class FanController : IDisposable
 
         // fan % = temperature, floored so no fan stalls and capped at full.
         // Past 70C the fans lean ahead: 72C -> 74%, 75C -> 80%, 85C -> 90%.
-        float lean = Math.Clamp(temp - HotLeanFromC, 0f, HotLeanMax);
-        float desired = Math.Clamp(temp + lean, FloorPercent, CeilingPercent);
+        float lean = Math.Clamp(driving - HotLeanFromC, 0f, HotLeanMax);
+        float desired = Math.Clamp(driving + lean, FloorPercent, CeilingPercent);
         _currentPercent = Slew(_currentPercent, desired, dt);
 
         foreach (FanChannel f in controlled)
@@ -530,7 +550,7 @@ public sealed class FanController : IDisposable
         _engaged = true;
 
         string hotter = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
-        string status = $"Matching {hotter} {temp:F0}°C -> Fans: {_currentPercent:F0}%";
+        string status = $"Matching {hotter} {driving:F0}°C -> Fans: {_currentPercent:F0}%";
         if (_conflict)
             status += "   ·   another app is fighting for the fans - holding control";
 
@@ -543,7 +563,7 @@ public sealed class FanController : IDisposable
             LogSample(cpu, gpu, temp, controlled);
         }
 
-        Publish(cpu, gpu, temp, status: status);
+        Publish(cpu, gpu, driving, status: status);
     }
 
     /// <summary>
@@ -680,9 +700,12 @@ public sealed class FanController : IDisposable
             ? $" gpw={pw:F0}{(_hw.GpuMaxWatts is { } mx ? $"/{mx}" : "")}"
             : "";
         string bt = _hw.BoardTemp is { } b ? $" board={b:F1}" : "";
+        // When the held peak is above the current hotter, show it - that's why
+        // the fans sit where they do while the instantaneous temp has dipped.
+        string hold = _drivingTemp > (hotter ?? float.MinValue) + 0.5f ? $" hold={_drivingTemp:F1}" : "";
         DebugLog.Write(bios
             ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1} {rpm}"
-            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1} out={_currentPercent:F1}% {rpm}");
+            : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1}{hold} out={_currentPercent:F1}% {rpm}");
     }
 
     private void LogSessionSummary()
