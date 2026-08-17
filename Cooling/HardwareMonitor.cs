@@ -119,6 +119,10 @@ public sealed class HardwareMonitor : IDisposable
     /// <summary>Live GPU board power draw in watts, or null if the card has no power sensor.</summary>
     public float? GpuPowerW => _gpuPower?.Value;
 
+    /// <summary>True when the card exposes a power sensor at all - without one,
+    /// true load is impossible and a stored max watts can never be used.</summary>
+    public bool GpuHasPowerSensor => _gpuPower != null;
+
     /// <summary>This card's max watts - the true-load gauge's denominator. Set from
     /// the GPU library at open; a user-entered value (unlisted card) overwrites it.
     /// Null = unknown, markers fall back to busy time.</summary>

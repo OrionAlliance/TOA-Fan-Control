@@ -232,6 +232,23 @@ public partial class App : Application
     /// </summary>
     private async Task MaybeShowGpuLibraryNoticeAsync(MainWindow main)
     {
+        string? gpu = Controller.GpuName;
+        if (gpu == null) return;
+
+        // No power sensor = true load is impossible no matter what watts get
+        // stored - asking for them would be a false promise.
+        if (!Controller.GpuHasPowerSensor)
+        {
+            DebugLog.Write($"GPU library notice: '{gpu}' has no power sensor - true load impossible, notice skipped.");
+            return;
+        }
+
+        // Decide from TODAY's library, not yesterday's cache: a stale "unlisted"
+        // verdict invites a typed guess that would permanently outrank the real
+        // row. One awaited fetch (shared with the launch check); offline just
+        // means the cache is the best truth available.
+        if (await GpuLibrary.RefreshAsync()) Controller.RefreshGpuMaxFromLibrary();
+
         // First look as soon as the window has settled; if the screen is busy
         // (game, video, Game Mode), retry gently - same manners as the update
         // popups - then decide once and stop.
@@ -239,10 +256,7 @@ public partial class App : Application
         {
             await Task.Delay(TimeSpan.FromSeconds(i == 0 ? 4 : 15));
             if (!ScreenState.PopupsSafe() || GameModeActive()) continue;
-
-            string? gpu = Controller.GpuName;
-            if (gpu == null) return;
-            if (!GpuLibrary.IsLoaded) continue; // first fetch still in flight - retry
+            if (!GpuLibrary.IsLoaded) continue; // offline with no cache - next session
 
             bool listed = GpuLibrary.MaxWattsFor(gpu) != null;
             string? shownFor = Controller.Settings.GpuNoticeShownFor;

@@ -47,8 +47,18 @@ public static class GpuLibrary
 
     /// <summary>Refresh the cache from GitHub. Rides the daily update check;
     /// silent on failure - offline is normal and the cached copy keeps working.
-    /// Returns true when a fresh copy landed, so the caller can re-match the card.</summary>
-    public static async Task<bool> RefreshAsync()
+    /// Returns true when a fresh copy landed, so the caller can re-match the card.
+    /// Single-flight: concurrent callers (launch check + notice flow) share one
+    /// download instead of racing two.</summary>
+    public static Task<bool> RefreshAsync()
+    {
+        if (_refresh == null || _refresh.IsCompleted) _refresh = RefreshCoreAsync();
+        return _refresh;
+    }
+
+    private static Task<bool>? _refresh;
+
+    private static async Task<bool> RefreshCoreAsync()
     {
         try
         {
@@ -68,10 +78,11 @@ public static class GpuLibrary
         }
     }
 
-    // A match that's immediately followed by one of these is a BIGGER variant
-    // whose own row is missing - "…RX 6700 XT" must never fall into "RX 6700"'s
-    // row and quietly get the wrong watts. No match = the honest popup instead.
-    private static readonly string[] VariantTokens = { "XT", "XTX", "Ti", "SUPER", "GRE", "D" };
+    // A match immediately followed by one of these is a DIFFERENT card whose own
+    // row is missing - "…RX 6700 XT" must never fall into "RX 6700"'s row, and a
+    // laptop "…RTX 4080 Laptop GPU" must never get the desktop 4080's watts.
+    private static readonly string[] VariantTokens =
+        { "XT", "XTX", "Ti", "SUPER", "GRE", "D", "M", "S", "Laptop", "Mobile", "Max-Q" };
 
     /// <summary>Reference max watts for this card, or null if unknown. Longest
     /// library key contained in the sensor-reported name wins - "RTX 3080 Ti"
@@ -85,8 +96,13 @@ public static class GpuLibrary
             int at = cardName.IndexOf(key, StringComparison.OrdinalIgnoreCase);
             if (at < 0) continue;
 
+            // A match that cuts a model number short is no match - "RX 550"
+            // must never claim "RX 5500".
+            int end = at + key.Length;
+            if (end < cardName.Length && char.IsDigit(cardName[end])) continue;
+
             // What follows the match? A variant token disqualifies it.
-            string rest = cardName[(at + key.Length)..].TrimStart();
+            string rest = cardName[end..].TrimStart();
             string firstWord = rest.Split(' ', 2)[0];
             if (VariantTokens.Any(v => firstWord.Equals(v, StringComparison.OrdinalIgnoreCase)))
                 continue;

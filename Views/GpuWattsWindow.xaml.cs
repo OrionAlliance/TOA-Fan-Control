@@ -24,6 +24,14 @@ public partial class GpuWattsWindow : Window
             Owner = owner;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
         }
+        else
+        {
+            // Started minimized to tray: nothing anchors this dialog, and modal +
+            // borderless + hidden owner = "the app looks hung" if it gets buried.
+            // A taskbar button and Topmost keep it findable until it's answered.
+            ShowInTaskbar = true;
+            Topmost = true;
+        }
 
         BodyText.Text =
             $"The cyan markers can show your GPU's TRUE load - watts pulled versus " +

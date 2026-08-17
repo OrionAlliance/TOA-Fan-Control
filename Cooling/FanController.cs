@@ -594,6 +594,10 @@ public sealed class FanController : IDisposable
     /// <summary>The card's sensor-reported name - for the library notice popup.</summary>
     public string? GpuName => _hw.GpuName;
 
+    /// <summary>Whether the card has a power sensor - the notice popup must not
+    /// ask for max watts it can never use.</summary>
+    public bool GpuHasPowerSensor => _hw.GpuHasPowerSensor;
+
     // Sustained load = min of the last two ~1s captures, so a one-poll blip can't
     // become a peak. Captured on its own ~1s cadence, NOT per tick - conflict
     // mode's 250ms ticks must not shrink the two-capture window to half a second.
