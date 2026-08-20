@@ -33,7 +33,7 @@
 
                         <TextBlock Margin="0,6,0,0" FontSize="11.5" TextWrapping="Wrap"
                                    Foreground="{DynamicResource Text}"
-                                   Text="The app works by adjusting ONLY your PC case fans to follow your hottest item. Either your CPU or your GPU. Every second, the app reads the CPU and GPU temperatures and sets every case fan to match the hotter of the two, one-to-one: 70°C means 70% fan speed. Past 70°C the fans lean up to 5 points ahead of the temperature (78°C means 83%) for extra push when things are hottest." />
+                                   Text="The app works by adjusting ONLY your PC case fans to follow your hottest item. Either your CPU or your GPU. Every second, the app reads the CPU and GPU temperatures, and the fans match the hottest reading of the last 15 seconds, one-to-one: 70°C means 70% fan speed. Holding the recent peak keeps the fans steady when bursty loads make the temperature sawtooth - a real spike still raises them instantly, only the quieting-down waits. Past 70°C the fans lean up to 5 points ahead of the temperature (78°C means 83%) for extra push when things are hottest." />
 
                         <TextBlock Margin="0,8,0,0" FontSize="11.5" TextWrapping="Wrap"
                                    Foreground="{DynamicResource Text}"

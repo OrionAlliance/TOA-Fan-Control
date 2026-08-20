@@ -35,7 +35,7 @@ I never wanted that type of control over my fans. I didn't want the confusion or
 
 ## What it does
 
-The app adjusts **only your PC case fans**, making them follow your hottest component — your CPU or your GPU. Every second it reads both temperatures and sets every case fan to match the hotter of the two, one-to-one: **70°C means 70% fan speed.** Past 70°C the fans lean up to 5 points ahead of the temperature (78°C → 83%) — extra push exactly when things are hottest.
+The app adjusts **only your PC case fans**, making them follow your hottest component — your CPU or your GPU. Every second it reads both temperatures, and the fans match the hottest reading of the last 15 seconds, one-to-one: **70°C means 70% fan speed.** Holding the recent peak keeps the fans steady when bursty loads (video encoding is the classic) make the temperature sawtooth — a real spike still raises them instantly; only the quieting-down waits. Past 70°C the fans lean up to 5 points ahead of the temperature (78°C → 83%) — extra push exactly when things are hottest.
 
 - A hard **30% floor** means no case fan ever stalls, and changes are **rate-limited** so fans glide to the needed speed instead of jerking up and down.
 - Your **AIO pumps, CPU coolers, and GPU fans are never touched** — they stay on your motherboard's BIOS control (and your GPU driver's), where they belong.
@@ -120,7 +120,7 @@ No — no affiliation. That's the powerful, fully-customizable one (and it's exc
 Because that's the whole point. The app has one rule: match the case fans to whichever is hotter, your CPU or your GPU. Everything else — the 30% no-stall floor, the gentle ramps, the automatic BIOS hand-back, the watchdog — is built in, with nothing to tune and nothing to get wrong. If you enjoy building custom curves, [FanControl](https://github.com/Rem0o/FanControl.Releases) is fantastic. If you'd rather install it once and never think about it again, that's exactly what this app is for.
 
 **Why not just use a BIOS fan curve that does what TOA - Fan Control does?**
-Because most BIOS curves can't. On most boards, case-fan curves follow the CPU only — the BIOS can't see your GPU. So in games, when the GPU is the hottest thing in the case, BIOS-driven case fans just idle. This app watches both chips every second and matches the fans to whichever is hotter — no reboots to tweak anything, and if the app ever closes, your BIOS curve takes right back over. (Already have a curve you love? Keep it — this is for everyone who doesn't want that homework.)
+Because most BIOS curves can't. On most boards, case-fan curves follow the CPU only — the BIOS can't see your GPU. So in games, when the GPU is the hottest thing in the case, BIOS-driven case fans just idle. This app watches both chips every second and matches the fans to the hotter one's recent peak — no reboots to tweak anything, and if the app ever closes, your BIOS curve takes right back over. (Already have a curve you love? Keep it — this is for everyone who doesn't want that homework.)
 
 **Why doesn't it control the CPU fan?**
 On purpose. Your CPU cooler stays on the BIOS so that no failure of this app can ever starve your CPU of cooling. The same rule protects AIO pumps (throttling a pump is the one genuine landmine in fan software) and your GPU's fans (the GPU's own driver runs those best). This app manages the case airflow *around* your components; their own coolers always keep the motherboard as their safety net.

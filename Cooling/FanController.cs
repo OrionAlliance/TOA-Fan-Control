@@ -116,7 +116,9 @@ public sealed class FanController : IDisposable
     private List<FanChannel> _candidates = new();
     private float _currentPercent = FloorPercent;
     // Rolling peak-hold of the driving temp over PeakHoldSeconds (see the tick).
-    private readonly Queue<(long Ms, float Temp)> _peakWindow = new();
+    // Src remembers which chip each sample came from, so the status line always
+    // attributes the held peak to the chip that actually reached it.
+    private readonly Queue<(long Ms, float Temp, string Src)> _peakWindow = new();
     private float _drivingTemp;
     private bool _engaged;
     private bool _paused;
@@ -511,11 +513,13 @@ public sealed class FanController : IDisposable
         // matched 1:1 the fans would surf it. Holding the recent peak keeps them
         // steady, and the spike still lands instantly - only quietening waits.
         long nowMs = Environment.TickCount64;
-        _peakWindow.Enqueue((nowMs, temp));
+        string src = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
+        _peakWindow.Enqueue((nowMs, temp, src));
         long cutoff = nowMs - (long)(PeakHoldSeconds * 1000f);
         while (_peakWindow.Peek().Ms < cutoff) _peakWindow.Dequeue();
-        float driving = temp;
-        foreach ((_, float t) in _peakWindow) driving = MathF.Max(driving, t);
+        var held = _peakWindow.Peek();
+        foreach (var e in _peakWindow) if (e.Temp > held.Temp) held = e;
+        float driving = held.Temp;
         _drivingTemp = driving;
 
         // Never write before the watchdog holds these headers. If we got in first
@@ -549,8 +553,9 @@ public sealed class FanController : IDisposable
 
         _engaged = true;
 
-        string hotter = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
-        string status = $"Matching {hotter} {driving:F0}°C -> Fans: {_currentPercent:F0}%";
+        // Label the held peak with the chip that actually reached it - the instant
+        // hotter can be the OTHER chip while a held spike still drives the fans.
+        string status = $"Matching {held.Src} {driving:F0}°C -> Fans: {_currentPercent:F0}%";
         if (_conflict)
             status += "   ·   another app is fighting for the fans - holding control";
 
