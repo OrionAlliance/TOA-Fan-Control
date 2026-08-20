@@ -10,7 +10,8 @@ public sealed class FanReadings
     public float? CpuTemp { get; init; }
     public float? GpuTemp { get; init; }
 
-    /// <summary>The hotter of CPU/GPU - the number the fans are matching.</summary>
+    /// <summary>While driving: the held recent peak (see PeakHoldSeconds) the fans
+    /// are matching. Otherwise the current hotter of CPU/GPU, or null with no reading.</summary>
     public float? SourceTemp { get; init; }
     public float OutputPercent { get; init; }
 
@@ -119,6 +120,10 @@ public sealed class FanController : IDisposable
     // Src remembers which chip each sample came from, so the status line always
     // attributes the held peak to the chip that actually reached it.
     private readonly Queue<(long Ms, float Temp, string Src)> _peakWindow = new();
+
+    // Last tick's raw temp - a sample must appear on 2 consecutive ticks to
+    // enter the hold window (glitch guard; see the tick).
+    private float _prevWindowTemp = float.NaN;
     private float _drivingTemp;
     private bool _engaged;
     private bool _paused;
@@ -514,10 +519,26 @@ public sealed class FanController : IDisposable
         // steady, and the spike still lands instantly - only quietening waits.
         long nowMs = Environment.TickCount64;
         string src = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
-        _peakWindow.Enqueue((nowMs, temp, src));
+
+        // A fresh engagement drives from the CURRENT temp: a peak held from
+        // before a pause or sensor loss must not outlive its disengagement.
+        if (!_engaged)
+        {
+            _peakWindow.Clear();
+            _prevWindowTemp = float.NaN;
+        }
+
+        // A reading enters the hold only after surviving 2 consecutive ticks -
+        // one glitched sample must not rule the fans for a whole window. The
+        // instant reading still seeds the fold below, so a real spike lands
+        // this tick; only its 15s hold starts one tick late.
+        float paired = float.IsNaN(_prevWindowTemp) ? temp : MathF.Min(temp, _prevWindowTemp);
+        _peakWindow.Enqueue((nowMs, paired, src));
+        _prevWindowTemp = temp;
+
         long cutoff = nowMs - (long)(PeakHoldSeconds * 1000f);
         while (_peakWindow.Peek().Ms < cutoff) _peakWindow.Dequeue();
-        var held = _peakWindow.Peek();
+        var held = (Ms: nowMs, Temp: temp, Src: src);
         foreach (var e in _peakWindow) if (e.Temp > held.Temp) held = e;
         float driving = held.Temp;
         _drivingTemp = driving;
