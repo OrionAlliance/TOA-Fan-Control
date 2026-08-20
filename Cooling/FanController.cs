@@ -10,8 +10,8 @@ public sealed class FanReadings
     public float? CpuTemp { get; init; }
     public float? GpuTemp { get; init; }
 
-    /// <summary>While driving: the held recent peak (see PeakHoldSeconds) the fans
-    /// are matching. Otherwise the current hotter of CPU/GPU, or null with no reading.</summary>
+    /// <summary>While driving: the held recent peak (see PeakHoldMs) the fans are
+    /// matching. Otherwise the current hotter of CPU/GPU, or null with no reading.</summary>
     public float? SourceTemp { get; init; }
     public float OutputPercent { get; init; }
 
@@ -34,6 +34,10 @@ public sealed class FanReadings
 
     /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
     public bool NoControllableFans { get; init; }
+
+    /// <summary>The BIOS curve owns the fans right now (paused, or none to drive) -
+    /// displays must not claim a fan % the app isn't commanding.</summary>
+    public bool BiosHasFans { get; init; }
 
     /// <summary>The watchdog died mid-session; a clean exit can no longer restore the BIOS curve.</summary>
     public bool SentinelLost { get; init; }
@@ -90,10 +94,10 @@ public sealed class FanController : IDisposable
     private const float SlewUpPerSec = 8f;
     private const float SlewDownPerSec = 3f;
 
-    // Fans track the hottest reading over this many seconds, not the instant's.
+    // Fans track the hottest reading over this window, not the instant's.
     // Bursty loads (video encoding) sawtooth the CPU temp; holding the recent
     // peak keeps the fans steady instead of surfing every spike and dip.
-    private const float PeakHoldSeconds = 15f;
+    private const long PeakHoldMs = 15_000;
 
     private const int MaxBlindTicks = 3;
 
@@ -116,15 +120,9 @@ public sealed class FanController : IDisposable
     private List<FanChannel> _controlled = new();
     private List<FanChannel> _candidates = new();
     private float _currentPercent = FloorPercent;
-    // Rolling peak-hold of the driving temp over PeakHoldSeconds (see the tick).
-    // Src remembers which chip each sample came from, so the status line always
-    // attributes the held peak to the chip that actually reached it.
+    // The peak-hold state - see HoldPeak, which owns both fields.
     private readonly Queue<(long Ms, float Temp, string Src)> _peakWindow = new();
-
-    // Last tick's raw temp - a sample must appear on 2 consecutive ticks to
-    // enter the hold window (glitch guard; see the tick).
     private float _prevWindowTemp = float.NaN;
-    private float _drivingTemp;
     private bool _engaged;
     private bool _paused;
     private int _blindTicks;
@@ -450,7 +448,7 @@ public sealed class FanController : IDisposable
 
         if (controlled.Count == 0)
         {
-            Publish(cpu, gpu, source, noFans: true,
+            Publish(cpu, gpu, source, noFans: true, biosHasFans: true,
                     status: "No controllable fans found - the BIOS is running your fans. See fan_debug.log.");
             return;
         }
@@ -491,7 +489,7 @@ public sealed class FanController : IDisposable
                 LogSample(cpu, gpu, source, controlled, bios: true);
             }
 
-            Publish(cpu, gpu, source,
+            Publish(cpu, gpu, source, biosHasFans: true,
                     status: "Paused - the BIOS curve has your fans.");
             return;
         }
@@ -513,35 +511,10 @@ public sealed class FanController : IDisposable
 
         _blindTicks = 0;
 
-        // Peak-hold: drive off the hottest reading in the last PeakHoldSeconds,
-        // not this instant's. Bursty loads (video encoding) sawtooth the CPU temp;
-        // matched 1:1 the fans would surf it. Holding the recent peak keeps them
-        // steady, and the spike still lands instantly - only quietening waits.
-        long nowMs = Environment.TickCount64;
+        // Drive off the window's hottest reading, not this instant's - spikes
+        // still land instantly, only quietening waits (why: PeakHoldMs).
         string src = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
-
-        // A fresh engagement drives from the CURRENT temp: a peak held from
-        // before a pause or sensor loss must not outlive its disengagement.
-        if (!_engaged)
-        {
-            _peakWindow.Clear();
-            _prevWindowTemp = float.NaN;
-        }
-
-        // A reading enters the hold only after surviving 2 consecutive ticks -
-        // one glitched sample must not rule the fans for a whole window. The
-        // instant reading still seeds the fold below, so a real spike lands
-        // this tick; only its 15s hold starts one tick late.
-        float paired = float.IsNaN(_prevWindowTemp) ? temp : MathF.Min(temp, _prevWindowTemp);
-        _peakWindow.Enqueue((nowMs, paired, src));
-        _prevWindowTemp = temp;
-
-        long cutoff = nowMs - (long)(PeakHoldSeconds * 1000f);
-        while (_peakWindow.Peek().Ms < cutoff) _peakWindow.Dequeue();
-        var held = (Ms: nowMs, Temp: temp, Src: src);
-        foreach (var e in _peakWindow) if (e.Temp > held.Temp) held = e;
-        float driving = held.Temp;
-        _drivingTemp = driving;
+        (float driving, string drivingSrc) = HoldPeak(temp, src);
 
         // Never write before the watchdog holds these headers. If we got in first
         // it would be left with nothing to restore, and a force-kill would strand
@@ -576,7 +549,7 @@ public sealed class FanController : IDisposable
 
         // Label the held peak with the chip that actually reached it - the instant
         // hotter can be the OTHER chip while a held spike still drives the fans.
-        string status = $"Matching {held.Src} {driving:F0}°C -> Fans: {_currentPercent:F0}%";
+        string status = $"Matching {drivingSrc} {driving:F0}°C -> Fans: {_currentPercent:F0}%";
         if (_conflict)
             status += "   ·   another app is fighting for the fans - holding control";
 
@@ -586,10 +559,40 @@ public sealed class FanController : IDisposable
         if (Environment.TickCount64 - _lastSampleLogMs >= SampleEveryMs)
         {
             _lastSampleLogMs = Environment.TickCount64;
-            LogSample(cpu, gpu, temp, controlled);
+            LogSample(cpu, gpu, temp, controlled, drivingTemp: driving);
         }
 
         Publish(cpu, gpu, driving, status: status);
+    }
+
+    // The peak-hold window: fans match the hottest reading of the last PeakHoldMs
+    // rather than the instant's, so bursty loads (video encoding) can't make them
+    // surf the sawtooth. Returns the driving temp and the chip that actually
+    // reached it, so the status line never mislabels a held peak.
+    private (float Temp, string Src) HoldPeak(float temp, string src)
+    {
+        // A fresh engagement drives from the CURRENT temp: a peak held from
+        // before a pause or sensor loss must not outlive its disengagement.
+        if (!_engaged)
+        {
+            _peakWindow.Clear();
+            _prevWindowTemp = float.NaN;
+        }
+
+        // A reading enters the hold only after surviving 2 consecutive ticks -
+        // one glitched sample must not rule the fans for a whole window. The
+        // instant reading still seeds the fold below, so a real spike lands
+        // this tick; only its hold starts one tick late.
+        long nowMs = Environment.TickCount64;
+        float paired = float.IsNaN(_prevWindowTemp) ? temp : MathF.Min(temp, _prevWindowTemp);
+        _peakWindow.Enqueue((nowMs, paired, src));
+        _prevWindowTemp = temp;
+
+        while (_peakWindow.Peek().Ms < nowMs - PeakHoldMs) _peakWindow.Dequeue();
+
+        var held = (Ms: nowMs, Temp: temp, Src: src);
+        foreach (var e in _peakWindow) if (e.Temp > held.Temp) held = e;
+        return (held.Temp, held.Src);
     }
 
     /// <summary>
@@ -714,7 +717,8 @@ public sealed class FanController : IDisposable
         }
     }
 
-    private void LogSample(float? cpu, float? gpu, float? hotter, List<FanChannel> controlled, bool bios = false)
+    private void LogSample(float? cpu, float? gpu, float? hotter, List<FanChannel> controlled,
+                           bool bios = false, float drivingTemp = float.NaN)
     {
         string rpm = string.Join(" ", controlled.Select(f => $"[{f.Name}={f.Rpm:F0}]"));
         if (_hw.CpuFan?.Rpm is { } cr) rpm += $" [{_hw.CpuFan.Name}={cr:F0}]";
@@ -728,7 +732,7 @@ public sealed class FanController : IDisposable
         string bt = _hw.BoardTemp is { } b ? $" board={b:F1}" : "";
         // When the held peak is above the current hotter, show it - that's why
         // the fans sit where they do while the instantaneous temp has dipped.
-        string hold = _drivingTemp > (hotter ?? float.MinValue) + 0.5f ? $" hold={_drivingTemp:F1}" : "";
+        string hold = drivingTemp > (hotter ?? float.MinValue) + 0.5f ? $" hold={drivingTemp:F1}" : "";
         DebugLog.Write(bios
             ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1} {rpm}"
             : $"SAMPLE cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1}{hold} out={_currentPercent:F1}% {rpm}");
@@ -761,7 +765,8 @@ public sealed class FanController : IDisposable
         return current + delta;
     }
 
-    private void Publish(float? cpu, float? gpu, float? source, string status, bool noFans = false)
+    private void Publish(float? cpu, float? gpu, float? source, string status,
+                         bool noFans = false, bool biosHasFans = false)
     {
         // Display peaks live here, not in the views: every view renders these, so
         // switching dial/bar/Game Mode can never show different "peaks". Kept
@@ -786,6 +791,7 @@ public sealed class FanController : IDisposable
             GpuLoad = _prevGpuLoad,
             GpuLoadIsTrue = GpuLoadIsTrue,
             NoControllableFans = noFans,
+            BiosHasFans = biosHasFans,
             SentinelLost = _sentinelLost,
             Conflict = _conflict,
             Status = _sentinelLost ? status + "   ·   WATCHDOG GONE - restart the app" : status,

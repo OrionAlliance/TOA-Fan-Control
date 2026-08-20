@@ -140,7 +140,9 @@ public partial class MainWindow : Window
         if (_tray != null)
         {
             string hot = r.SourceTemp is { } t ? $"{t:F0}°C" : "--";
-            _tray.Text = $"TOA - Fan Control  ·  {hot}  ·  fans {r.OutputPercent:F0}%";
+            // While the BIOS owns the fans, say so - never claim a % nobody's driving.
+            string fans = r.BiosHasFans ? "BIOS" : $"{r.OutputPercent:F0}%";
+            _tray.Text = $"TOA - Fan Control  ·  {hot}  ·  fans {fans}";
         }
 
         // One balloon per conflict episode: the app is holding control, but the
