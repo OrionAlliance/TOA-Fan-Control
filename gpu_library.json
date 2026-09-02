@@ -1,6 +1,6 @@
 {
   "_readme": "GPU power library for TOA - Fan Control's true-load gauge. Maps desktop GPU model names to REFERENCE board power in watts (TDP/TGP/TBP as published by the vendor). Board-partner cards can run ~10-15% above reference - the gauge is honest-approximate, not lab-grade. Lookup rule: case-insensitive, longest key that appears in the sensor-reported card name wins. Card missing? Open a GitHub issue with your exact card name and it gets added.",
-  "_updated": "2026-08-15",
+  "_updated": "2026-09-01",
   "gpus": {
 
     "GeForce GTX 460": 160,
@@ -76,6 +76,7 @@
     "GeForce RTX 4080 SUPER": 320,
     "GeForce RTX 4080": 320,
     "GeForce RTX 4090": 450,
+    "GeForce RTX 5050": 130,
     "GeForce RTX 5060 Ti": 180,
     "GeForce RTX 5060": 145,
     "GeForce RTX 5070 Ti": 300,
@@ -150,7 +151,9 @@
     "Radeon RX 7900 GRE": 260,
     "Radeon RX 7900 XTX": 355,
     "Radeon RX 7900 XT": 315,
+    "Radeon RX 9050": 92,
     "Radeon RX 9060 XT": 182,
+    "Radeon RX 9070 GRE": 220,
     "Radeon RX 9070 XT": 304,
     "Radeon RX 9070": 220,
 
