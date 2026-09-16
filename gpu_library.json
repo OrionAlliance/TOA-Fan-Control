@@ -1,6 +1,6 @@
 {
   "_readme": "GPU power library for TOA - Fan Control's true-load gauge. Maps desktop GPU model names to REFERENCE board power in watts (TDP/TGP/TBP as published by the vendor). Board-partner cards can run ~10-15% above reference - the gauge is honest-approximate, not lab-grade. Lookup rule: case-insensitive, longest key that appears in the sensor-reported card name wins. Card missing? Open a GitHub issue with your exact card name and it gets added.",
-  "_updated": "2026-09-01",
+  "_updated": "2026-09-15",
   "gpus": {
 
     "GeForce GTX 460": 160,
@@ -56,6 +56,7 @@
     "GeForce GTX 1660 Ti": 120,
     "GeForce GTX 1660": 120,
     "GeForce RTX 2060 SUPER": 175,
+    "GeForce RTX 2060 12GB": 185,
     "GeForce RTX 2060": 160,
     "GeForce RTX 2070 SUPER": 215,
     "GeForce RTX 2070": 175,
@@ -82,6 +83,8 @@
     "GeForce RTX 4070": 200,
     "GeForce RTX 4080 SUPER": 320,
     "GeForce RTX 4080": 320,
+    "GeForce RTX 4090 D": 425,
+    "GeForce RTX 4090D": 425,
     "GeForce RTX 4090": 450,
     "GeForce RTX 5050": 130,
     "GeForce RTX 5060 Ti": 180,
@@ -89,6 +92,8 @@
     "GeForce RTX 5070 Ti": 300,
     "GeForce RTX 5070": 250,
     "GeForce RTX 5080": 360,
+    "GeForce RTX 5090 D": 575,
+    "GeForce RTX 5090D": 575,
     "GeForce RTX 5090": 575,
 
     "Radeon HD 5750": 86,
@@ -103,12 +108,14 @@
     "Radeon HD 6990": 375,
     "Radeon HD 7750": 55,
     "Radeon HD 7770": 80,
+    "Radeon HD 7790": 85,
     "Radeon HD 7850": 130,
     "Radeon HD 7870": 175,
     "Radeon HD 7950": 200,
     "Radeon HD 7970": 250,
     "Radeon HD 7990": 375,
     "Radeon R7 260X": 115,
+    "Radeon R7 260": 95,
     "Radeon R7 265": 150,
     "Radeon R7 370": 110,
     "Radeon R9 270X": 180,
