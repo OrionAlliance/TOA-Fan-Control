@@ -176,6 +176,23 @@ public partial class App : Application
             Controller.UpdateSettings(s => s.SelectedFans = chosen);
         }
 
+        // Set-and-forget only works if the app is actually running - so ask ONCE
+        // whether it should start with Windows. Any answer ends the asking forever;
+        // the cog toggle stays the way to change your mind later.
+        if (!settings.StartupOffered && !StartupTask.IsEnabled())
+        {
+            DebugLog.Write("Offering start-with-Windows (one-time).");
+            bool wants = MessageWindow.Confirm(null, "Start with Windows?",
+                "This app only guards your fans while it's running.\n\n" +
+                "Want it to start with Windows, minimized to the tray? Until it " +
+                "starts, your BIOS curve runs the fans. You can change this " +
+                "anytime from the ⚙ menu.",
+                "Yes, start with Windows", "Not now");
+            if (wants) StartupTask.Enable();
+            DebugLog.Write($"Start-with-Windows offer answered: {(wants ? "yes" : "no")}.");
+            Controller.UpdateSettings(s => s.StartupOffered = true, reresolve: false);
+        }
+
         // The watchdog must take the fans BEFORE we write to any of them: whoever
         // grabs a header first is the only one holding its real BIOS settings, and
         // therefore the only one that can ever hand it back. Blocking here is the

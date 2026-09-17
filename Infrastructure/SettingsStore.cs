@@ -52,6 +52,10 @@ public sealed class FanSettings
     /// </summary>
     public string? GpuUserMaxWattsFor { get; set; }
     public int? GpuUserMaxWatts { get; set; }
+
+    /// <summary>The one-time "Start with Windows?" question was asked - never ask again,
+    /// whatever the answer. The cog toggle remains the way to change it later.</summary>
+    public bool StartupOffered { get; set; }
 }
 
 public static class SettingsStore
