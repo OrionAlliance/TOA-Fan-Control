@@ -111,6 +111,9 @@
                                    Text="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
                     </Button.ToolTip>
                 </Button>
+                <Button x:Name="ReportButton" Content="Report" Margin="0,0,8,0"
+                        Click="OnReportClick"
+                        ToolTip="What set each peak marker - the value, when, and (for the CPU) which program." />
                 <Button x:Name="ResetPeaksButton" Content="Reset peaks"
                         Click="OnResetPeaksClick" Margin="0,0,8,0" />
                 <!-- Explicit TextBlock: a string Content would get the implicit

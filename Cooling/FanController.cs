@@ -154,6 +154,12 @@ public sealed class FanController : IDisposable
     private float _dispPeakCpuLoad = float.NaN;
     private float _dispPeakGpuLoad = float.NaN;
 
+    // The Report's memory: WHEN each display peak was set and (CPU only) WHO set
+    // it. One line per dial, overwritten by a new record, wiped by Reset peaks -
+    // in memory only, never on disk, never in the debug log.
+    private DateTime _dispPeakCpuAt, _dispPeakGpuAt, _dispPeakCpuLoadAt, _dispPeakGpuLoadAt;
+    private string? _dispPeakCpuFrom, _dispPeakCpuLoadFrom;
+
     // A load must hold 2 consecutive ~1s captures to count as effort - one-poll
     // bursts (our own view-switch render, background blips) can't warm anything.
     private float _prevCpuLoad = float.NaN;
@@ -348,6 +354,38 @@ public sealed class FanController : IDisposable
         _dispPeakGpu = float.NaN;
         _dispPeakCpuLoad = float.NaN;
         _dispPeakGpuLoad = float.NaN;
+
+        // The Report forgets with the peaks - times and names included.
+        _dispPeakCpuAt = _dispPeakGpuAt = _dispPeakCpuLoadAt = _dispPeakGpuLoadAt = default;
+        _dispPeakCpuFrom = _dispPeakCpuLoadFrom = null;
+    }
+
+    /// <summary>The Report button's four lines - built here so the window stays
+    /// display-only. Value, when it was set, and (CPU dials only) who set it.</summary>
+    public string BuildPeakReport()
+    {
+        string gpuLoadLabel = GpuLoadIsTrue ? "Highest GPU load" : "Highest GPU busy time";
+        return string.Join("\n\n",
+            Line("Highest CPU temp", _dispPeakCpu, "°C", _dispPeakCpuAt, _dispPeakCpuFrom),
+            Line("Highest CPU load", _dispPeakCpuLoad, "%", _dispPeakCpuLoadAt, _dispPeakCpuLoadFrom),
+            Line("Highest GPU temp", _dispPeakGpu, "°C", _dispPeakGpuAt, null),
+            Line(gpuLoadLabel, _dispPeakGpuLoad, "%", _dispPeakGpuLoadAt, null));
+
+        static string Line(string label, float v, string unit, DateTime at, string? from)
+        {
+            if (float.IsNaN(v)) return $"{label}: nothing recorded yet.";
+            string s = $"{label}: {v:F0}{unit}  ·  {at:M/d h:mm tt}";
+            if (from != null) s += $"  ·  from: {from}";
+            return s;
+        }
+    }
+
+    // MaxInto that also says whether it raised - a raise is what stamps the Report.
+    private static bool RaisedInto(ref float peak, float v)
+    {
+        if (float.IsNaN(v) || (!float.IsNaN(peak) && v <= peak)) return false;
+        peak = v;
+        return true;
     }
 
     /// <summary>Stop driving and put the fans back on the BIOS curve.</summary>
@@ -772,10 +810,20 @@ public sealed class FanController : IDisposable
         // switching dial/bar/Game Mode can never show different "peaks". Kept
         // separate from the SESSION PEAKS log values - Reset peaks clears these,
         // but the log keeps reporting the true whole-session maximum for support.
-        MaxInto(ref _dispPeakCpu, cpu ?? float.NaN);
-        MaxInto(ref _dispPeakGpu, gpu ?? float.NaN);
-        MaxInto(ref _dispPeakCpuLoad, _susCpuLoad);
-        MaxInto(ref _dispPeakGpuLoad, _susGpuLoad);
+        // A raised record also stamps the Report: when, and (CPU only) who.
+        DateTime stamp = DateTime.Now;
+        if (RaisedInto(ref _dispPeakCpu, cpu ?? float.NaN))
+        {
+            _dispPeakCpuAt = stamp;
+            PeakCulprit.Identify(n => _dispPeakCpuFrom = n);
+        }
+        if (RaisedInto(ref _dispPeakGpu, gpu ?? float.NaN)) _dispPeakGpuAt = stamp;
+        if (RaisedInto(ref _dispPeakCpuLoad, _susCpuLoad))
+        {
+            _dispPeakCpuLoadAt = stamp;
+            PeakCulprit.Identify(n => _dispPeakCpuLoadFrom = n);
+        }
+        if (RaisedInto(ref _dispPeakGpuLoad, _susGpuLoad)) _dispPeakGpuLoadAt = stamp;
 
         var readings = new FanReadings
         {

@@ -403,6 +403,11 @@ public partial class MainWindow : Window
         else _controller.Pause();
     }
 
+    /// <summary>The Report: what set each peak marker. Values live in the controller;
+    /// this window only displays them - and Reset peaks wipes them, names and all.</summary>
+    private void OnReportClick(object sender, RoutedEventArgs e) =>
+        MessageWindow.Show(this, "What set your peaks", _controller.BuildPeakReport());
+
     private void ShowAbout() => new AboutWindow { Owner = this }.ShowDialog();
 
     /// <summary>Manual check. Silence would read as broken, so "current" says so.</summary>
