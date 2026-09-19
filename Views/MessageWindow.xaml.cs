@@ -13,7 +13,7 @@ public partial class MessageWindow : Window
     private bool _result;
 
     private MessageWindow(Window? owner, string header, string body,
-                          string primary, string? secondary)
+                          string primary, string? secondary, bool copyButton = false)
     {
         InitializeComponent();
 
@@ -32,11 +32,14 @@ public partial class MessageWindow : Window
             SecondaryButton.Content = secondary;
             SecondaryButton.Visibility = Visibility.Visible;
         }
+        if (copyButton) CopyButton.Visibility = Visibility.Visible;
     }
 
-    /// <summary>A notice with a single button.</summary>
-    public static void Show(Window? owner, string header, string body, string button = "OK")
-        => new MessageWindow(owner, header, body, button, null).ShowDialog();
+    /// <summary>A notice with a single button. copyButton adds "Copy info", which
+    /// puts the whole notice on the clipboard - for pasting instead of retyping.</summary>
+    public static void Show(Window? owner, string header, string body, string button = "OK",
+                            bool copyButton = false)
+        => new MessageWindow(owner, header, body, button, null, copyButton).ShowDialog();
 
     /// <summary>A two-button question. True = the primary (right) button.</summary>
     public static bool Confirm(Window? owner, string header, string body,
@@ -57,6 +60,18 @@ public partial class MessageWindow : Window
     {
         _result = false;
         Close();
+    }
+
+    private void OnCopyClick(object sender, RoutedEventArgs e)
+    {
+        // CRLF so the paste line-breaks everywhere, oldest Notepad included.
+        string text = HeaderText.Text + "\r\n\r\n" + BodyText.Text.Replace("\n", "\r\n");
+        try
+        {
+            Clipboard.SetText(text);
+            CopyButton.Content = "Copied!";
+        }
+        catch { CopyButton.Content = "Try again"; } // another app held the clipboard
     }
 
     private void OnDrag(object sender, MouseButtonEventArgs e)

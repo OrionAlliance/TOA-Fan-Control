@@ -113,7 +113,7 @@
                 </Button>
                 <Button x:Name="ReportButton" Content="Report" Margin="0,0,8,0"
                         Click="OnReportClick"
-                        ToolTip="What set each peak marker - the value, when, and (for the CPU) which program." />
+                        ToolTip="What set each peak marker - the value, when, and which program." />
                 <Button x:Name="ResetPeaksButton" Content="Reset peaks"
                         Click="OnResetPeaksClick" Margin="0,0,8,0" />
                 <!-- Explicit TextBlock: a string Content would get the implicit

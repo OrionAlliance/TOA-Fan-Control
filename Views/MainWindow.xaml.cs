@@ -406,7 +406,8 @@ public partial class MainWindow : Window
     /// <summary>The Report: what set each peak marker. Values live in the controller;
     /// this window only displays them - and Reset peaks wipes them, names and all.</summary>
     private void OnReportClick(object sender, RoutedEventArgs e) =>
-        MessageWindow.Show(this, "What set your peaks", _controller.BuildPeakReport());
+        MessageWindow.Show(this, "What set your peaks", _controller.BuildPeakReport(),
+                           copyButton: true);
 
     private void ShowAbout() => new AboutWindow { Owner = this }.ShowDialog();
 

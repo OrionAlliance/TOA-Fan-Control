@@ -154,11 +154,11 @@ public sealed class FanController : IDisposable
     private float _dispPeakCpuLoad = float.NaN;
     private float _dispPeakGpuLoad = float.NaN;
 
-    // The Report's memory: WHEN each display peak was set and (CPU only) WHO set
-    // it. One line per dial, overwritten by a new record, wiped by Reset peaks -
+    // The Report's memory: WHEN each display peak was set and WHO set it. One
+    // line per dial, overwritten by a new record, wiped by Reset peaks -
     // in memory only, never on disk, never in the debug log.
     private DateTime _dispPeakCpuAt, _dispPeakGpuAt, _dispPeakCpuLoadAt, _dispPeakGpuLoadAt;
-    private string? _dispPeakCpuFrom, _dispPeakCpuLoadFrom;
+    private string? _dispPeakCpuFrom, _dispPeakCpuLoadFrom, _dispPeakGpuFrom, _dispPeakGpuLoadFrom;
 
     // A load must hold 2 consecutive ~1s captures to count as effort - one-poll
     // bursts (our own view-switch render, background blips) can't warm anything.
@@ -357,19 +357,19 @@ public sealed class FanController : IDisposable
 
         // The Report forgets with the peaks - times and names included.
         _dispPeakCpuAt = _dispPeakGpuAt = _dispPeakCpuLoadAt = _dispPeakGpuLoadAt = default;
-        _dispPeakCpuFrom = _dispPeakCpuLoadFrom = null;
+        _dispPeakCpuFrom = _dispPeakCpuLoadFrom = _dispPeakGpuFrom = _dispPeakGpuLoadFrom = null;
     }
 
     /// <summary>The Report button's four lines - built here so the window stays
-    /// display-only. Value, when it was set, and (CPU dials only) who set it.</summary>
+    /// display-only. Value, when it was set, and who set it.</summary>
     public string BuildPeakReport()
     {
         string gpuLoadLabel = GpuLoadIsTrue ? "Highest GPU load" : "Highest GPU busy time";
         return string.Join("\n\n",
             Line("Highest CPU temp", _dispPeakCpu, "°C", _dispPeakCpuAt, _dispPeakCpuFrom),
             Line("Highest CPU load", _dispPeakCpuLoad, "%", _dispPeakCpuLoadAt, _dispPeakCpuLoadFrom),
-            Line("Highest GPU temp", _dispPeakGpu, "°C", _dispPeakGpuAt, null),
-            Line(gpuLoadLabel, _dispPeakGpuLoad, "%", _dispPeakGpuLoadAt, null));
+            Line("Highest GPU temp", _dispPeakGpu, "°C", _dispPeakGpuAt, _dispPeakGpuFrom),
+            Line(gpuLoadLabel, _dispPeakGpuLoad, "%", _dispPeakGpuLoadAt, _dispPeakGpuLoadFrom));
 
         static string Line(string label, float v, string unit, DateTime at, string? from)
         {
@@ -737,6 +737,8 @@ public sealed class FanController : IDisposable
         _susGpuLoad = float.NaN;
         _peakGpuLoad = float.NaN;
         _dispPeakGpuLoad = float.NaN;
+        _dispPeakGpuLoadAt = default;
+        _dispPeakGpuLoadFrom = null;
     }
 
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
@@ -817,13 +819,21 @@ public sealed class FanController : IDisposable
             _dispPeakCpuAt = stamp;
             PeakCulprit.Identify(n => _dispPeakCpuFrom = n);
         }
-        if (RaisedInto(ref _dispPeakGpu, gpu ?? float.NaN)) _dispPeakGpuAt = stamp;
+        if (RaisedInto(ref _dispPeakGpu, gpu ?? float.NaN))
+        {
+            _dispPeakGpuAt = stamp;
+            PeakCulprit.IdentifyGpu(n => _dispPeakGpuFrom = n);
+        }
         if (RaisedInto(ref _dispPeakCpuLoad, _susCpuLoad))
         {
             _dispPeakCpuLoadAt = stamp;
             PeakCulprit.Identify(n => _dispPeakCpuLoadFrom = n);
         }
-        if (RaisedInto(ref _dispPeakGpuLoad, _susGpuLoad)) _dispPeakGpuLoadAt = stamp;
+        if (RaisedInto(ref _dispPeakGpuLoad, _susGpuLoad))
+        {
+            _dispPeakGpuLoadAt = stamp;
+            PeakCulprit.IdentifyGpu(n => _dispPeakGpuLoadFrom = n);
+        }
 
         var readings = new FanReadings
         {
