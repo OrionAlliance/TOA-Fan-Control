@@ -154,9 +154,8 @@ public sealed class FanController : IDisposable
     private float _dispPeakCpuLoad = float.NaN;
     private float _dispPeakGpuLoad = float.NaN;
 
-    // The Report's memory: WHEN each display peak was set and WHO set it. One
-    // line per dial, overwritten by a new record, wiped by Reset peaks -
-    // in memory only, never on disk, never in the debug log.
+    // The Report's memory - when each peak was set and who set it, held in
+    // memory only and wiped by Reset peaks.
     private DateTime _dispPeakCpuAt, _dispPeakGpuAt, _dispPeakCpuLoadAt, _dispPeakGpuLoadAt;
     private string? _dispPeakCpuFrom, _dispPeakCpuLoadFrom, _dispPeakGpuFrom, _dispPeakGpuLoadFrom;
 
@@ -361,7 +360,7 @@ public sealed class FanController : IDisposable
     }
 
     /// <summary>The Report button's four lines - built here so the window stays
-    /// display-only. Value, when it was set, and who set it.</summary>
+    /// display-only.</summary>
     public string BuildPeakReport()
     {
         string gpuLoadLabel = GpuLoadIsTrue ? "Highest GPU load" : "Highest GPU busy time";
@@ -812,7 +811,7 @@ public sealed class FanController : IDisposable
         // switching dial/bar/Game Mode can never show different "peaks". Kept
         // separate from the SESSION PEAKS log values - Reset peaks clears these,
         // but the log keeps reporting the true whole-session maximum for support.
-        // A raised record also stamps the Report: when, and (CPU only) who.
+        // A raised record also stamps the Report: when and who.
         DateTime stamp = DateTime.Now;
         if (RaisedInto(ref _dispPeakCpu, cpu ?? float.NaN))
         {

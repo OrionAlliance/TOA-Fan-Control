@@ -4,10 +4,8 @@ using System.Management;
 namespace FanControlApp.Infrastructure;
 
 /// <summary>
-/// Names the process working a chip hardest RIGHT NOW - asked the moment a peak
-/// latches, so the Report can say who set it. Names live in memory only: never
-/// written to disk and never to the debug log (privacy rule - the one file a
-/// user might share stays free of what they run).
+/// Names the process working a chip hardest the moment a peak latches - held in
+/// memory only, never written to disk or the debug log.
 /// </summary>
 public static class PeakCulprit
 {
@@ -17,9 +15,8 @@ public static class PeakCulprit
     private static readonly Lookup Cpu = new(SampleCpuAsync, "CPU");
     private static readonly Lookup Gpu = new(SampleGpuAsync, "GPU");
 
-    /// <summary>Deliver the top CPU consumer's name (async, ~0.5s), or null when
-    /// nothing moved. Callers during the same surge share one lookup; the fan
-    /// tick is never blocked.</summary>
+    /// <summary>Deliver the top CPU consumer's name async (null when nothing
+    /// moved), never blocking the fan tick.</summary>
     public static void Identify(Action<string?> deliver) => Cpu.Identify(deliver);
 
     /// <summary>Same for the GPU: who burned the most GPU-engine time.</summary>
@@ -109,10 +106,8 @@ public static class PeakCulprit
         return map;
     }
 
-    // GPU: Windows keeps a per-process GPU-time odometer (the books behind Task
-    // Manager's GPU column). Same dance as the CPU: two reads, biggest delta.
-    // ALL engine types count on purpose - an encode pegging the video block IS
-    // the culprit even while the 3D engine sleeps through it.
+    // The CPU dance again, over Windows' per-process GPU-time odometers - ALL
+    // engine types count, so an encode pegging the video block is still caught.
     private static async Task<string?> SampleGpuAsync()
     {
         Dictionary<int, long> first = GpuSnapshot();

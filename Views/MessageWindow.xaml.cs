@@ -35,8 +35,8 @@ public partial class MessageWindow : Window
         if (copyButton) CopyButton.Visibility = Visibility.Visible;
     }
 
-    /// <summary>A notice with a single button. copyButton adds "Copy info", which
-    /// puts the whole notice on the clipboard - for pasting instead of retyping.</summary>
+    /// <summary>A notice with a single button - copyButton adds a "Copy info"
+    /// that puts the whole notice on the clipboard.</summary>
     public static void Show(Window? owner, string header, string body, string button = "OK",
                             bool copyButton = false)
         => new MessageWindow(owner, header, body, button, null, copyButton).ShowDialog();
