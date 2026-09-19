@@ -364,11 +364,10 @@ public sealed class FanController : IDisposable
     public string BuildPeakReport()
     {
         string gpuLoadLabel = GpuLoadIsTrue ? "Highest GPU load" : "Highest GPU busy time";
-        return string.Join("\n\n",
-            Line("Highest CPU temp", _dispPeakCpu, "°C", _dispPeakCpuAt, _dispPeakCpuFrom),
-            Line("Highest CPU load", _dispPeakCpuLoad, "%", _dispPeakCpuLoadAt, _dispPeakCpuLoadFrom),
-            Line("Highest GPU temp", _dispPeakGpu, "°C", _dispPeakGpuAt, _dispPeakGpuFrom),
-            Line(gpuLoadLabel, _dispPeakGpuLoad, "%", _dispPeakGpuLoadAt, _dispPeakGpuLoadFrom));
+        return Line("Highest CPU temp", _dispPeakCpu, "°C", _dispPeakCpuAt, _dispPeakCpuFrom) + "\n"
+             + Line("Highest CPU load", _dispPeakCpuLoad, "%", _dispPeakCpuLoadAt, _dispPeakCpuLoadFrom) + "\n\n"
+             + Line("Highest GPU temp", _dispPeakGpu, "°C", _dispPeakGpuAt, _dispPeakGpuFrom) + "\n"
+             + Line(gpuLoadLabel, _dispPeakGpuLoad, "%", _dispPeakGpuLoadAt, _dispPeakGpuLoadFrom);
 
         static string Line(string label, float v, string unit, DateTime at, string? from)
         {
