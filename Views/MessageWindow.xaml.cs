@@ -13,9 +13,19 @@ public partial class MessageWindow : Window
     private bool _result;
 
     private MessageWindow(Window? owner, string header, string body,
-                          string primary, string? secondary, bool copyButton = false)
+                          string primary, string? secondary, bool copyButton = false,
+                          bool autoWidth = false)
     {
         InitializeComponent();
+
+        // autoWidth = the window grows so pre-formatted lines never wrap.
+        if (autoWidth)
+        {
+            Width = double.NaN;
+            MinWidth = 430;
+            SizeToContent = SizeToContent.WidthAndHeight;
+            BodyText.TextWrapping = TextWrapping.NoWrap;
+        }
 
         if (owner is { IsVisible: true })
         {
@@ -38,8 +48,8 @@ public partial class MessageWindow : Window
     /// <summary>A notice with a single button - copyButton adds a "Copy info"
     /// that puts the whole notice on the clipboard.</summary>
     public static void Show(Window? owner, string header, string body, string button = "OK",
-                            bool copyButton = false)
-        => new MessageWindow(owner, header, body, button, null, copyButton).ShowDialog();
+                            bool copyButton = false, bool autoWidth = false)
+        => new MessageWindow(owner, header, body, button, null, copyButton, autoWidth).ShowDialog();
 
     /// <summary>A two-button question. True = the primary (right) button.</summary>
     public static bool Confirm(Window? owner, string header, string body,

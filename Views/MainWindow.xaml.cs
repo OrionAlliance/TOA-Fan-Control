@@ -406,7 +406,7 @@ public partial class MainWindow : Window
     /// <summary>The Report: what set each peak marker, straight from the controller.</summary>
     private void OnReportClick(object sender, RoutedEventArgs e) =>
         MessageWindow.Show(this, "What set your peaks", _controller.BuildPeakReport(),
-                           copyButton: true);
+                           copyButton: true, autoWidth: true);
 
     private void ShowAbout() => new AboutWindow { Owner = this }.ShowDialog();
 
