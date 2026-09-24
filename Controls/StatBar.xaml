@@ -45,10 +45,10 @@
                        Fill="#E3B341" Visibility="Collapsed"
                        ToolTipService.InitialShowDelay="200" />
 
-            <!-- Peak-load marker: the yellow tick's SHORTER twin in load blue -
-                 inset so a stacked pair still shows yellow above and below. -->
+            <!-- Peak-load marker: the yellow tick's twin in load blue, parked at
+                 the session's highest load. -->
             <Rectangle x:Name="LoadPeakTick" Width="2" RadiusX="1" RadiusY="1"
-                       HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="0,6"
+                       HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="0,1"
                        Fill="#4DEEFF" Visibility="Collapsed"
                        ToolTipService.InitialShowDelay="200" />
 
