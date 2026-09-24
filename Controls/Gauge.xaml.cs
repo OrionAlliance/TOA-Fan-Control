@@ -735,17 +735,15 @@ public partial class Gauge : UserControl
             _loadPeakHit.ToolTip = $"{flat} peak {LoadWord} this run: {_peakLoad:0}%";
             double loadAngle = LoadAngle(_peakLoad);
 
-            // Equal peaks land both marks on one angle (47°C + 47%) - nudge the
-            // load mark aside so the pair sits side by side instead of stacked.
-            const double MinSep = 6;
+            // His rule: temp and load peaks on the same spot = park the load
+            // mark exactly one dial unit above the temp mark.
+            double oneUnit = SweepAngle / 100.0;
             if (hasPeak)
             {
                 double tempAngle = AngleFor(Peak);
-                double diff = loadAngle - tempAngle;
-                if (Math.Abs(diff) < MinSep)
-                    loadAngle = tempAngle + (diff >= 0 ? MinSep : -MinSep);
-                if (loadAngle > StartAngle + SweepAngle) loadAngle = tempAngle - MinSep;
-                if (loadAngle < StartAngle) loadAngle = tempAngle + MinSep;
+                if (Math.Abs(loadAngle - tempAngle) < oneUnit)
+                    loadAngle = tempAngle + oneUnit;
+                if (loadAngle > StartAngle + SweepAngle) loadAngle = tempAngle - oneUnit;
             }
 
             _loadPeakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation

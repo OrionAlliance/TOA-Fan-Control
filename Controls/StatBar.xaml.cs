@@ -212,16 +212,14 @@ public partial class StatBar : UserControl
         {
             double x = Math.Clamp(_peakLoad / 100.0, 0, 1) * w;
 
-            // Equal peaks land both ticks on one x - nudge the load tick aside
-            // so the pair sits side by side instead of stacked.
-            const double MinSep = 5;
+            // His rule: temp and load peaks on the same spot = park the load
+            // tick exactly one track unit above the temp tick.
+            double oneUnit = w / 100.0;
             if (!double.IsNaN(_peak))
             {
                 double px = Math.Clamp((_peak - Minimum) / (Maximum - Minimum), 0, 1) * w;
-                double diff = x - px;
-                if (Math.Abs(diff) < MinSep) x = px + (diff >= 0 ? MinSep : -MinSep);
-                if (x > w) x = px - MinSep;
-                if (x < 0) x = px + MinSep;
+                if (Math.Abs(x - px) < oneUnit) x = px + oneUnit;
+                if (x > w) x = px - oneUnit;
             }
 
             LoadPeakTick.Margin = new Thickness(Math.Max(0, x - 1), 1, 0, 1);
