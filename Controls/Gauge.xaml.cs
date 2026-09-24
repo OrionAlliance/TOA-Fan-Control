@@ -534,13 +534,11 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_peakMark);
 
-        // Peak-load mark: the yellow peak line's twin, in load blue - same band-
-        // crossing geometry so it reads instantly, parked at the highest load the
-        // live triangle reached. The triangle rides outside the band, so the two
-        // never hide each other even at the same angle.
+        // Peak-load mark: the yellow peak line's SHORTER twin in load blue - a
+        // stacked pair (47°C + 47% = same angle) still shows yellow at both ends.
         _loadPeakRotate = new RotateTransform(StartAngle);
-        var loadPeakFig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
-        loadPeakFig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
+        var loadPeakFig = new PathFigure { StartPoint = new Point(BandR - 7, 0) };
+        loadPeakFig.Segments.Add(new LineSegment(new Point(BandR + 2, 0), true));
         var loadPeakGeo = new PathGeometry();
         loadPeakGeo.Figures.Add(loadPeakFig);
 
