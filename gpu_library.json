@@ -1,6 +1,6 @@
 {
   "_readme": "GPU power library for TOA - Fan Control's true-load gauge. Maps desktop GPU model names to REFERENCE board power in watts (TDP/TGP/TBP as published by the vendor). Board-partner cards can run ~10-15% above reference - the gauge is honest-approximate, not lab-grade. Lookup rule: case-insensitive, longest key that appears in the sensor-reported card name wins. Card missing? Open a GitHub issue with your exact card name and it gets added.",
-  "_updated": "2026-09-15",
+  "_updated": "2026-10-01",
   "gpus": {
 
     "GeForce GTX 460": 160,
@@ -117,7 +117,10 @@
     "Radeon R7 260X": 115,
     "Radeon R7 260": 95,
     "Radeon R7 265": 150,
+    "Radeon R7 360": 100,
     "Radeon R7 370": 110,
+    "Radeon R9 370X": 185,
+    "Radeon R9 370": 150,
     "Radeon R9 270X": 180,
     "Radeon R9 270": 150,
     "Radeon R9 280X": 250,
