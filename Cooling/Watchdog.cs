@@ -28,6 +28,21 @@ public static class Watchdog
 
     private const int ParentPollMs = 300;
 
+    // Windows quits this process at sign-out/shutdown - this wakes the sentinel to hand back first.
+    private static readonly ManualResetEvent SessionEnd = new(false);
+
+    // Set whenever the BIOS has the fans, so a session-end handler knows the process may go.
+    private static readonly ManualResetEvent HandedBack = new(false);
+
+    private enum Wake { Signal, ParentGone, SessionEnd }
+
+    /// <summary>Windows is ending the session: hand the fans back now, waiting up to the timeout.</summary>
+    public static bool ReleaseForSessionEnd(TimeSpan timeout)
+    {
+        SessionEnd.Set();
+        return HandedBack.WaitOne(timeout);
+    }
+
     /// <summary>
     /// Start the sentinel and block until it actually holds the fans. The caller
     /// MUST NOT write to any fan before this returns true, or it will grab them
@@ -95,6 +110,12 @@ public static class Watchdog
     /// </summary>
     public static void RunSentinel(string[] args)
     {
+        try { RunSentinelCore(args); }
+        finally { HandedBack.Set(); } // holding nothing anymore - a session end needn't wait
+    }
+
+    private static void RunSentinelCore(string[] args)
+    {
         // args: --watchdog <parentPid> <fan name> [<fan name> ...]
         if (args.Length < 3 || !int.TryParse(args[1], out int parentPid))
         {
@@ -156,25 +177,38 @@ public static class Watchdog
         while (true)
         {
             Seize(hw, fans);
+            HandedBack.Reset();
             link.Ready.Set();
 
-            // Hold the fans until the app asks for them back, or dies.
-            bool parentGone = WaitFor(link.Restore, parentPid);
+            // Hold the fans until the app asks for them back, dies, or Windows ends the session.
+            Wake why = WaitFor(link.Restore, parentPid);
             link.Ready.Reset();
             RestoreToBios(fans);
+            HandedBack.Set();
 
-            if (parentGone)
+            if (why == Wake.ParentGone)
             {
                 DebugLog.Write($"[watchdog] Parent {parentPid} is gone - fans are back on the BIOS curve.");
+                return;
+            }
+            if (why == Wake.SessionEnd)
+            {
+                DebugLog.Write("[watchdog] Windows session ending - fans are back on the BIOS curve.");
                 return;
             }
 
             DebugLog.Write("[watchdog] App asked for the BIOS to take over; waiting to be told to resume.");
 
             // Paused. The BIOS has the fans; nothing to undo if the app dies now.
-            if (WaitFor(link.Resume, parentPid))
+            Wake paused = WaitFor(link.Resume, parentPid);
+            if (paused == Wake.ParentGone)
             {
                 DebugLog.Write($"[watchdog] Parent {parentPid} died while paused - fans already on the BIOS.");
+                return;
+            }
+            if (paused == Wake.SessionEnd)
+            {
+                DebugLog.Write("[watchdog] Windows session ending while paused - fans already on the BIOS.");
                 return;
             }
 
@@ -225,16 +259,16 @@ public static class Watchdog
         Thread.Sleep(200);
     }
 
-    /// <summary>
-    /// Wait for a signal, watching for the parent dying at the same time.
-    /// Returns true if the parent is gone, false if the signal fired first.
-    /// </summary>
-    private static bool WaitFor(EventWaitHandle signal, int parentPid)
+    /// <summary>Wait for a signal, while watching for the parent dying or the session ending.</summary>
+    private static Wake WaitFor(EventWaitHandle signal, int parentPid)
     {
+        WaitHandle[] handles = { signal, SessionEnd };
         while (true)
         {
-            if (signal.WaitOne(ParentPollMs)) return false;
-            if (IsGone(parentPid)) return true;
+            int hit = WaitHandle.WaitAny(handles, ParentPollMs);
+            if (hit == 0) return Wake.Signal;
+            if (hit == 1) return Wake.SessionEnd;
+            if (IsGone(parentPid)) return Wake.ParentGone;
         }
     }
 

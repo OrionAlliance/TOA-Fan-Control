@@ -474,6 +474,13 @@ public partial class App : Application
         // "quit when the last window closes" would never fire.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        // Windows quits this process at sign-out/shutdown - hand the fans back first, capped at 3s.
+        SessionEnding += (_, _) =>
+        {
+            if (!Watchdog.ReleaseForSessionEnd(TimeSpan.FromSeconds(3)))
+                DebugLog.Write("[watchdog] Session ending - fan handback did not confirm within 3s.");
+        };
+
         Task.Run(() =>
         {
             try
