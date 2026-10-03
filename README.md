@@ -60,9 +60,9 @@ There's nothing you *have* to do — it sits in the system tray and does its job
 
   <p align="center"><img src="Docs/images/settings-menu.png" width="220" alt="Settings menu" /></p>
 
-- **The load telltale** — the cyan triangle sweeps with your GPU's load *right now*, and a cyan line parks at the highest load of the run, like a race tach's telltale pointer. On the GPU it's TRUE load — watts pulled versus your card's maximum, from a built-in library of ~160 cards. Card not listed? The app asks once: a one-click search finds your card's TDP, you type one number, done forever.
+- **The load telltale** — the cyan triangle sweeps with your GPU's load *right now*, and a cyan line parks at the highest load of the run, like a race tach's telltale pointer. On the GPU it's TRUE load — watts pulled versus your card's maximum, from a library of 185+ cards that's kept current twice a month. Card not listed? The app asks once: a one-click search finds your card's TDP, you type one number, done forever.
 
-- **Self-maintaining prerequisites** — the app checks PawnIO and .NET for updates daily (if you leave your PC on continuously) and at app launch. The app only downloads official signed installers, verifies their signatures and never interrupts you mid-game with a popup.
+- **Self-maintaining** — the app keeps itself, PawnIO and .NET up to date. It checks at launch, every time you open its window, and daily if you leave your PC on. PawnIO and .NET only come as official signed installers, and the app verifies their signatures before running them; the app's own updates come straight from this repository's Releases. It never interrupts you mid-game with a popup.
 
 ## If the app ever fails, your BIOS takes over. Every time.
 
@@ -149,11 +149,11 @@ The sensor library is deliberately version-pinned — it never updates behind yo
 
 ## Your data stays yours
 
-This app collects **nothing** and transmits **nothing**: no telemetry, no analytics, no accounts, no personal data — there isn't even a server to send anything to. Temperatures and fan speeds are read from your hardware, shown on screen, and written only to a local log file next to the app. The app's only internet use is checking for updates (PawnIO from its author's GitHub, .NET from Microsoft, and the app itself from this repository), and those requests send nothing about you or your PC.
+This app collects **nothing** and transmits **nothing**: no telemetry, no analytics, no accounts, no personal data — there isn't even a server to send anything to. Temperatures and fan speeds are read from your hardware, shown on screen, and written only to a local log file next to the app. The app's only internet use is checking for updates (PawnIO from its author's GitHub, .NET from Microsoft, and the app itself from this repository) and downloading the whole GPU power library from this repository — never a lookup about *your* card — and those requests send nothing about you or your PC.
 
 ## Found a bug?
 
-Open an [Issue](../../issues). Include the `fan_debug.log` file that lives next to the app's exe — it records exactly what the app was doing, and it contains no personal information (temperatures, fan speeds, and app events only — read it yourself first if you like).
+Open an [Issue](../../issues). Include the `fan_debug.log` file that lives next to the app's exe — it records exactly what the app was doing, and it contains no personal information (temperatures, fan speeds, app events, and your hardware's model names and software versions — read it yourself first if you like).
 
 ---
 
