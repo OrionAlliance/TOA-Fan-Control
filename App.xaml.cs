@@ -358,27 +358,35 @@ public partial class App : Application
         return await CheckForUpdatesAsync();
     }
 
-    /// <summary>
-    /// Opening the window from the tray is the user coming to look - the right
-    /// moment to surface an update they missed. Rate-limited to once an hour so
-    /// bouncing the window can't hammer the update APIs.
-    /// </summary>
+    /// <summary>Opening the window from the tray is the user coming to look, so every open checks.</summary>
     public async Task CheckOnUserReturnAsync()
     {
-        if (DateTime.Now - _lastCheckRan < TimeSpan.FromHours(1)) return;
         _nextUpdateCheck = DateTime.Now.AddHours(24); // counts as today's check
         DebugLog.Write("Window opened - checking for updates.");
         await CheckForUpdatesAsync();
     }
 
-    private static DateTime _lastCheckRan = DateTime.MinValue;
-
     private static bool GameModeActive() =>
         Current.Windows.OfType<GameModeWindow>().Any(w => w.IsVisible);
 
+    private static Task<bool>? _checkRun;
+
+    // One check at a time - a second request joins the running one, so popups can never stack.
     private static async Task<bool> CheckForUpdatesAsync()
     {
-        _lastCheckRan = DateTime.Now;
+        if (_checkRun != null)
+        {
+            DebugLog.Write("Update check already running - joining it.");
+            return await _checkRun;
+        }
+
+        _checkRun = RunUpdateChecksAsync();
+        try { return await _checkRun; }
+        finally { _checkRun = null; }
+    }
+
+    private static async Task<bool> RunUpdateChecksAsync()
+    {
         DebugLog.Write("Checking PawnIO and .NET for updates.");
         bool offered = false;
         bool restartWanted = false; // restart ONCE after all checks, never mid-run
