@@ -515,7 +515,7 @@ public partial class App : Application
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         DebugLog.Write("Unhandled UI exception - releasing fans.", e.Exception);
-        Controller.SafeRelease();
+        Controller.Dispose(); // stops the fan timer first, so no tick can re-grab the fans while the process dies
     }
 
     private void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -525,7 +525,7 @@ public partial class App : Application
         else
             DebugLog.Write("Unhandled non-exception throw - releasing fans.");
 
-        Controller.SafeRelease();
+        Controller.Dispose(); // stops the fan timer first, so no tick can re-grab the fans while the process dies
     }
 
     protected override void OnExit(ExitEventArgs e)
