@@ -48,7 +48,7 @@ There are no curves, no profiles, no targets, no tuning. If that's what you want
 
 There's nothing you *have* to do — it sits in the system tray and does its job on its own. But when you want to check in on things, you get:
 
-- **A dashboard** — CPU/GPU temperature dials or bars with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin at the fan's real speed).
+- **A dashboard** — CPU/GPU temperature dials or bars with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin faster or slower with the fan's real speed).
 
   <p align="center"><img src="Docs/images/dials-dark.png" width="300" alt="Temperature dials — dark theme" />&nbsp;&nbsp;<img src="Docs/images/dials-light.png" width="300" alt="Temperature dials — light theme" /></p>
 
@@ -56,7 +56,7 @@ There's nothing you *have* to do — it sits in the system tray and does its job
 
   <p align="center"><img src="Docs/images/game-mode-dark.png" width="300" alt="Game Mode overlay — dark theme" />&nbsp;&nbsp;<img src="Docs/images/game-mode-light.png" width="300" alt="Game Mode overlay — light theme" /></p>
 
-- **Settings (the ⚙ cog)** — dark/light theme, dial or bar display, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), Check for updates, About and a full uninstall.
+- **Settings (the ⚙ cog)** — dark/light theme, dial or bar display, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), Check for updates, About, Donate and a full uninstall.
 
   <p align="center"><img src="Docs/images/settings-menu.png" width="220" alt="Settings menu" /></p>
 
