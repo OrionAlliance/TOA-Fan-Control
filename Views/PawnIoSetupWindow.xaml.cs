@@ -97,8 +97,8 @@ public partial class PawnIoSetupWindow : Window
 
     private async void OnInstallClick(object sender, RoutedEventArgs e)
     {
-        InstallButton.IsEnabled = false;
-        LaterButton.IsEnabled = false;
+        // The choice is made - the popup becomes a progress window with nothing to click.
+        ButtonRow.Visibility = Visibility.Collapsed;
         StatusText.Visibility = Visibility.Visible;
         Progress.Visibility = Visibility.Visible;
 
@@ -124,15 +124,15 @@ public partial class PawnIoSetupWindow : Window
             // First-run flow, or a reboot-pending update where a restart is
             // pointless - leave the result message on screen behind Continue.
             InstallButton.Content = "Continue";
-            InstallButton.IsEnabled = true;
             InstallButton.Click -= OnInstallClick;
             InstallButton.Click += (_, _) => Close();
+            LaterButton.Visibility = Visibility.Collapsed;
+            ButtonRow.Visibility = Visibility.Visible;
         }
         else
         {
             // Let them retry or bail out.
-            InstallButton.IsEnabled = true;
-            LaterButton.IsEnabled = true;
+            ButtonRow.Visibility = Visibility.Visible;
         }
     }
 
