@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace FanControlApp.Infrastructure;
 
@@ -16,6 +17,15 @@ public static class DebugLog
 
     private const long MaxBytes = 2 * 1024 * 1024;
 
+    // Any C:\Users\<name> folder (full or Windows' shortened ~1 form) - the name never reaches the log.
+    private static readonly Regex UserFolder = new(
+        @"([A-Za-z]:\\Users\\)[^\\/:*?""<>|\r\n]+",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    // Profiles stored outside C:\Users (rare corporate setups) get caught by their exact path.
+    private static readonly string Profile =
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
     public static void Write(string message)
     {
         try
@@ -23,7 +33,7 @@ public static class DebugLog
             lock (Gate)
             {
                 RollIfTooBig();
-                string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}  {message}{Environment.NewLine}";
+                string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}  {Scrub(message)}{Environment.NewLine}";
                 File.AppendAllText(LogPath, line, Encoding.UTF8);
             }
         }
@@ -36,6 +46,13 @@ public static class DebugLog
 
     public static void Write(string message, Exception ex) =>
         Write($"{message} :: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+
+    private static string Scrub(string s)
+    {
+        s = UserFolder.Replace(s, "$1<user>");
+        if (Profile.Length > 0) s = s.Replace(Profile, "<user profile>", StringComparison.OrdinalIgnoreCase);
+        return s;
+    }
 
     private static void RollIfTooBig()
     {
