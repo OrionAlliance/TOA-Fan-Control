@@ -30,6 +30,9 @@ public partial class PawnIoSetupWindow : Window
     // PawnIO install keeps its Continue flow; the app updater restarts itself.
     private bool _restartAppOnSuccess;
 
+    // The app updater closes the app on its own, so its success screen needs no button.
+    private bool _closesItself;
+
     public PawnIoSetupWindow()
     {
         InitializeComponent();
@@ -72,6 +75,7 @@ public partial class PawnIoSetupWindow : Window
         InstallButton.Content = "Update app";
         LaterButton.Content = "Not now";
         HintText.Text = "Every past version stays downloadable on GitHub if you ever want to roll back.";
+        _closesItself = true;
     }
 
     /// <summary>.NET-update variant: same window, Microsoft's runtime installer.</summary>
@@ -120,6 +124,8 @@ public partial class PawnIoSetupWindow : Window
                 Close();
                 return;
             }
+
+            if (_closesItself) return;
 
             // First-run flow, or a reboot-pending update where a restart is
             // pointless - leave the result message on screen behind Continue.
