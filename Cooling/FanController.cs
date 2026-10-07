@@ -359,7 +359,7 @@ public sealed class FanController : IDisposable
         _dispPeakCpuFrom = _dispPeakCpuLoadFrom = _dispPeakGpuFrom = _dispPeakGpuLoadFrom = null;
     }
 
-    /// <summary>The Report button's four lines - built here so the window stays
+    /// <summary>The Peak Info button's four lines - built here so the window stays
     /// display-only.</summary>
     public string BuildPeakReport()
     {

@@ -176,6 +176,9 @@ public partial class App : Application
             Controller.UpdateSettings(s => s.SelectedFans = chosen);
         }
 
+        // New fans: ask once about any spinning header the app isn't driving - before the watchdog, so a yes is guarded.
+        AskAboutNewFans();
+
         // Set-and-forget only works if the app is actually running - so ask ONCE
         // whether it should start with Windows. Any answer ends the asking forever;
         // the cog toggle stays the way to change your mind later.
@@ -466,6 +469,39 @@ public partial class App : Application
         }
 
         return offered;
+    }
+
+    private static void AskAboutNewFans()
+    {
+        IReadOnlyList<(string Name, float? Rpm)> candidates = Controller.CandidateFans;
+
+        // First run of this feature: everything already set up counts as decided - never nag about a pump left unchecked on purpose.
+        if (Controller.Settings.AskedFans == null)
+        {
+            Controller.UpdateSettings(s => NewFans.RecordDecisions(s, candidates), reresolve: false);
+            DebugLog.Write($"New-fan check set up: {Controller.Settings.AskedFans?.Count ?? 0} unchecked spinning header(s) count as already decided.");
+            return;
+        }
+
+        foreach (string name in NewFans.Find(candidates, Controller.Settings))
+        {
+            string shown = FanName.Display(name);
+            DebugLog.Write($"New fan detected on '{name}' - asking.");
+            bool drive = MessageWindow.Confirm(null, "New fan detected",
+                $"A fan is spinning on {shown}, which the app isn't driving yet.\n\n" +
+                "Want the app to drive it along with your other case fans?\n\n" +
+                "Liquid-cooled? Make sure this isn't your pump - slowing a pump can " +
+                "overheat your CPU. Not sure what it is? Choose No: it simply stays on " +
+                "your BIOS curve, exactly as it is now.",
+                "Yes, drive it", "No, leave it on the BIOS");
+
+            Controller.UpdateSettings(s =>
+            {
+                s.AskedFans!.Add(name);
+                if (drive) (s.SelectedFans ??= new List<string>()).Add(name);
+            }, reresolve: drive);
+            DebugLog.Write($"New fan '{name}': {(drive ? "user chose to drive it" : "left on the BIOS")}.");
+        }
     }
 
     private void StartAsWatchdog(string[] args)

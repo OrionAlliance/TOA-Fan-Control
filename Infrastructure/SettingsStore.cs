@@ -56,6 +56,9 @@ public sealed class FanSettings
     /// <summary>The one-time "Start with Windows?" question was asked - never ask again,
     /// whatever the answer. The cog toggle remains the way to change it later.</summary>
     public bool StartupOffered { get; set; }
+
+    /// <summary>Headers the user already decided on, so the new-fan popup never asks about them again; null until first set up.</summary>
+    public List<string>? AskedFans { get; set; }
 }
 
 public static class SettingsStore

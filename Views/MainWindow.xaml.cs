@@ -403,8 +403,8 @@ public partial class MainWindow : Window
         else _controller.Pause();
     }
 
-    /// <summary>The Report: what set each peak marker, straight from the controller.</summary>
-    private void OnReportClick(object sender, RoutedEventArgs e) =>
+    /// <summary>Peak Info: what set each peak marker, straight from the controller.</summary>
+    private void OnPeakInfoClick(object sender, RoutedEventArgs e) =>
         MessageWindow.Show(this, "What set your peaks", _controller.BuildPeakReport(),
                            copyButton: true, autoWidth: true);
 
@@ -454,7 +454,12 @@ public partial class MainWindow : Window
         picker.ShowDialog();
 
         if (picker.Selection == null) return; // cancelled
-        _controller.UpdateSettings(s => s.SelectedFans = picker.Selection, reresolve: false);
+        IReadOnlyList<(string Name, float? Rpm)> candidates = _controller.CandidateFans;
+        _controller.UpdateSettings(s =>
+        {
+            s.SelectedFans = picker.Selection;
+            NewFans.RecordDecisions(s, candidates);
+        }, reresolve: false);
         DebugLog.Write("Fan selection changed - applies next launch.");
     }
 
