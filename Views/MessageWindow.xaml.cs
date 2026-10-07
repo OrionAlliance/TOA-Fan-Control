@@ -11,6 +11,7 @@ namespace FanControlApp;
 public partial class MessageWindow : Window
 {
     private bool _result;
+    private bool _secondaryClicked;
 
     private MessageWindow(Window? owner, string header, string body,
                           string primary, string? secondary, bool copyButton = false,
@@ -60,6 +61,17 @@ public partial class MessageWindow : Window
         return w._result;
     }
 
+    /// <summary>A risky question: the safe answer sits on the right and takes Enter and Escape - true only on a real click of the risky button.</summary>
+    public static bool ConfirmRisky(Window? owner, string header, string body,
+                                    string risky, string safe)
+    {
+        var w = new MessageWindow(owner, header, body, safe, risky);
+        w.PrimaryButton.IsCancel = true;
+        w.SecondaryButton.IsCancel = false;
+        w.ShowDialog();
+        return w._secondaryClicked;
+    }
+
     private void OnPrimaryClick(object sender, RoutedEventArgs e)
     {
         _result = true;
@@ -69,6 +81,7 @@ public partial class MessageWindow : Window
     private void OnSecondaryClick(object sender, RoutedEventArgs e)
     {
         _result = false;
+        _secondaryClicked = true;
         Close();
     }
 

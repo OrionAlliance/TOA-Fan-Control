@@ -487,7 +487,7 @@ public partial class App : Application
         {
             string shown = FanName.Display(name);
             DebugLog.Write($"New fan detected on '{name}' - asking.");
-            bool drive = MessageWindow.Confirm(null, "New fan detected",
+            bool drive = MessageWindow.ConfirmRisky(null, "New fan detected",
                 $"A fan is spinning on {shown}, which the app isn't driving yet.\n\n" +
                 "Liquid-cooled? Make sure this isn't your pump - slowing a pump can " +
                 "overheat your CPU. Not sure what it is? Choose No: it simply stays on " +
