@@ -171,9 +171,13 @@ public partial class App : Application
 
             // Closing the window without saving counts as "keep them all" - the
             // default is every candidate, same as before the picker existed.
-            List<string> chosen = picker.Selection
-                ?? Controller.CandidateFans.Select(f => f.Name).ToList();
-            Controller.UpdateSettings(s => s.SelectedFans = chosen);
+            IReadOnlyList<(string Name, float? Rpm)> picked = Controller.CandidateFans;
+            List<string> chosen = picker.Selection ?? picked.Select(f => f.Name).ToList();
+            Controller.UpdateSettings(s =>
+            {
+                s.SelectedFans = chosen;
+                NewFans.RecordDecisions(s, picked); // a fan unchecked here was just decided on - never ask about it
+            });
         }
 
         // New fans: ask once about any spinning header the app isn't driving - before the watchdog, so a yes is guarded.
@@ -498,7 +502,7 @@ public partial class App : Application
             Controller.UpdateSettings(s =>
             {
                 s.AskedFans!.Add(name);
-                if (drive) (s.SelectedFans ??= new List<string>()).Add(name);
+                if (drive) s.SelectedFans?.Add(name);
             }, reresolve: drive);
             DebugLog.Write($"New fan '{name}': {(drive ? "user chose to drive it" : "left on the BIOS")}.");
         }

@@ -68,6 +68,10 @@ public partial class MessageWindow : Window
         var w = new MessageWindow(owner, header, body, safe, risky);
         w.PrimaryButton.IsCancel = true;
         w.SecondaryButton.IsCancel = false;
+
+        // Can appear at boot with no main window yet - never let it hide behind other windows.
+        w.Topmost = true;
+        w.ShowInTaskbar = true;
         w.ShowDialog();
         return w._secondaryClicked;
     }

@@ -11,14 +11,19 @@ public static class NewFans
     // Empty headers read 0; real fans idle well above this.
     private const float MinSpinRpm = 100;
 
+    // Same rule as the controller and picker - fan names never differ by case alone.
+    private static readonly StringComparer Names = StringComparer.OrdinalIgnoreCase;
+
     /// <summary>Spinning headers the user hasn't picked and hasn't been asked about yet.</summary>
     public static List<string> Find(IReadOnlyList<(string Name, float? Rpm)> candidates, FanSettings s)
     {
-        if (s.AskedFans == null) return new List<string>();
+        // No list = every candidate is driven, so nothing is new.
+        if (s.AskedFans == null || s.SelectedFans == null) return new List<string>();
+
         return candidates
             .Where(c => Spinning(c.Rpm)
-                        && !(s.SelectedFans?.Contains(c.Name) ?? false)
-                        && !s.AskedFans.Contains(c.Name))
+                        && !s.SelectedFans.Contains(c.Name, Names)
+                        && !s.AskedFans.Contains(c.Name, Names))
             .Select(c => c.Name)
             .ToList();
     }
@@ -27,13 +32,7 @@ public static class NewFans
     public static void RecordDecisions(FanSettings s, IReadOnlyList<(string Name, float? Rpm)> candidates)
     {
         s.AskedFans ??= new List<string>();
-        foreach ((string name, float? rpm) in candidates)
-        {
-            if (Spinning(rpm)
-                && !(s.SelectedFans?.Contains(name) ?? false)
-                && !s.AskedFans.Contains(name))
-                s.AskedFans.Add(name);
-        }
+        s.AskedFans.AddRange(Find(candidates, s));
     }
 
     private static bool Spinning(float? rpm) => rpm is > MinSpinRpm;
