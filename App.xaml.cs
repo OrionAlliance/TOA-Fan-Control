@@ -489,10 +489,10 @@ public partial class App : Application
             DebugLog.Write($"New fan detected on '{name}' - asking.");
             bool drive = MessageWindow.Confirm(null, "New fan detected",
                 $"A fan is spinning on {shown}, which the app isn't driving yet.\n\n" +
-                "Want the app to drive it along with your other case fans?\n\n" +
                 "Liquid-cooled? Make sure this isn't your pump - slowing a pump can " +
                 "overheat your CPU. Not sure what it is? Choose No: it simply stays on " +
-                "your BIOS curve, exactly as it is now.",
+                "your BIOS curve, exactly as it is now.\n\n" +
+                "Want the app to drive it along with your other case fans?",
                 "Yes, drive it", "No, leave it on the BIOS");
 
             Controller.UpdateSettings(s =>
