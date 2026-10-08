@@ -58,7 +58,7 @@ public static class AppInstaller
             }
         }
 
-        DebugLog.Write($"App written to {InstalledExe}.");
+        DebugLog.Write("App written.");
     }
 
     /// <summary>

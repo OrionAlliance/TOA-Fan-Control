@@ -38,15 +38,15 @@ public static class Uninstaller
     {
         string exe = Path.Combine(AppPaths.ExeDir.TrimEnd('\\'), "TOA - Fan Control.exe");
 
-        string[] shortcuts =
+        (string lnk, string where)[] shortcuts =
         {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs),
-                "TOA - Fan Control.lnk"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                "TOA - Fan Control.lnk"),
+            (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs),
+                "TOA - Fan Control.lnk"), "Start menu"),
+            (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                "TOA - Fan Control.lnk"), "Desktop"),
         };
 
-        foreach (string lnk in shortcuts)
+        foreach ((string lnk, string where) in shortcuts)
         {
             try
             {
@@ -59,12 +59,12 @@ public static class Uninstaller
                 if (string.Equals(target, exe, StringComparison.OrdinalIgnoreCase))
                 {
                     File.Delete(lnk);
-                    DebugLog.Write($"Shortcut removed: {lnk}");
+                    DebugLog.Write($"{where} shortcut removed.");
                 }
             }
             catch (Exception ex)
             {
-                DebugLog.Write($"Couldn't remove shortcut '{lnk}'.", ex);
+                DebugLog.Write($"Couldn't remove the {where} shortcut.", ex);
             }
         }
     }
