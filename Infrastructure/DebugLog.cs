@@ -26,6 +26,16 @@ public static class DebugLog
     private static readonly string Profile =
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
+    // Folders that could carry a person's name outside C:\Users, starting with this exe's own.
+    private static readonly List<(string Path, string Label)> Hidden =
+        new() { (AppPaths.ExeDir.TrimEnd('\\'), "<exe folder>") };
+
+    /// <summary>From now on, every log line shows this folder as the label instead of its real path.</summary>
+    public static void HidePath(string path, string label)
+    {
+        lock (Gate) Hidden.Add((path.Trim().TrimEnd('\\'), label));
+    }
+
     public static void Write(string message)
     {
         try
@@ -51,6 +61,11 @@ public static class DebugLog
     {
         s = UserFolder.Replace(s, "$1<user>");
         if (Profile.Length > 0) s = s.Replace(Profile, "<user profile>", StringComparison.OrdinalIgnoreCase);
+        foreach ((string path, string label) in Hidden)
+        {
+            // A bare drive root like "D:" is never hidden - it would swallow every path on that drive.
+            if (path.Length > 3) s = s.Replace(path, label, StringComparison.OrdinalIgnoreCase);
+        }
         return s;
     }
 

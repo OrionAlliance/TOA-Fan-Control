@@ -67,13 +67,13 @@ public static class AppInstaller
     /// asks for admin, so the shortcut triggers UAC on its own - no flag needed.
     /// </summary>
     public static void CreateStartMenuShortcut() => WriteShortcut(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.Programs), AppName + ".lnk"));
+        Environment.GetFolderPath(Environment.SpecialFolder.Programs), AppName + ".lnk"), "Start menu");
 
     /// <summary>Desktop shortcut - the optional one; the installer asks first.</summary>
     public static void CreateDesktopShortcut() => WriteShortcut(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.Desktop), AppName + ".lnk"));
+        Environment.GetFolderPath(Environment.SpecialFolder.Desktop), AppName + ".lnk"), "Desktop");
 
-    private static void WriteShortcut(string lnkPath)
+    private static void WriteShortcut(string lnkPath, string where)
     {
         try
         {
@@ -85,7 +85,7 @@ public static class AppInstaller
             link.IconLocation = InstalledExe + ",0";
             link.Description = "Temperature-driven case-fan control";
             link.Save();
-            DebugLog.Write($"Shortcut created: {lnkPath}");
+            DebugLog.Write($"{where} shortcut created.");
         }
         catch (Exception ex)
         {

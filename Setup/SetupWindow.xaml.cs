@@ -77,7 +77,8 @@ public partial class SetupWindow : Window
             if (updateDir != null)
             {
                 AppInstaller.InstallDir = updateDir;
-                DebugLog.Write($"Update mode - replacing app in: {updateDir}");
+                DebugLog.HidePath(updateDir, "<app folder>");
+                DebugLog.Write($"Update mode - replacing the installed app (drive {Path.GetPathRoot(updateDir)}).");
 
                 HeaderText.Text = "Updating TOA - Fan Control";
                 SetStatus("Updating TOA - Fan Control…");
@@ -111,7 +112,8 @@ public partial class SetupWindow : Window
                 return;
             }
             AppInstaller.InstallDir = installDir;
-            DebugLog.Write($"Install location: {installDir}");
+            DebugLog.HidePath(installDir, "<app folder>");
+            DebugLog.Write($"Install location chosen (drive {Path.GetPathRoot(installDir)}).");
 
             // ---- the app ----
             SetStatus("Installing TOA - Fan Control…");
@@ -192,7 +194,8 @@ public partial class SetupWindow : Window
             }
             catch (Exception ex)
             {
-                DebugLog.Write($"Install path '{path}' rejected.", ex);
+                DebugLog.HidePath(path, "<chosen folder>");
+                DebugLog.Write("Install path rejected.", ex);
                 body = $"Can't use that folder ({ex.Message.TrimEnd('.')}). Pick another:";
             }
         }

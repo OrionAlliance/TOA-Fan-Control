@@ -27,7 +27,7 @@ public static class StartupTask
 
         bool ok = Register(exe);
         DebugLog.Write(ok
-            ? $"Start-with-Windows enabled (task -> {exe})."
+            ? "Start-with-Windows enabled."
             : "Start-with-Windows enable FAILED (schtasks error).");
         return ok;
     }

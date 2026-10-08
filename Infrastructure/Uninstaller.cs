@@ -100,6 +100,6 @@ public static class Uninstaller
         };
 
         Process.Start(psi);
-        DebugLog.Write($"Folder removal scheduled: {dir}");
+        DebugLog.Write("Folder removal scheduled.");
     }
 }
