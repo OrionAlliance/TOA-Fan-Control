@@ -203,6 +203,9 @@ public partial class App : Application
         // Tasks from older builds die after 3 days of uptime - fix them in place.
         _ = Task.Run(StartupTask.HealIfOutdated);
 
+        // Each update leaves a ~74 MB installer behind - clear out the old ones.
+        _ = Task.Run(AppUpdate.CleanUpOldInstallers);
+
         // The watchdog must take the fans BEFORE we write to any of them: whoever
         // grabs a header first is the only one holding its real BIOS settings, and
         // therefore the only one that can ever hand it back. Blocking here is the

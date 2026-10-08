@@ -38,6 +38,7 @@
     <Compile Include="..\Infrastructure\DotNetUpdate.cs" Link="Shared\DotNetUpdate.cs" />
     <Compile Include="..\Infrastructure\DebugLog.cs" Link="Shared\DebugLog.cs" />
     <Compile Include="..\Infrastructure\AppPaths.cs" Link="Shared\AppPaths.cs" />
+    <Compile Include="..\Infrastructure\FolderLock.cs" Link="Shared\FolderLock.cs" />
   </ItemGroup>
 
   <ItemGroup>

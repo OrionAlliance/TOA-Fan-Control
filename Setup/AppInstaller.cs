@@ -59,6 +59,27 @@ public static class AppInstaller
         }
 
         DebugLog.Write("App written.");
+        LockFolder();
+    }
+
+    // Everything this app ever keeps in its folder - anything else means it's someone's shared folder.
+    private static readonly string[] OwnEntries =
+        { ExeName, "Settings", "Updates", "fan_debug.log", "fan_debug.log.old" };
+
+    // The logon task runs this exe as admin, so nothing without admin may change its folder.
+    private static void LockFolder()
+    {
+        bool dedicated = Directory.EnumerateFileSystemEntries(InstallDir)
+            .All(p => OwnEntries.Contains(Path.GetFileName(p), StringComparer.OrdinalIgnoreCase));
+        if (!dedicated)
+        {
+            DebugLog.Write("App folder holds other files too - left unlocked so nothing else is affected.");
+            return;
+        }
+
+        DebugLog.Write(FolderLock.LockToAdmins(InstallDir)
+            ? "App folder locked: only administrators can change it."
+            : "App folder lock FAILED - it stays as it was.");
     }
 
     /// <summary>

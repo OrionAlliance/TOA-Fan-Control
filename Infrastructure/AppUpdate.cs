@@ -23,6 +23,45 @@ public static class AppUpdate
 
     public sealed record UpdateInfo(Version Installed, Version Latest, string DownloadUrl);
 
+    private static readonly string UpdatesDir = Path.Combine(AppPaths.ExeDir, "Updates");
+
+    /// <summary>Deletes installers left by earlier updates - each one is ~74 MB that's never needed again.</summary>
+    public static void CleanUpOldInstallers()
+    {
+        try
+        {
+            // Older versions downloaded to the temp folder; newer ones use Updates.
+            IEnumerable<string> old = Directory.Exists(UpdatesDir)
+                ? Directory.EnumerateFiles(UpdatesDir, "TOA-FanControl-Setup-*.exe")
+                : Enumerable.Empty<string>();
+            old = old.Concat(Directory.EnumerateFiles(Path.GetTempPath(), "TOA-FanControl-Setup-*.exe"));
+
+            int removed = 0, inUse = 0;
+            long bytes = 0;
+            foreach (string f in old.ToList())
+            {
+                try
+                {
+                    long size = new FileInfo(f).Length;
+                    File.Delete(f);
+                    removed++;
+                    bytes += size;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    inUse++; // the installer that just relaunched us is still finishing up
+                }
+            }
+            if (removed + inUse > 0)
+                DebugLog.Write($"Old update installers: removed {removed} ({bytes / (1024 * 1024)} MB), " +
+                               $"{inUse} still in use - removed next start.");
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("Old update installer cleanup failed.", ex);
+        }
+    }
+
     /// <summary>Newer release than this build? Null = current, or offline (no nagging).</summary>
     public static async Task<UpdateInfo?> CheckForUpdateAsync()
     {
@@ -72,8 +111,11 @@ public static class AppUpdate
     {
         try
         {
-            string temp = Path.Combine(Path.GetTempPath(),
-                $"TOA-FanControl-Setup-{u.Latest}.exe");
+            // Admin-only drop-off, so nothing can swap the installer between download and run.
+            Directory.CreateDirectory(UpdatesDir);
+            if (!FolderLock.LockToAdmins(UpdatesDir))
+                throw new InvalidOperationException("couldn't secure the download folder");
+            string temp = Path.Combine(UpdatesDir, $"TOA-FanControl-Setup-{u.Latest}.exe");
 
             progress.Report($"Downloading v{u.Latest} from GitHub…");
             using (var http = NewClient())
@@ -86,8 +128,7 @@ public static class AppUpdate
                 await src.CopyToAsync(file);
             }
 
-            // Filename only - the full temp path contains the Windows username,
-            // and this log ships with bug reports.
+            // Filename only - where things live never goes in the log.
             DebugLog.Write($"App update downloaded: {Path.GetFileName(temp)}");
             progress.Report("Starting the installer - the app will close…");
 
