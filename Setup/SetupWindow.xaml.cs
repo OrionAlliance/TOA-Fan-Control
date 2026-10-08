@@ -78,7 +78,7 @@ public partial class SetupWindow : Window
             {
                 AppInstaller.InstallDir = updateDir;
                 DebugLog.HidePath(updateDir, "<app folder>");
-                DebugLog.Write($"Update mode - replacing the installed app (drive {Path.GetPathRoot(updateDir)}).");
+                DebugLog.Write("Update mode - replacing the installed app.");
 
                 HeaderText.Text = "Updating TOA - Fan Control";
                 SetStatus("Updating TOA - Fan Control…");
@@ -113,7 +113,7 @@ public partial class SetupWindow : Window
             }
             AppInstaller.InstallDir = installDir;
             DebugLog.HidePath(installDir, "<app folder>");
-            DebugLog.Write($"Install location chosen (drive {Path.GetPathRoot(installDir)}).");
+            DebugLog.Write("Install location chosen.");
 
             // ---- the app ----
             SetStatus("Installing TOA - Fan Control…");
