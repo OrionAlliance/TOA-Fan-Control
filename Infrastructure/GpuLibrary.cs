@@ -52,8 +52,7 @@ public static class GpuLibrary
         string json;
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
+            using HttpClient http = Downloads.NewClient(TimeSpan.FromSeconds(30));
             json = await http.GetStringAsync(LibraryUrl);
             Parse(json); // parse first so a bad download never clobbers a good cache
         }

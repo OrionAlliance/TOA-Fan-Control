@@ -21,7 +21,7 @@
                 <TextBlock x:Name="BodyText" Margin="0,12,0,0" FontSize="12.5"
                            TextWrapping="Wrap" Foreground="{DynamicResource Text}" />
 
-                <Button x:Name="SearchButton" Margin="0,14,0,0" HorizontalAlignment="Center"
+                <Button Margin="0,14,0,0" HorizontalAlignment="Center"
                         MaxWidth="360" Click="OnSearchClick">
                     <TextBlock x:Name="SearchButtonText" TextWrapping="Wrap" TextAlignment="Center" />
                 </Button>

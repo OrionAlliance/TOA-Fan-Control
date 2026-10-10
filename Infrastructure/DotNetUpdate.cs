@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -15,6 +14,8 @@ public static class DotNetUpdate
     // The app targets net10.0-windows, so it needs WindowsDesktop 10.x.
     private const string DesktopFramework = "Microsoft.WindowsDesktop.App";
     private const int RequiredMajor = 10;
+
+    private static readonly TimeSpan HttpTimeout = TimeSpan.FromMinutes(5);
 
     public sealed record UpdateInfo(Version Installed, Version Latest);
 
@@ -60,8 +61,8 @@ public static class DotNetUpdate
             Version? installed = InstalledVersion();
             if (installed == null) return null; // Setup installs it, not an update
 
-            using var http = NewClient();
-            string latestStr = await GetLatestReleaseAsync(http);
+            using HttpClient http = Downloads.NewClient(HttpTimeout);
+            string latestStr = await GetChannelFieldAsync(http, "latest-release");
             var latest = Version.Parse(latestStr);
 
             return latest > installed ? new UpdateInfo(installed, latest) : null;
@@ -85,7 +86,7 @@ public static class DotNetUpdate
             DebugLog.Write($".NET runtime installer URL: {url}");
 
             progress.Report("Downloading the .NET 10 runtime…");
-            await DownloadAsync(url, temp);
+            await Downloads.DownloadToFileAsync(url, temp, HttpTimeout);
 
             progress.Report("Checking the download…");
             if (!PawnIoSetup.IsTrustedAndSignedBy(temp, "Microsoft"))
@@ -96,12 +97,12 @@ public static class DotNetUpdate
             }
 
             progress.Report("Installing .NET 10…");
-            int exit = await RunAsync(temp, "/install /quiet /norestart");
+            int exit = await Downloads.RunAndWaitAsync(temp, "/install /quiet /norestart");
 
             return exit switch
             {
                 0 => new PawnIoSetup.InstallResult(true, false, ".NET 10 updated."),
-                3010 => new PawnIoSetup.InstallResult(true, true,
+                PawnIoSetup.RebootRequiredExitCode => new PawnIoSetup.InstallResult(true, true,
                     ".NET 10 updated - a reboot will finish it."),
                 _ => new PawnIoSetup.InstallResult(false, false,
                     $"The .NET installer exited with code {exit}."),
@@ -121,23 +122,21 @@ public static class DotNetUpdate
 
     // ---- Microsoft release metadata ------------------------------------------
 
-    private static async Task<string> GetLatestReleaseAsync(HttpClient http)
+    // One field of the 10.0 channel entry in Microsoft's releases index.
+    private static async Task<string> GetChannelFieldAsync(HttpClient http, string field)
     {
         using JsonDocument index = JsonDocument.Parse(await http.GetStringAsync(ReleasesIndex));
         return index.RootElement.GetProperty("releases-index").EnumerateArray()
             .First(c => c.GetProperty("channel-version").GetString() == "10.0")
-            .GetProperty("latest-release").GetString()!;
+            .GetProperty(field).GetString()!;
     }
 
     /// <summary>The current 10.0 WindowsDesktop x64 .exe installer URL, from Microsoft.</summary>
     private static async Task<string> GetInstallerUrlAsync()
     {
-        using var http = NewClient();
+        using HttpClient http = Downloads.NewClient(HttpTimeout);
 
-        using JsonDocument index = JsonDocument.Parse(await http.GetStringAsync(ReleasesIndex));
-        string channel = index.RootElement.GetProperty("releases-index").EnumerateArray()
-            .First(c => c.GetProperty("channel-version").GetString() == "10.0")
-            .GetProperty("releases.json").GetString()!;
+        string channel = await GetChannelFieldAsync(http, "releases.json");
 
         using JsonDocument rel = JsonDocument.Parse(await http.GetStringAsync(channel));
         string latest = rel.RootElement.GetProperty("latest-release").GetString()!;
@@ -153,33 +152,5 @@ public static class DotNetUpdate
         }
 
         throw new InvalidOperationException("No win-x64 desktop-runtime installer in the release metadata.");
-    }
-
-    private static async Task DownloadAsync(string url, string dest)
-    {
-        using var http = NewClient();
-        using HttpResponseMessage resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-        resp.EnsureSuccessStatusCode();
-
-        await using Stream src = await resp.Content.ReadAsStreamAsync();
-        await using FileStream file = File.Create(dest);
-        await src.CopyToAsync(file);
-    }
-
-    private static async Task<int> RunAsync(string path, string args)
-    {
-        // The caller is already elevated, so the installer inherits admin.
-        var psi = new ProcessStartInfo { FileName = path, Arguments = args, UseShellExecute = false };
-        using Process? p = Process.Start(psi);
-        if (p == null) return -1;
-        await p.WaitForExitAsync();
-        return p.ExitCode;
-    }
-
-    private static HttpClient NewClient()
-    {
-        var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
-        return http;
     }
 }

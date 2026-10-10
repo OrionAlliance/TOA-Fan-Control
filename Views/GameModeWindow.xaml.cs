@@ -135,7 +135,7 @@ public partial class GameModeWindow : Window
     private void OnRestoreClick(object sender, RoutedEventArgs e) =>
         RestoreRequested?.Invoke(this, EventArgs.Empty);
 
-    public void Detach() => _controller.Updated -= OnUpdated;
+    private void Detach() => _controller.Updated -= OnUpdated;
 
     private Brush Res(string key) => (Brush)FindResource(key);
 

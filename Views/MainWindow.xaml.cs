@@ -33,17 +33,11 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // Build version from the assembly into the caption and taskbar title.
-        Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
-                    ?? new Version(0, 0, 0);
-        string label = $"TOA - Fan Control  v{v.Major}.{v.Minor}.{v.Build}";
+        string label = $"TOA - Fan Control  {AppVersion.Display}";
         TitleText.Text = label;
         Title = label;
 
         SetupTray();
-
-        // Redline at the real throttle point (90C); nothing below it is damage.
-        CpuGauge.RedFrom = 90;
-        GpuGauge.RedFrom = 90;
 
         ApplyDisplayStyle(_controller.Settings.DisplayStyle);
 
@@ -318,9 +312,7 @@ public partial class MainWindow : Window
 
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("About", ShowAbout));
-        menu.Items.Add(Item("Donate ♥", () =>
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                "https://ko-fi.com/orionailliance") { UseShellExecute = true })));
+        menu.Items.Add(Item("Donate ♥", () => Browser.Open("https://ko-fi.com/orionailliance")));
         menu.Items.Add(Item("Uninstall…", ConfirmUninstall));
 
         menu.IsOpen = true;
@@ -385,10 +377,8 @@ public partial class MainWindow : Window
         finally { Cursor = null; }
         if (offered) return;
 
-        Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
-                    ?? new Version(0, 0, 0);
         MessageWindow.Show(this, "You're up to date.",
-            $"App v{v.Major}.{v.Minor}.{v.Build}, PawnIO, and .NET are all current.");
+            $"App {AppVersion.Display}, PawnIO, and .NET are all current.");
     }
 
     /// <summary>Register or unregister the logon task.</summary>
@@ -428,15 +418,7 @@ public partial class MainWindow : Window
 
     private void ConfirmUninstall()
     {
-        bool yes = MessageWindow.Confirm(this,
-            "Uninstall TOA - Fan Control?",
-            "This will close the app and remove it from this PC - the app, its " +
-            "settings, its log, and its shortcuts.\n\n" +
-            "(PawnIO and .NET stay: they're shared system components other software " +
-            "can use.)",
-            "Uninstall", "Cancel");
-
-        if (yes) Uninstaller.Run();
+        if (Uninstaller.Confirm(this, appIsRunning: true)) Uninstaller.Run();
     }
 
     private void OnThemeChanged(object? sender, EventArgs e) => ApplyTitleBarColors();

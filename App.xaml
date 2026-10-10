@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
 
-        <!-- Dark defaults; ThemeManager overwrites these at runtime (gauges and fan tiles are not themed). -->
+        <!-- Dark defaults; ThemeManager overwrites all but Accent at runtime (gauges and fan tiles are not themed). -->
         <SolidColorBrush x:Key="Bg"        Color="#12141A" />
         <SolidColorBrush x:Key="Panel"     Color="#1A1D26" />
         <SolidColorBrush x:Key="PanelEdge" Color="#2A2F3D" />

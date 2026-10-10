@@ -22,7 +22,7 @@
             </Border>
 
             <!-- Text drawn twice: white over the track, black clipped to the fill, laid out identically. -->
-            <Grid x:Name="TextWhiteLayer">
+            <Grid>
                 <TextBlock x:Name="LabelTextW" HorizontalAlignment="Left" VerticalAlignment="Center"
                            Margin="9,0,0,0" FontSize="11.5" FontWeight="Bold"
                            Foreground="{DynamicResource BarTrackText}"

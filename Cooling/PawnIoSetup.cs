@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -23,7 +22,7 @@ public static class PawnIoSetup
     // The installer must be signed by this publisher, or we refuse to run it.
     private const string ExpectedSigner = "namazso";
 
-    private const int RebootRequiredExitCode = 3010; // ERROR_SUCCESS_REBOOT_REQUIRED
+    public const int RebootRequiredExitCode = 3010; // ERROR_SUCCESS_REBOOT_REQUIRED
 
     public sealed record InstallResult(bool Success, bool RebootRequired, string Message);
 
@@ -97,8 +96,7 @@ public static class PawnIoSetup
     {
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
+            using HttpClient http = Downloads.NewClient(TimeSpan.FromSeconds(6));
 
             string json = await http.GetStringAsync(LatestReleaseApi);
             using JsonDocument doc = JsonDocument.Parse(json);
@@ -133,7 +131,7 @@ public static class PawnIoSetup
         {
             temp = Path.Combine(FolderLock.DownloadFolder(), $"PawnIO_setup_{Environment.ProcessId}.exe");
             progress.Report("Downloading the official PawnIO installer…");
-            await DownloadAsync(InstallerUrl, temp);
+            await Downloads.DownloadToFileAsync(InstallerUrl, temp, TimeSpan.FromMinutes(3));
             // Filename only: the full path holds the Windows username.
             DebugLog.Write($"PawnIO installer downloaded ({Path.GetFileName(temp)}).");
 
@@ -148,7 +146,8 @@ public static class PawnIoSetup
 
             DebugLog.Write("PawnIO installer signature OK. Running it.");
             progress.Report("Running the installer…");
-            int exit = await RunInstallerAsync(temp);
+            // Inherits our admin rights; runs visibly so the person sees the real PawnIO installer.
+            int exit = await Downloads.RunAndWaitAsync(temp);
 
             if (exit == 0)
                 return new InstallResult(true, false, "PawnIO installed.");
@@ -170,34 +169,6 @@ public static class PawnIoSetup
         {
             try { if (File.Exists(temp)) File.Delete(temp); } catch { /* temp cleanup */ }
         }
-    }
-
-    private static async Task DownloadAsync(string url, string dest)
-    {
-        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
-
-        using HttpResponseMessage resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-        resp.EnsureSuccessStatusCode();
-
-        await using Stream src = await resp.Content.ReadAsStreamAsync();
-        await using FileStream file = File.Create(dest);
-        await src.CopyToAsync(file);
-    }
-
-    private static async Task<int> RunInstallerAsync(string path)
-    {
-        // Inherits our admin rights; runs visibly so the person sees the real PawnIO installer.
-        var psi = new ProcessStartInfo
-        {
-            FileName = path,
-            UseShellExecute = false,
-        };
-
-        using Process? p = Process.Start(psi);
-        if (p == null) return -1;
-        await p.WaitForExitAsync();
-        return p.ExitCode;
     }
 
     // ---- signature verification ---------------------------------------------

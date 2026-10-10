@@ -1,4 +1,5 @@
 using System.Windows;
+using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
 
@@ -47,8 +48,7 @@ public partial class GpuWattsWindow : Window
     {
         string url = "https://www.google.com/search?q="
                      + Uri.EscapeDataString($"{_cardName} TDP");
-        System.Diagnostics.Process.Start(
-            new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        Browser.Open(url);
     }
 
     private void OnSaveClick(object sender, RoutedEventArgs e)

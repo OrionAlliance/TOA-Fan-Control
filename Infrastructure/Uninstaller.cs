@@ -7,6 +7,17 @@ namespace FanControlApp.Infrastructure;
 /// <summary>Removes shortcuts now and app files after exit; fans go back to BIOS, shared PawnIO/.NET stay.</summary>
 public static class Uninstaller
 {
+    /// <summary>Asks before uninstalling; a running app also warns that it will close.</summary>
+    public static bool Confirm(Window? owner, bool appIsRunning) =>
+        MessageWindow.Confirm(owner,
+            "Uninstall TOA - Fan Control?",
+            (appIsRunning
+                ? "This will close the app and remove it from this PC"
+                : "This will remove TOA - Fan Control from this PC") +
+            " - the app, its settings, its log, and its shortcuts.\n\n" +
+            "(PawnIO and .NET stay: they're shared system components other software can use.)",
+            "Uninstall", "Cancel");
+
     public static void Run()
     {
         DebugLog.Write("UNINSTALL requested - removing shortcuts, scheduling folder removal.");

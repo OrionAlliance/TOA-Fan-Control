@@ -117,7 +117,7 @@ public static class StartupTask
               <Settings>
                 <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
                 <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+                {NoTimeLimit}
                 <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
                 <Priority>4</Priority>
               </Settings>

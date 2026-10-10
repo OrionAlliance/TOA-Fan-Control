@@ -37,11 +37,11 @@
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button x:Name="MinButton" Style="{StaticResource CaptionButton}"
+                    <Button Style="{StaticResource CaptionButton}"
                             Content="&#xE921;" Click="OnMinimizeClick" ToolTip="Minimize to system tray" />
                     <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}"
                             Content="&#xE922;" Click="OnMaximizeClick" ToolTip="Maximise" />
-                    <Button x:Name="CloseButton" Style="{StaticResource CaptionClose}"
+                    <Button Style="{StaticResource CaptionClose}"
                             Content="&#xE8BB;" Click="OnCloseClick" ToolTip="Close" />
                 </StackPanel>
 
@@ -69,9 +69,9 @@
                     <StackPanel x:Name="DialsPanel">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <ctrl:Gauge x:Name="CpuGauge" Label="CPU" Unit="C" Width="200" Height="195"
-                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="75" RedFrom="90" />
+                                        GreenTo="75" RedFrom="90" />
                             <ctrl:Gauge x:Name="GpuGauge" Label="GPU" Unit="C" Width="200" Height="195"
-                                        Minimum="0" Maximum="100" MajorTick="20" GreenTo="75" RedFrom="90" />
+                                        GreenTo="75" RedFrom="90" />
                         </StackPanel>
 
                         <StackPanel x:Name="FanRows" Margin="0,4,0,0" />
@@ -100,17 +100,17 @@
 
             <!-- Actions, centred; the cog opens Settings. -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="GameModeButton" Content="Game Mode" Click="OnGameModeClick"
+                <Button Content="Game Mode" Click="OnGameModeClick"
                         Margin="0,0,8,0">
                     <Button.ToolTip>
                         <TextBlock TextWrapping="Wrap" MaxWidth="230"
                                    Text="Shrink to a small always-on-top readout. Needs the game in Windowed Fullscreen / Borderless - nothing can draw over exclusive fullscreen." />
                     </Button.ToolTip>
                 </Button>
-                <Button x:Name="PeakInfoButton" Content="Peak Info" Margin="0,0,8,0"
+                <Button Content="Peak Info" Margin="0,0,8,0"
                         Click="OnPeakInfoClick"
                         ToolTip="What set each peak marker - the value, when, and which program." />
-                <Button x:Name="ResetPeaksButton" Content="Reset peaks"
+                <Button Content="Reset peaks"
                         Click="OnResetPeaksClick" Margin="0,0,8,0" />
                 <!-- Explicit TextBlock so the implicit Segoe UI style can't render the gear as tofu. -->
                 <Button x:Name="SettingsButton" Padding="8,6"

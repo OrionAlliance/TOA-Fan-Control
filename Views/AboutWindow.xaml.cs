@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
 
@@ -11,9 +12,7 @@ public partial class AboutWindow : Window
         InitializeComponent();
 
         // Same version source as the title bar, so they never disagree.
-        Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
-                    ?? new Version(0, 0, 0);
-        TitleLine.Text = $"TOA - Fan Control  v{v.Major}.{v.Minor}.{v.Build}";
+        TitleLine.Text = $"TOA - Fan Control  {AppVersion.Display}";
     }
 
     private void OnDrag(object sender, MouseButtonEventArgs e)
@@ -24,8 +23,7 @@ public partial class AboutWindow : Window
 
     private void OnLinkClick(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
     {
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-            e.Uri.AbsoluteUri) { UseShellExecute = true });
+        Browser.Open(e.Uri.AbsoluteUri);
         e.Handled = true;
     }
 

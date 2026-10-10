@@ -1,4 +1,4 @@
-# Builds the portable exe framework-dependent on purpose, so Windows Update keeps its .NET 10 patched.
+# Builds the portable exe framework-dependent on purpose, so it runs on the PC's shared .NET 10, which the app keeps patched.
 
 $ErrorActionPreference = 'Stop'
 $proj = Join-Path $PSScriptRoot 'FanControl.csproj'

@@ -376,9 +376,7 @@ public partial class Gauge : UserControl
 
             if (!numbered) continue; // midpoints are markers only, no label
 
-            string text = Maximum >= 1000
-                ? (v / 1000d).ToString("0.#", CultureInfo.InvariantCulture) + "k"
-                : v.ToString("0", CultureInfo.InvariantCulture);
+            string text = v.ToString("0", CultureInfo.InvariantCulture);
 
             var tb = new TextBlock { Text = text, Foreground = num, FontSize = 9 };
             tb.Measure(new Size(100, 100));
@@ -457,7 +455,7 @@ public partial class Gauge : UserControl
         };
         Canvas.SetLeft(lab, _cx - _r * 0.8);
 
-        // Anchor the label's bottom at 0.86r so one and two line labels end level, below the band ends.
+        // Anchor the label's bottom at 0.86r, below the band ends.
         lab.Measure(new Size(_r * 1.6, double.PositiveInfinity));
         Canvas.SetTop(lab, _cy + _r * 0.86 - lab.DesiredSize.Height);
         Face.Children.Add(lab);
@@ -672,9 +670,6 @@ public partial class Gauge : UserControl
     {
         if (_peakMark == null || _peakRotate == null || _peakHit == null) return;
 
-        // Flatten two-line labels so tooltips don't break mid-sentence.
-        string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-
         bool hasPeak = !double.IsNaN(Peak);
         Visibility peakVis = hasPeak ? Visibility.Visible : Visibility.Collapsed;
         _peakMark.Visibility = peakVis;
@@ -682,7 +677,7 @@ public partial class Gauge : UserControl
         if (hasPeak)
         {
             string unit = string.IsNullOrEmpty(Unit) ? "" : " " + Unit;
-            _peakHit.ToolTip = $"{flat} peak temp this run: {Peak:0}{unit}";
+            _peakHit.ToolTip = $"{Label} peak temp this run: {Peak:0}{unit}";
             _peakRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
             {
                 To = AngleFor(Peak),
@@ -698,7 +693,7 @@ public partial class Gauge : UserControl
         _loadPeakHit.Visibility = loadVis;
         if (hasLoad)
         {
-            _loadPeakHit.ToolTip = $"{flat} peak {LoadWord} this run: {_peakLoad:0}%";
+            _loadPeakHit.ToolTip = $"{Label} peak {LoadWord} this run: {_peakLoad:0}%";
             double loadAngle = LoadAngle(_peakLoad);
 
             // If the peaks overlap, park the load mark one dial unit off the temp mark.
@@ -730,8 +725,7 @@ public partial class Gauge : UserControl
         _loadHit.Visibility = vis;
         if (!has) return;
 
-        string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-        _loadHit.ToolTip = $"{flat} {LoadWord} right now: {_loadValue:0}%";
+        _loadHit.ToolTip = $"{Label} {LoadWord} right now: {_loadValue:0}%";
         _loadRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
         {
             To = LoadAngle(_loadValue),

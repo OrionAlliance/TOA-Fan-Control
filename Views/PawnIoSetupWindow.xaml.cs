@@ -134,9 +134,5 @@ public partial class PawnIoSetupWindow : Window
         }
     }
 
-    private void OnLaterClick(object sender, RoutedEventArgs e)
-    {
-        Installed = false;
-        Close();
-    }
+    private void OnLaterClick(object sender, RoutedEventArgs e) => Close();
 }

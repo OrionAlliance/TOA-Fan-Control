@@ -60,7 +60,7 @@
                        Foreground="{DynamicResource TextDim}" Text="-- / --" />
 
             <!-- Back to the full window; E7F4 is Segoe MDL2's monitor-on-a-stand glyph. -->
-            <Button x:Name="RestoreButton" Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
+            <Button Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
                     Padding="0" Width="28" Height="28" VerticalAlignment="Center"
                     Click="OnRestoreClick"
                     ToolTip="Back to the full window (or double-click anywhere)">

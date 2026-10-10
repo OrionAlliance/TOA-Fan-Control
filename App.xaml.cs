@@ -41,14 +41,7 @@ public partial class App : Application
                 return;
             }
 
-            bool yes = MessageWindow.Confirm(null,
-                "Uninstall TOA - Fan Control?",
-                "This will remove TOA - Fan Control from this PC - the app, its " +
-                "settings, its log, and its shortcuts.\n\n(PawnIO and .NET stay: " +
-                "they're shared system components other software can use.)",
-                "Uninstall", "Cancel");
-
-            if (yes) Uninstaller.Run();
+            if (Uninstaller.Confirm(null, appIsRunning: false)) Uninstaller.Run();
             else Shutdown();
             return;
         }
@@ -70,10 +63,8 @@ public partial class App : Application
         DebugLog.Write("TOA - Fan Control starting.");
 
         // Environment banner for support: versions and bitness only, no personal data.
-        Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
-                    ?? new Version(0, 0, 0);
         DebugLog.Write(
-            $"App v{v.Major}.{v.Minor}.{v.Build}  ·  " +
+            $"App {AppVersion.Display}  ·  " +
             $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription} " +
             $"({(Environment.Is64BitOperatingSystem ? "64" : "32")}-bit OS, " +
             $"{(Environment.Is64BitProcess ? "64" : "32")}-bit app)  ·  " +

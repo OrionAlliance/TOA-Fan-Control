@@ -15,6 +15,8 @@ public static class AppUpdate
 
     public sealed record UpdateInfo(Version Installed, Version Latest, string DownloadUrl);
 
+    private static readonly TimeSpan HttpTimeout = TimeSpan.FromMinutes(5);
+
     private static readonly string UpdatesDir = Path.Combine(AppPaths.ExeDir, "Updates");
     private static readonly string UnpackDir = Path.Combine(UpdatesDir, "Unpacked");
 
@@ -74,11 +76,9 @@ public static class AppUpdate
     {
         try
         {
-            Version asm = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
-                          ?? new Version(0, 0, 0);
-            var installed = new Version(asm.Major, asm.Minor, asm.Build < 0 ? 0 : asm.Build);
+            Version installed = AppVersion.Current;
 
-            using var http = NewClient();
+            using HttpClient http = Downloads.NewClient(HttpTimeout);
             using JsonDocument doc = JsonDocument.Parse(await http.GetStringAsync(LatestApi));
 
             string? tag = doc.RootElement.GetProperty("tag_name").GetString();
@@ -119,15 +119,7 @@ public static class AppUpdate
             string temp = Path.Combine(UpdatesDir, $"TOA-FanControl-Setup-{u.Latest}.exe");
 
             progress.Report($"Downloading v{u.Latest} from GitHub…");
-            using (var http = NewClient())
-            using (HttpResponseMessage resp = await http.GetAsync(
-                       u.DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
-            {
-                resp.EnsureSuccessStatusCode();
-                await using Stream src = await resp.Content.ReadAsStreamAsync();
-                await using FileStream file = File.Create(temp);
-                await src.CopyToAsync(file);
-            }
+            await Downloads.DownloadToFileAsync(u.DownloadUrl, temp, HttpTimeout);
 
             // Filename only, paths never go in the log.
             DebugLog.Write($"App update downloaded: {Path.GetFileName(temp)}");
@@ -163,11 +155,4 @@ public static class AppUpdate
                 "GitHub Releases page. " + ex.Message);
         }
     };
-
-    private static HttpClient NewClient()
-    {
-        var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
-        return http;
-    }
 }

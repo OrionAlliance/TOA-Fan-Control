@@ -60,8 +60,8 @@ public sealed class FanController : IDisposable
     private const double ConflictTickMs = 250;
 
     // Hard 30% floor, deliberately not a setting: below it Chassis Fan #2 stalls to 0 RPM.
-    public const float FloorPercent = 30f;
-    public const float CeilingPercent = 100f;
+    private const float FloorPercent = 30f;
+    private const float CeilingPercent = 100f;
 
     // Hot lean: past 70C fans run up to +5 ahead of the temp, faded in by 75C so the target never steps at a boundary.
     private const float HotLeanFromC = 70f;
@@ -287,7 +287,7 @@ public sealed class FanController : IDisposable
         if (reresolve) ResolveControlledFans();
     }
 
-    // ---- pause / resume -----------------------------------------------------
+    // ---- peaks --------------------------------------------------------------
 
     /// <summary>Clear the displayed session peaks in every view.</summary>
     public void ResetDisplayPeaks()
@@ -320,13 +320,15 @@ public sealed class FanController : IDisposable
         }
     }
 
-    // MaxInto that reports a raise, which stamps Peak Info.
+    // NaN-safe max fold that reports a raise, which stamps Peak Info.
     private static bool RaisedInto(ref float peak, float v)
     {
         if (float.IsNaN(v) || (!float.IsNaN(peak) && v <= peak)) return false;
         peak = v;
         return true;
     }
+
+    // ---- pause / resume -----------------------------------------------------
 
     /// <summary>Stop driving and put the fans back on the BIOS curve.</summary>
     public void Pause()
@@ -601,10 +603,7 @@ public sealed class FanController : IDisposable
     }
 
     // NaN-safe max fold used by every peak.
-    private static void MaxInto(ref float peak, float v)
-    {
-        if (!float.IsNaN(v) && (float.IsNaN(peak) || v > peak)) peak = v;
-    }
+    private static void MaxInto(ref float peak, float v) => RaisedInto(ref peak, v);
 
     /// <summary>True when GPU load is watts vs max; keyed on sensor presence so the label can't flicker.</summary>
     public bool GpuLoadIsTrue => _hw.GpuMaxWatts != null && _hw.GpuHasPowerSensor;
@@ -789,7 +788,7 @@ public sealed class FanController : IDisposable
     }
 
     /// <summary>Put the fans back on the BIOS curve; safe from any thread, anytime, and never throws.</summary>
-    public void SafeRelease()
+    private void SafeRelease()
     {
         try
         {

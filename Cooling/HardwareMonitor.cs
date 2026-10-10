@@ -195,9 +195,7 @@ public sealed class HardwareMonitor : IDisposable
 
         // Core, not Hot Spot: Hot Spot runs ~15C hotter and would peg fans tuned around CPU temps.
         ISensor[] gpuTemps = all.Where(s => s.SensorType == SensorType.Temperature
-                                            && s.Hardware.HardwareType is HardwareType.GpuAmd
-                                                or HardwareType.GpuNvidia
-                                                or HardwareType.GpuIntel).ToArray();
+                                            && IsGpu(s)).ToArray();
 
         _gpuTemp = gpuTemps.FirstOrDefault(s => s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault(s => s.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase))
@@ -225,21 +223,15 @@ public sealed class HardwareMonitor : IDisposable
         _gpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                            && SameGpu(s)
                                            && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase)
-                                           && s.Hardware.HardwareType is HardwareType.GpuAmd
-                                               or HardwareType.GpuNvidia
-                                               or HardwareType.GpuIntel)
+                                           && IsGpu(s))
                    ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                               && SameGpu(s)
-                                              && s.Hardware.HardwareType is HardwareType.GpuAmd
-                                                  or HardwareType.GpuNvidia
-                                                  or HardwareType.GpuIntel);
+                                              && IsGpu(s));
 
         // D3D 3D and compute/Cuda engines only; video decode/copy blocks peg high on almost no power.
         _gpuEngineLoads = all.Where(s => s.SensorType == SensorType.Load
                                          && SameGpu(s)
-                                         && s.Hardware.HardwareType is HardwareType.GpuAmd
-                                             or HardwareType.GpuNvidia
-                                             or HardwareType.GpuIntel
+                                         && IsGpu(s)
                                          && s.Name.StartsWith("D3D", StringComparison.OrdinalIgnoreCase)
                                          && (s.Name.EndsWith("3D", StringComparison.OrdinalIgnoreCase)
                                              || s.Name.Contains("Compute", StringComparison.OrdinalIgnoreCase)
@@ -248,17 +240,13 @@ public sealed class HardwareMonitor : IDisposable
         // Core clock tells real effort from idle, when a near-zero clock inflates "load".
         _gpuClock = all.FirstOrDefault(s => s.SensorType == SensorType.Clock
                                             && SameGpu(s)
-                                            && s.Hardware.HardwareType is HardwareType.GpuAmd
-                                                or HardwareType.GpuNvidia
-                                                or HardwareType.GpuIntel
+                                            && IsGpu(s)
                                             && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase));
 
         // GPU power draw for true load, preferring whole-board readings over per-rail ones.
         ISensor[] gpuPowers = all.Where(s => s.SensorType == SensorType.Power
                                              && SameGpu(s)
-                                             && s.Hardware.HardwareType is HardwareType.GpuAmd
-                                                 or HardwareType.GpuNvidia
-                                                 or HardwareType.GpuIntel).ToArray();
+                                             && IsGpu(s)).ToArray();
         _gpuPower = gpuPowers.FirstOrDefault(s => s.Name.Contains("Package", StringComparison.OrdinalIgnoreCase))
                     ?? gpuPowers.FirstOrDefault(s => s.Name.Contains("Board", StringComparison.OrdinalIgnoreCase))
                     ?? gpuPowers.FirstOrDefault();
@@ -290,6 +278,9 @@ public sealed class HardwareMonitor : IDisposable
 
     public FanChannel? GpuFan { get; private set; }
     public FanChannel? CpuFan { get; private set; }
+
+    private static bool IsGpu(ISensor s) =>
+        s.Hardware.HardwareType is HardwareType.GpuAmd or HardwareType.GpuNvidia or HardwareType.GpuIntel;
 
     public FanChannel? FindFan(string name) =>
         Fans.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
