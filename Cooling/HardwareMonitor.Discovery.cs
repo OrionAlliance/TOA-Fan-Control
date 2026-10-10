@@ -42,23 +42,17 @@ public sealed partial class HardwareMonitor
                    ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                               && s.Hardware.HardwareType == HardwareType.Cpu);
 
+        ISensor[] gpuLoads = all.Where(s => s.SensorType == SensorType.Load && SameGpu(s) && IsGpu(s)).ToArray();
+
         // Fallback only: this clock-relative load reads 50%+ at idle, never show it directly.
-        _gpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
-                                           && SameGpu(s)
-                                           && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase)
-                                           && IsGpu(s))
-                   ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
-                                              && SameGpu(s)
-                                              && IsGpu(s));
+        _gpuLoad = gpuLoads.FirstOrDefault(s => s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
+                   ?? gpuLoads.FirstOrDefault();
 
         // D3D 3D and compute/Cuda engines only; video decode/copy blocks peg high on almost no power.
-        _gpuEngineLoads = all.Where(s => s.SensorType == SensorType.Load
-                                         && SameGpu(s)
-                                         && IsGpu(s)
-                                         && s.Name.StartsWith("D3D", StringComparison.OrdinalIgnoreCase)
-                                         && (s.Name.EndsWith("3D", StringComparison.OrdinalIgnoreCase)
-                                             || s.Name.Contains("Compute", StringComparison.OrdinalIgnoreCase)
-                                             || s.Name.Contains("Cuda", StringComparison.OrdinalIgnoreCase))).ToArray();
+        _gpuEngineLoads = gpuLoads.Where(s => s.Name.StartsWith("D3D", StringComparison.OrdinalIgnoreCase)
+                                              && (s.Name.EndsWith("3D", StringComparison.OrdinalIgnoreCase)
+                                                  || s.Name.Contains("Compute", StringComparison.OrdinalIgnoreCase)
+                                                  || s.Name.Contains("Cuda", StringComparison.OrdinalIgnoreCase))).ToArray();
 
         // Core clock tells real effort from idle, when a near-zero clock inflates "load".
         _gpuClock = all.FirstOrDefault(s => s.SensorType == SensorType.Clock

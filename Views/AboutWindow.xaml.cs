@@ -15,11 +15,7 @@ public partial class AboutWindow : Window
         TitleLine.Text = $"TOA - Fan Control  {AppVersion.Display}";
     }
 
-    private void OnDrag(object sender, MouseButtonEventArgs e)
-    {
-        try { DragMove(); }
-        catch (InvalidOperationException) { /* button already released */ }
-    }
+    private void OnDrag(object sender, MouseButtonEventArgs e) => Infrastructure.WindowDrag.TryDrag(this);
 
     private void OnLinkClick(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
     {

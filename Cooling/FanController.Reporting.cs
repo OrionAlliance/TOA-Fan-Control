@@ -47,26 +47,10 @@ public sealed partial class FanController
     {
         // Display peaks (separate from the log's whole-session peaks); a raise stamps Peak Info when and who.
         DateTime stamp = DateTime.Now;
-        if (RaisedInto(ref _dispPeakCpu, cpu ?? float.NaN))
-        {
-            _dispPeakCpuAt = stamp;
-            PeakCulprit.Identify(n => _dispPeakCpuFrom = n);
-        }
-        if (RaisedInto(ref _dispPeakGpu, gpu ?? float.NaN))
-        {
-            _dispPeakGpuAt = stamp;
-            PeakCulprit.IdentifyGpu(n => _dispPeakGpuFrom = n);
-        }
-        if (RaisedInto(ref _dispPeakCpuLoad, _susCpuLoad))
-        {
-            _dispPeakCpuLoadAt = stamp;
-            PeakCulprit.Identify(n => _dispPeakCpuLoadFrom = n);
-        }
-        if (RaisedInto(ref _dispPeakGpuLoad, _susGpuLoad))
-        {
-            _dispPeakGpuLoadAt = stamp;
-            PeakCulprit.IdentifyGpu(n => _dispPeakGpuLoadFrom = n);
-        }
+        _dispCpu.Raise(cpu ?? float.NaN, stamp, PeakCulprit.Identify);
+        _dispGpu.Raise(gpu ?? float.NaN, stamp, PeakCulprit.IdentifyGpu);
+        _dispCpuLoad.Raise(_susCpuLoad, stamp, PeakCulprit.Identify);
+        _dispGpuLoad.Raise(_susGpuLoad, stamp, PeakCulprit.IdentifyGpu);
 
         var readings = new FanReadings
         {
@@ -74,10 +58,10 @@ public sealed partial class FanController
             GpuTemp = gpu,
             SourceTemp = source,
             OutputPercent = _currentPercent,
-            PeakCpu = _dispPeakCpu,
-            PeakGpu = _dispPeakGpu,
-            PeakCpuLoad = _dispPeakCpuLoad,
-            PeakGpuLoad = _dispPeakGpuLoad,
+            PeakCpu = _dispCpu.Value,
+            PeakGpu = _dispGpu.Value,
+            PeakCpuLoad = _dispCpuLoad.Value,
+            PeakGpuLoad = _dispGpuLoad.Value,
             CpuLoad = _prevCpuLoad,
             GpuLoad = _prevGpuLoad,
             GpuLoadIsTrue = GpuLoadIsTrue,

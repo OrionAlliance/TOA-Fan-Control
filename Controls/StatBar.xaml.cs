@@ -46,21 +46,14 @@ public partial class StatBar : UserControl
         DependencyProperty.Register(nameof(Label), typeof(string), typeof(StatBar),
             new PropertyMetadata("", (d, _) => ((StatBar)d).OnLabelChanged()));
 
-    public static readonly DependencyProperty ValueProperty =
-        DependencyProperty.Register(nameof(Value), typeof(double), typeof(StatBar),
-            new PropertyMetadata(double.NaN, (d, _) => ((StatBar)d).UpdateVisual()));
+    public static readonly DependencyProperty ValueProperty = Reg(nameof(Value), double.NaN);
+    public static readonly DependencyProperty UnitProperty = Reg(nameof(Unit), "");
+    public static readonly DependencyProperty GreenToProperty = Reg(nameof(GreenTo), double.NaN);
+    public static readonly DependencyProperty RedFromProperty = Reg(nameof(RedFrom), double.NaN);
 
-    public static readonly DependencyProperty UnitProperty =
-        DependencyProperty.Register(nameof(Unit), typeof(string), typeof(StatBar),
-            new PropertyMetadata("", (d, _) => ((StatBar)d).UpdateVisual()));
-
-    public static readonly DependencyProperty GreenToProperty =
-        DependencyProperty.Register(nameof(GreenTo), typeof(double), typeof(StatBar),
-            new PropertyMetadata(double.NaN, (d, _) => ((StatBar)d).UpdateVisual()));
-
-    public static readonly DependencyProperty RedFromProperty =
-        DependencyProperty.Register(nameof(RedFrom), typeof(double), typeof(StatBar),
-            new PropertyMetadata(double.NaN, (d, _) => ((StatBar)d).UpdateVisual()));
+    private static DependencyProperty Reg(string name, object def) =>
+        DependencyProperty.Register(name, def.GetType(), typeof(StatBar),
+            new PropertyMetadata(def, (d, _) => ((StatBar)d).UpdateVisual()));
 
     /// <summary>Name inside the bar; long names ellipsize with a tooltip.</summary>
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
@@ -229,42 +222,28 @@ public partial class StatBar : UserControl
     private static readonly Dictionary<Color, LinearGradientBrush> FillCache = new();
     private static readonly Dictionary<Color, DropShadowEffect> GlowCache = new();
 
-    private static SolidColorBrush Solid(Color c)
+    // Made and frozen on first use per colour, then reused.
+    private static T Cached<T>(Dictionary<Color, T> cache, Color c, Func<T> make) where T : Freezable
     {
-        if (!SolidCache.TryGetValue(c, out SolidColorBrush? b))
+        if (!cache.TryGetValue(c, out T? x))
         {
-            b = new SolidColorBrush(c);
-            b.Freeze();
-            SolidCache[c] = b;
+            x = make();
+            x.Freeze();
+            cache[c] = x;
         }
-        return b;
+        return x;
     }
 
-    private static LinearGradientBrush FillFor(Color c)
-    {
-        if (!FillCache.TryGetValue(c, out LinearGradientBrush? b))
-        {
-            // Lit from the top.
-            b = new LinearGradientBrush(
-                Color.FromRgb((byte)Math.Min(255, c.R + 40), (byte)Math.Min(255, c.G + 40), (byte)Math.Min(255, c.B + 40)),
-                Color.FromRgb((byte)(c.R * 0.55), (byte)(c.G * 0.55), (byte)(c.B * 0.55)),
-                90);
-            b.Freeze();
-            FillCache[c] = b;
-        }
-        return b;
-    }
+    private static SolidColorBrush Solid(Color c) => Cached(SolidCache, c, () => new SolidColorBrush(c));
 
-    private static DropShadowEffect GlowFor(Color c)
-    {
-        if (!GlowCache.TryGetValue(c, out DropShadowEffect? e))
-        {
-            e = new DropShadowEffect { Color = c, BlurRadius = 8, ShadowDepth = 0, Opacity = 0.45 };
-            e.Freeze();
-            GlowCache[c] = e;
-        }
-        return e;
-    }
+    // Lit from the top.
+    private static LinearGradientBrush FillFor(Color c) => Cached(FillCache, c, () => new LinearGradientBrush(
+        Color.FromRgb((byte)Math.Min(255, c.R + 40), (byte)Math.Min(255, c.G + 40), (byte)Math.Min(255, c.B + 40)),
+        Color.FromRgb((byte)(c.R * 0.55), (byte)(c.G * 0.55), (byte)(c.B * 0.55)),
+        90));
+
+    private static DropShadowEffect GlowFor(Color c) => Cached(GlowCache, c,
+        () => new DropShadowEffect { Color = c, BlurRadius = 8, ShadowDepth = 0, Opacity = 0.45 });
 
     private static Color C(string hex) => (Color)ColorConverter.ConvertFromString(hex)!;
 }

@@ -20,85 +20,15 @@ public partial class Gauge
 
         // Yellow peak mark, drawn under the needle so the needle wins on overlap.
         _peakRotate = new RotateTransform(StartAngle);
-        var peakFig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
-        peakFig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
-        var peakGeo = new PathGeometry();
-        peakGeo.Figures.Add(peakFig);
+        (_peakHit, _peakMark) = AddPeakMark(_peakRotate, 18, "#E3B341", "#E3B341", 0.85);
 
-        // Shared so the mark and its hit area never drift apart.
-        var peakTransform = new TransformGroup
-        {
-            Children = { _peakRotate, new TranslateTransform(_cx, _cy) },
-        };
-
-        // Fat invisible copy to catch the mouse; Transparent hit-tests, null wouldn't.
-        _peakHit = new Path
-        {
-            Data = peakGeo,
-            Stroke = Brushes.Transparent,
-            StrokeThickness = 18,
-            RenderTransform = peakTransform,
-            Cursor = Cursors.Hand,
-        };
-        Moving.Children.Add(_peakHit);
-
-        _peakMark = new Path
-        {
-            Data = peakGeo,
-            Stroke = B("#E3B341"),
-            StrokeThickness = 3,
-            IsHitTestVisible = false,
-            Effect = new DropShadowEffect
-            {
-                Color = C("#E3B341"), BlurRadius = 7, ShadowDepth = 0, Opacity = 0.85,
-            },
-            RenderTransform = peakTransform,
-        };
-        Moving.Children.Add(_peakMark);
-
-        // Peak-load mark in load blue at the session's highest load.
+        // Peak-load mark in electric cyan, since the triangle's deep cyan vanishes over the green band.
         _loadPeakRotate = new RotateTransform(StartAngle);
-        var loadPeakFig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
-        loadPeakFig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
-        var loadPeakGeo = new PathGeometry();
-        loadPeakGeo.Figures.Add(loadPeakFig);
-
-        var loadPeakTransform = new TransformGroup
-        {
-            Children = { _loadPeakRotate, new TranslateTransform(_cx, _cy) },
-        };
-
-        _loadPeakHit = new Path
-        {
-            Data = loadPeakGeo,
-            Stroke = Brushes.Transparent,
-            StrokeThickness = 14,
-            RenderTransform = loadPeakTransform,
-            Cursor = Cursors.Hand,
-        };
-        Moving.Children.Add(_loadPeakHit);
-
-        _loadPeakMark = new Path
-        {
-            Data = loadPeakGeo,
-            // Electric cyan, since the triangle's deep cyan vanishes over the green band.
-            Stroke = B("#4DEEFF"),
-            StrokeThickness = 3,
-            IsHitTestVisible = false,
-            Effect = new DropShadowEffect
-            {
-                Color = C("#00A3C4"), BlurRadius = 7, ShadowDepth = 0, Opacity = 0.9,
-            },
-            RenderTransform = loadPeakTransform,
-        };
-        Moving.Children.Add(_loadPeakMark);
+        (_loadPeakHit, _loadPeakMark) = AddPeakMark(_loadPeakRotate, 14, "#4DEEFF", "#00A3C4", 0.9);
 
         // Live-load triangle outside the band, so a load never reads as a temperature.
         _loadRotate = new RotateTransform(StartAngle);
-        var loadTransform = new TransformGroup
-        {
-            Children = { _loadRotate, new TranslateTransform(_cx, _cy) },
-        };
+        var loadTransform = Pivot(_loadRotate);
         var loadPoints = new PointCollection
         {
             new Point(BandR + 4, 0),
@@ -156,10 +86,7 @@ public partial class Gauge
                 Color = Colors.Black, BlurRadius = 9, ShadowDepth = 3.5,
                 Direction = 300, Opacity = 0.65,
             },
-            RenderTransform = new TransformGroup
-            {
-                Children = { _needleRotate, new TranslateTransform(_cx, _cy) },
-            },
+            RenderTransform = Pivot(_needleRotate),
         };
         Moving.Children.Add(_needle);
 
@@ -187,5 +114,41 @@ public partial class Gauge
         Canvas.SetLeft(hub, _cx - 7.5);
         Canvas.SetTop(hub, _cy - 7.5);
         Moving.Children.Add(hub);
+    }
+
+    // Spins about the dial's center.
+    private TransformGroup Pivot(RotateTransform rotate) =>
+        new() { Children = { rotate, new TranslateTransform(_cx, _cy) } };
+
+    // A peak tick on the band plus a fat invisible copy that catches the mouse (Transparent hit-tests, null wouldn't).
+    private (Path Hit, Path Mark) AddPeakMark(RotateTransform rotate, double hitWidth, string stroke, string glow, double glowOpacity)
+    {
+        var fig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
+        fig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
+        var geo = new PathGeometry();
+        geo.Figures.Add(fig);
+        var transform = Pivot(rotate); // shared so the mark and its hit area never drift apart
+
+        var hit = new Path
+        {
+            Data = geo,
+            Stroke = Brushes.Transparent,
+            StrokeThickness = hitWidth,
+            RenderTransform = transform,
+            Cursor = Cursors.Hand,
+        };
+        Moving.Children.Add(hit);
+
+        var mark = new Path
+        {
+            Data = geo,
+            Stroke = B(stroke),
+            StrokeThickness = 3,
+            IsHitTestVisible = false,
+            Effect = new DropShadowEffect { Color = C(glow), BlurRadius = 7, ShadowDepth = 0, Opacity = glowOpacity },
+            RenderTransform = transform,
+        };
+        Moving.Children.Add(mark);
+        return (hit, mark);
     }
 }

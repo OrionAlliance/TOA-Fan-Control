@@ -12,27 +12,49 @@ public sealed partial class FanController
     /// <summary>Clear the displayed session peaks in every view.</summary>
     public void ResetDisplayPeaks()
     {
-        _dispPeakCpu = float.NaN;
-        _dispPeakGpu = float.NaN;
-        _dispPeakCpuLoad = float.NaN;
-        _dispPeakGpuLoad = float.NaN;
+        _dispCpu.Clear();
+        _dispGpu.Clear();
+        _dispCpuLoad.Clear();
+        _dispGpuLoad.Clear();
+    }
 
-        // Peak Info times and names reset too.
-        _dispPeakCpuAt = _dispPeakGpuAt = _dispPeakCpuLoadAt = _dispPeakGpuLoadAt = default;
-        _dispPeakCpuFrom = _dispPeakCpuLoadFrom = _dispPeakGpuFrom = _dispPeakGpuLoadFrom = null;
+    // One shown peak plus its Peak Info when and who; memory only, wiped by Reset peaks.
+    private sealed class PeakMark
+    {
+        public float Value = float.NaN;
+        public DateTime At;
+        public string? From;
+
+        // A raise stamps the time and asks who caused it (the answer arrives later).
+        public void Raise(float v, DateTime stamp, Action<Action<string?>> identify)
+        {
+            if (!RaisedInto(ref Value, v)) return;
+            At = stamp;
+            identify(n => From = n);
+        }
+
+        public void Clear()
+        {
+            Value = float.NaN;
+            At = default;
+            From = null;
+        }
     }
 
     /// <summary>The Peak Info button's four lines, built here so the window stays display-only.</summary>
     public string BuildPeakReport()
     {
         string gpuLoadLabel = GpuLoadIsTrue ? "Highest GPU load" : "Highest GPU busy time";
-        return Line("Highest CPU temp", _dispPeakCpu, "°C", _dispPeakCpuAt, _dispPeakCpuFrom) + "\n"
-             + Line("Highest CPU load", _dispPeakCpuLoad, "%", _dispPeakCpuLoadAt, _dispPeakCpuLoadFrom) + "\n\n"
-             + Line("Highest GPU temp", _dispPeakGpu, "°C", _dispPeakGpuAt, _dispPeakGpuFrom) + "\n"
-             + Line(gpuLoadLabel, _dispPeakGpuLoad, "%", _dispPeakGpuLoadAt, _dispPeakGpuLoadFrom);
+        return Line("Highest CPU temp", _dispCpu, "°C") + "\n"
+             + Line("Highest CPU load", _dispCpuLoad, "%") + "\n\n"
+             + Line("Highest GPU temp", _dispGpu, "°C") + "\n"
+             + Line(gpuLoadLabel, _dispGpuLoad, "%");
 
-        static string Line(string label, float v, string unit, DateTime at, string? from)
+        static string Line(string label, PeakMark p, string unit)
         {
+            float v = p.Value;
+            DateTime at = p.At;
+            string? from = p.From;
             if (float.IsNaN(v)) return $"{label}: nothing recorded yet.";
             string s = $"{label}: {v:F0}{unit}  ·  {at:M/d h:mm tt}";
             if (from != null) s += $"  ·  from: {from}";

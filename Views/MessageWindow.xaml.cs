@@ -96,9 +96,5 @@ public partial class MessageWindow : Window
         catch { CopyButton.Content = "Try again"; } // another app held the clipboard
     }
 
-    private void OnDrag(object sender, MouseButtonEventArgs e)
-    {
-        try { DragMove(); }
-        catch (InvalidOperationException) { /* button already released */ }
-    }
+    private void OnDrag(object sender, MouseButtonEventArgs e) => Infrastructure.WindowDrag.TryDrag(this);
 }

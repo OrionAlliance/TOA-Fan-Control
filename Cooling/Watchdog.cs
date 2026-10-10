@@ -162,14 +162,11 @@ public static class Watchdog
             RestoreToBios(fans);
             HandedBack.Set();
 
-            if (why == Wake.ParentGone)
+            if (why != Wake.Signal)
             {
-                DebugLog.Write($"[watchdog] Parent {parentPid} is gone - fans are back on the BIOS curve.");
-                return;
-            }
-            if (why == Wake.SessionEnd)
-            {
-                DebugLog.Write("[watchdog] Windows session ending - fans are back on the BIOS curve.");
+                DebugLog.Write(why == Wake.ParentGone
+                    ? $"[watchdog] Parent {parentPid} is gone - fans are back on the BIOS curve."
+                    : "[watchdog] Windows session ending - fans are back on the BIOS curve.");
                 return;
             }
 
@@ -177,14 +174,11 @@ public static class Watchdog
 
             // Paused: the BIOS has the fans, nothing to undo if the app dies.
             Wake paused = WaitFor(link.Resume, parentPid);
-            if (paused == Wake.ParentGone)
+            if (paused != Wake.Signal)
             {
-                DebugLog.Write($"[watchdog] Parent {parentPid} died while paused - fans already on the BIOS.");
-                return;
-            }
-            if (paused == Wake.SessionEnd)
-            {
-                DebugLog.Write("[watchdog] Windows session ending while paused - fans already on the BIOS.");
+                DebugLog.Write(paused == Wake.ParentGone
+                    ? $"[watchdog] Parent {parentPid} died while paused - fans already on the BIOS."
+                    : "[watchdog] Windows session ending while paused - fans already on the BIOS.");
                 return;
             }
 

@@ -20,6 +20,14 @@ public static class AppInstaller
 
     public static string InstalledExe => Path.Combine(InstallDir, ExeName);
 
+    /// <summary>The steps a fresh install and an update share: app, Start menu shortcut, Installed apps entry.</summary>
+    public static void Install()
+    {
+        ExtractApp();
+        CreateStartMenuShortcut();
+        RegisterInInstalledApps();
+    }
+
     /// <summary>Writes the app exe, retrying while a self-updating old app and its watchdog still lock it.</summary>
     public static void ExtractApp()
     {

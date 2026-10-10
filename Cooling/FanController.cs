@@ -119,14 +119,7 @@ public sealed partial class FanController : IDisposable
     private readonly Dictionary<string, float> _peakRpm = new();
 
     // The peaks the UI shows (cleared by Reset peaks; the log's stay whole-session).
-    private float _dispPeakCpu = float.NaN;
-    private float _dispPeakGpu = float.NaN;
-    private float _dispPeakCpuLoad = float.NaN;
-    private float _dispPeakGpuLoad = float.NaN;
-
-    // Peak Info: when and by whom each peak was set; memory only, wiped by Reset peaks.
-    private DateTime _dispPeakCpuAt, _dispPeakGpuAt, _dispPeakCpuLoadAt, _dispPeakGpuLoadAt;
-    private string? _dispPeakCpuFrom, _dispPeakCpuLoadFrom, _dispPeakGpuFrom, _dispPeakGpuLoadFrom;
+    private readonly PeakMark _dispCpu = new(), _dispGpu = new(), _dispCpuLoad = new(), _dispGpuLoad = new();
 
     // A load must hold 2 consecutive ~1s captures to count, so one-poll blips are ignored.
     private float _prevCpuLoad = float.NaN;

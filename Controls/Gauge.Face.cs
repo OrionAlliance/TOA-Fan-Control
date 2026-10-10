@@ -80,44 +80,32 @@ public partial class Gauge
         Face.Children.Add(innerShadow);
     }
 
+    // One glowing color zone on the band, with its tooltip.
+    private void AddBand(double a0, double a1, string hex, double glow, string tip)
+    {
+        Path band = Arc(a0, a1, BandR, B(hex), 7);
+        band.Effect = new DropShadowEffect { Color = C(hex), BlurRadius = 9, ShadowDepth = 0, Opacity = glow };
+        band.ToolTip = Tip(tip);
+        Face.Children.Add(band);
+    }
+
     private void DrawBands()
     {
         // Base sweep, recessed
         Face.Children.Add(Arc(StartAngle, EndAngle, BandR, B("#323848"), 7));
 
         if (!double.IsNaN(GreenTo) && GreenTo > Minimum)
-        {
-            Path green = Arc(StartAngle, AngleFor(GreenTo), BandR, B("#3FB950"), 7);
-            green.Effect = new DropShadowEffect
-            {
-                Color = C("#3FB950"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.5,
-            };
-            green.ToolTip = Tip("Safe and full speed - the chip boosts unhindered here.");
-            Face.Children.Add(green);
-        }
+            AddBand(StartAngle, AngleFor(GreenTo), "#3FB950", 0.5,
+                "Safe and full speed - the chip boosts unhindered here.");
 
         // Amber tax zone: safe, but boost erodes as heat climbs.
         if (!double.IsNaN(GreenTo) && !double.IsNaN(RedFrom) && RedFrom > GreenTo)
-        {
-            Path amber = Arc(AngleFor(GreenTo), AngleFor(RedFrom), BandR, B("#E8D44C"), 7);
-            amber.Effect = new DropShadowEffect
-            {
-                Color = C("#E8D44C"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.45,
-            };
-            amber.ToolTip = Tip("Safe, but the tax zone - no damage, yet every degree here quietly costs a little boost speed.");
-            Face.Children.Add(amber);
-        }
+            AddBand(AngleFor(GreenTo), AngleFor(RedFrom), "#E8D44C", 0.45,
+                "Safe, but the tax zone - no damage, yet every degree here quietly costs a little boost speed.");
 
         if (!double.IsNaN(RedFrom) && RedFrom < Maximum)
-        {
-            Path red = Arc(AngleFor(RedFrom), EndAngle, BandR, B("#F85149"), 7);
-            red.Effect = new DropShadowEffect
-            {
-                Color = C("#F85149"), BlurRadius = 9, ShadowDepth = 0, Opacity = 0.55,
-            };
-            red.ToolTip = Tip("Hard throttle - the chip slams its own brakes to protect itself. Don't live here.");
-            Face.Children.Add(red);
-        }
+            AddBand(AngleFor(RedFrom), EndAngle, "#F85149", 0.55,
+                "Hard throttle - the chip slams its own brakes to protect itself. Don't live here.");
 
         // Redline mark.
         if (double.IsNaN(RedFrom)) return;

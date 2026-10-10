@@ -59,9 +59,5 @@ public partial class FanPickerWindow : Window
         Close();
     }
 
-    private void OnDrag(object sender, MouseButtonEventArgs e)
-    {
-        try { DragMove(); }
-        catch (InvalidOperationException) { /* button already released */ }
-    }
+    private void OnDrag(object sender, MouseButtonEventArgs e) => Infrastructure.WindowDrag.TryDrag(this);
 }

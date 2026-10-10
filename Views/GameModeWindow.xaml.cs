@@ -42,36 +42,19 @@ public partial class GameModeWindow : Window
         Close();
     }
 
+    /// <summary>The saved spot if it's still on a screen (monitors can change), else top-centre, clear of most HUDs.</summary>
     private void RestorePlacement()
     {
         FanSettings s = _controller.Settings;
+        double x = SystemParameters.VirtualScreenLeft, y = SystemParameters.VirtualScreenTop;
+        double w = SystemParameters.VirtualScreenWidth, h = SystemParameters.VirtualScreenHeight;
 
-        if (!double.IsNaN(s.OverlayLeft) && !double.IsNaN(s.OverlayTop))
-        {
-            Left = s.OverlayLeft;
-            Top = s.OverlayTop;
-            EnsureOnScreen();
-            return;
-        }
+        bool onScreen = !double.IsNaN(s.OverlayLeft) && !double.IsNaN(s.OverlayTop)
+                        && s.OverlayLeft >= x && s.OverlayTop >= y
+                        && s.OverlayLeft <= x + w - 60 && s.OverlayTop <= y + h - 40;
 
-        // Never placed: top-centre, out of the way of most HUDs.
-        Left = (SystemParameters.PrimaryScreenWidth - Width) / 2;
-        Top = 24;
-    }
-
-    /// <summary>A saved position can be off-screen now if the monitor setup changed.</summary>
-    private void EnsureOnScreen()
-    {
-        double w = SystemParameters.VirtualScreenWidth;
-        double h = SystemParameters.VirtualScreenHeight;
-        double x = SystemParameters.VirtualScreenLeft;
-        double y = SystemParameters.VirtualScreenTop;
-
-        if (Left < x || Top < y || Left > x + w - 60 || Top > y + h - 40)
-        {
-            Left = (SystemParameters.PrimaryScreenWidth - Width) / 2;
-            Top = 24;
-        }
+        Left = onScreen ? s.OverlayLeft : (SystemParameters.PrimaryScreenWidth - Width) / 2;
+        Top = onScreen ? s.OverlayTop : 24;
     }
 
     public void SavePlacement() =>
@@ -120,14 +103,7 @@ public partial class GameModeWindow : Window
             return;
         }
 
-        try
-        {
-            DragMove();
-        }
-        catch (InvalidOperationException)
-        {
-            // Button already released.
-        }
+        Infrastructure.WindowDrag.TryDrag(this);
 
         SavePlacement();
     }

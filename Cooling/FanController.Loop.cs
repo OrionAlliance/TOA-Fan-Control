@@ -171,13 +171,7 @@ public sealed partial class FanController
     private float Slew(float current, float desired, float dt)
     {
         // dt keeps %/second ramps the same at any tick rate.
-        float up = SlewUpPerSec * dt;
-        float down = SlewDownPerSec * dt;
-
-        float delta = desired - current;
-        if (delta > up) delta = up;
-        if (delta < -down) delta = -down;
-        return current + delta;
+        return current + Math.Clamp(desired - current, -SlewDownPerSec * dt, SlewUpPerSec * dt);
     }
 
     private static float? Max(float? a, float? b)

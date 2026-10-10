@@ -74,21 +74,8 @@ public partial class SetupWindow : Window
                 HeaderText.Text = "Updating TOA - Fan Control";
                 SetStatus("Updating TOA - Fan Control…");
                 ShowProgress(true);
-                AppInstaller.ExtractApp();
-                AppInstaller.CreateStartMenuShortcut();
-                AppInstaller.RegisterInInstalledApps();
-
-                if (_rebootNeeded)
-                {
-                    ShowClose("Updated. Restart your PC to finish, then open TOA - Fan Control " +
-                              "from the Start menu.");
-                    return;
-                }
-
-                SetStatus("Starting TOA - Fan Control…");
-                AppInstaller.Launch();
-                DebugLog.Write("Update complete - app relaunched.");
-                Close();
+                AppInstaller.Install();
+                Finish("Updated", "Update complete - app relaunched.");
                 return;
             }
 
@@ -107,9 +94,7 @@ public partial class SetupWindow : Window
             // ---- the app ----
             SetStatus("Installing TOA - Fan Control…");
             ShowProgress(true);
-            AppInstaller.ExtractApp();
-            AppInstaller.CreateStartMenuShortcut();
-            AppInstaller.RegisterInInstalledApps();
+            AppInstaller.Install();
 
             // The desktop is the user's space, so ask.
             bool desktop = await AskAsync(
@@ -121,17 +106,7 @@ public partial class SetupWindow : Window
             else DebugLog.Write("Desktop shortcut skipped by user.");
 
             // ---- done ----
-            if (_rebootNeeded)
-            {
-                ShowClose("Installed. Restart your PC to finish, then open TOA - Fan Control " +
-                          "from the Start menu.");
-                return;
-            }
-
-            SetStatus("Starting TOA - Fan Control…");
-            AppInstaller.Launch();
-            DebugLog.Write("Setup complete - app launched.");
-            Close();
+            Finish("Installed", "Setup complete - app launched.");
         }
         catch (Exception ex)
         {
@@ -249,15 +224,23 @@ public partial class SetupWindow : Window
 
     private void Fail(string message)
     {
+        ShowClose(message);
         StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xF8, 0x51, 0x49));
-        _choice = null;
-        ShowProgress(false);
-        StatusText.Text = message;
+    }
 
-        PrimaryButton.Content = "Close";
-        PrimaryButton.Visibility = Visibility.Visible;
-        SecondaryButton.Visibility = Visibility.Collapsed;
-        Buttons.Visibility = Visibility.Visible;
+    // Reboot notice, or launch the app and close.
+    private void Finish(string done, string logLine)
+    {
+        if (_rebootNeeded)
+        {
+            ShowClose($"{done}. Restart your PC to finish, then open TOA - Fan Control from the Start menu.");
+            return;
+        }
+
+        SetStatus("Starting TOA - Fan Control…");
+        AppInstaller.Launch();
+        DebugLog.Write(logLine);
+        Close();
     }
 
     private void OnPrimaryClick(object sender, RoutedEventArgs e) => Answer(true);

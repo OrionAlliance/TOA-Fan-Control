@@ -66,9 +66,5 @@ public partial class GpuWattsWindow : Window
 
     private void OnSkipClick(object sender, RoutedEventArgs e) => Close();
 
-    private void OnDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        try { DragMove(); }
-        catch (InvalidOperationException) { /* button already released */ }
-    }
+    private void OnDrag(object sender, System.Windows.Input.MouseButtonEventArgs e) => Infrastructure.WindowDrag.TryDrag(this);
 }

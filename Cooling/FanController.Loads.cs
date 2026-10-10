@@ -76,8 +76,6 @@ public sealed partial class FanController
         _prevGpuLoad = float.NaN;
         _susGpuLoad = float.NaN;
         _peakGpuLoad = float.NaN;
-        _dispPeakGpuLoad = float.NaN;
-        _dispPeakGpuLoadAt = default;
-        _dispPeakGpuLoadFrom = null;
+        _dispGpuLoad.Clear();
     }
 }
