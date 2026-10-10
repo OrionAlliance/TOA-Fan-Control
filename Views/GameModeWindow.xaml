@@ -59,16 +59,12 @@
             <TextBlock x:Name="RpmText" Grid.Row="1" Grid.Column="2" FontSize="9"
                        Foreground="{DynamicResource TextDim}" Text="-- / --" />
 
-            <!-- Way back to the full window. E7F4 is Segoe MDL2's monitor-on-a-stand;
-                 picked by rendering the font rather than trusting a hex code from
-                 memory - the previous E73F was the "FullScreen" arrows, which read as
-                 a faint empty square at this size. -->
+            <!-- Back to the full window; E7F4 is Segoe MDL2's monitor-on-a-stand glyph. -->
             <Button x:Name="RestoreButton" Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
                     Padding="0" Width="28" Height="28" VerticalAlignment="Center"
                     Click="OnRestoreClick"
                     ToolTip="Back to the full window (or double-click anywhere)">
-                <!-- Explicit TextBlock so the glyph can't fall to the implicit
-                     Segoe UI style and render as a tofu box. -->
+                <!-- Explicit TextBlock so the implicit Segoe UI style can't render the glyph as tofu. -->
                 <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
             </Button>
         </Grid>

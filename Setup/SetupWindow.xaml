@@ -48,7 +48,7 @@
                            Foreground="#FFFFFF" TextWrapping="Wrap"
                            Text="Getting things ready…" />
 
-                <!-- Install-location picker, shown only for the "where should it go?" step -->
+                <!-- Install-location picker, shown only during the location step. -->
                 <DockPanel x:Name="PathRow" Margin="0,14,0,0" Visibility="Collapsed">
                     <Button x:Name="BrowseButton" DockPanel.Dock="Right" Content="Browse…"
                             Margin="8,0,0,0" MinWidth="86" Click="OnBrowseClick" />

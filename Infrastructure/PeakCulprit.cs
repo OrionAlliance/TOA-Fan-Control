@@ -3,27 +3,22 @@ using System.Management;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// Names the process working a chip hardest the moment a peak latches - held in
-/// memory only, never written to disk or the debug log.
-/// </summary>
+/// <summary>Names the process working a chip hardest when a peak latches; memory only, never disk or log.</summary>
 public static class PeakCulprit
 {
-    private const int SampleMs = 500;      // two odometer reads this far apart
-    private const long ReuseMs = 5_000;    // a climbing surge = one culprit, not fifty lookups
+    private const int SampleMs = 500;      // gap between the two time reads
+    private const long ReuseMs = 5_000;    // one lookup per surge
 
     private static readonly Lookup Cpu = new(SampleCpuAsync, "CPU");
     private static readonly Lookup Gpu = new(SampleGpuAsync, "GPU");
 
-    /// <summary>Deliver the top CPU consumer's name async (null when nothing
-    /// moved), never blocking the fan tick.</summary>
+    /// <summary>Delivers the top CPU process name async (null if idle), never blocking the fan tick.</summary>
     public static void Identify(Action<string?> deliver) => Cpu.Identify(deliver);
 
-    /// <summary>Same for the GPU: who burned the most GPU-engine time.</summary>
+    /// <summary>Same for the GPU, by GPU engine time.</summary>
     public static void IdentifyGpu(Action<string?> deliver) => Gpu.Identify(deliver);
 
-    /// <summary>One culprit pipeline: reuse the cached name within a surge,
-    /// single-flight the sampling, fan the answer out to every waiter.</summary>
+    /// <summary>Caches the name per surge, runs one sample at a time, answers every waiter.</summary>
     private sealed class Lookup(Func<Task<string?>> sample, string chip)
     {
         private readonly object _gate = new();
@@ -55,7 +50,7 @@ public static class PeakCulprit
             try { name = await sample(); }
             catch (Exception ex)
             {
-                // Log the FAILURE only - never a process name.
+                // Log the failure only, never a process name.
                 DebugLog.Write($"{chip} culprit lookup failed.", ex);
             }
 
@@ -71,7 +66,7 @@ public static class PeakCulprit
             }
             foreach (Action<string?> w in waiters)
             {
-                try { w(name); } catch { /* a dead subscriber can't spoil the others */ }
+                try { w(name); } catch { /* one bad subscriber can't spoil the others */ }
             }
         }
     }
@@ -100,14 +95,13 @@ public static class PeakCulprit
         foreach (Process p in Process.GetProcesses())
         {
             try { map[p.Id] = (p.ProcessName, p.TotalProcessorTime); }
-            catch { /* protected or already-gone processes have no story to tell */ }
+            catch { /* protected or exited process */ }
             finally { p.Dispose(); }
         }
         return map;
     }
 
-    // The CPU dance again, over Windows' per-process GPU-time odometers - ALL
-    // engine types count, so an encode pegging the video block is still caught.
+    // Same as CPU over per-process GPU time; all engine types count, so video encodes are caught.
     private static async Task<string?> SampleGpuAsync()
     {
         Dictionary<int, long> first = GpuSnapshot();
@@ -122,7 +116,7 @@ public static class PeakCulprit
             long delta = kv.Value - was;
             if (delta > best) { best = delta; bestPid = kv.Key; }
         }
-        if (bestPid == 0) return null; // nobody moved - a truly idle GPU has no culprit
+        if (bestPid == 0) return null; // idle GPU, no culprit
         try
         {
             using var p = Process.GetProcessById(bestPid);

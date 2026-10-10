@@ -1,16 +1,4 @@
-# Builds the shareable version of TOA - Fan Control.
-#
-# This is FRAMEWORK-DEPENDENT on purpose: the app uses the .NET 10 that's installed
-# on the PC rather than carrying its own copy. Why it matters - when Windows Update
-# patches .NET 10 (security/performance fixes), the app automatically runs on the
-# patched version next launch. A self-contained build would freeze one .NET version
-# inside the exe and never get those fixes.
-#
-# Result: one small .exe (~a few MB, not 74). It needs .NET 10 present:
-#   - Your PCs already have it, so they just run it.
-#   - A brand-new PC that lacks it: Windows shows a "get .NET" prompt with the exact
-#     download link the moment the exe is run (one click, one time).
-# PawnIO is still installed/updated by the app itself on first run.
+# Builds the portable exe framework-dependent on purpose, so Windows Update keeps its .NET 10 patched.
 
 $ErrorActionPreference = 'Stop'
 $proj = Join-Path $PSScriptRoot 'FanControl.csproj'

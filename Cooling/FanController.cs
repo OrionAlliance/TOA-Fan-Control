@@ -10,33 +10,29 @@ public sealed class FanReadings
     public float? CpuTemp { get; init; }
     public float? GpuTemp { get; init; }
 
-    /// <summary>While driving: the held recent peak (see PeakHoldMs) the fans are
-    /// matching. Otherwise the current hotter of CPU/GPU, or null with no reading.</summary>
+    /// <summary>The held peak the fans match while driving, else the current hotter of CPU/GPU (null if none).</summary>
     public float? SourceTemp { get; init; }
     public float OutputPercent { get; init; }
 
-    /// <summary>Session peaks (since app start / last Reset peaks) - the ONE truth
-    /// every view renders, so dials, bars and Game Mode always agree.</summary>
+    /// <summary>Session peaks since start or Reset peaks; every view renders these so they always agree.</summary>
     public float PeakCpu { get; init; } = float.NaN;
     public float PeakGpu { get; init; } = float.NaN;
 
-    /// <summary>Session peak load % - its own maximum, independent of peak temp.</summary>
+    /// <summary>Session peak load %, tracked independently of peak temp.</summary>
     public float PeakCpuLoad { get; init; } = float.NaN;
     public float PeakGpuLoad { get; init; } = float.NaN;
 
-    /// <summary>Live load % right now (latest ~1s capture) - the cyan triangle's needle.</summary>
+    /// <summary>Live load % from the latest ~1s capture.</summary>
     public float CpuLoad { get; init; } = float.NaN;
     public float GpuLoad { get; init; } = float.NaN;
 
-    /// <summary>True = GPU markers show real load (watts vs card max); false = busy-time
-    /// fallback. Drives the tooltip wording - the gauge must say what it measures.</summary>
+    /// <summary>True = GPU load is watts vs card max, false = busy-time fallback; drives the tooltip wording.</summary>
     public bool GpuLoadIsTrue { get; init; }
 
-    /// <summary>Nothing to drive - the app is a read-only thermometer right now.</summary>
+    /// <summary>Nothing to drive, so the app is only a thermometer.</summary>
     public bool NoControllableFans { get; init; }
 
-    /// <summary>The BIOS curve owns the fans right now (paused, or none to drive) -
-    /// displays must not claim a fan % the app isn't commanding.</summary>
+    /// <summary>The BIOS curve owns the fans, so displays must not show a fan % the app isn't commanding.</summary>
     public bool BiosHasFans { get; init; }
 
     /// <summary>The watchdog died mid-session; a clean exit can no longer restore the BIOS curve.</summary>
@@ -48,38 +44,22 @@ public sealed class FanReadings
     public string Status { get; init; } = "";
     public IReadOnlyList<FanChannel> Fans { get; init; } = Array.Empty<FanChannel>();
 
-    /// <summary>Names of the fans the app is actually driving - what the UI shows as dials.</summary>
+    /// <summary>Names of the fans the app is driving, shown as dials.</summary>
     public IReadOnlyList<string> DrivenFans { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>
-/// The whole engine, in one sentence: every second, take the hotter of the CPU
-/// and GPU and set the fans to that percent - leaning up to +5 ahead of it past
-/// 70C. 65C -> 65%, 78C -> 83%. That's it. No modes, no target, no curve - the
-/// rule is its own safety, because hot automatically means fast.
-///
-/// Releasing is NOT this class's job when a watchdog is attached. The fan chip
-/// has no "hand back to BIOS" command - the library restores a header by writing
-/// back what it read the first time it took that header, so only the first
-/// grabber holds the real BIOS settings. The watchdog grabs them before we do,
-/// which makes it the only thing that can truly hand them back. We just ask.
-///
-/// Without a watchdog we're the first grabber, so we own the release ourselves.
+/// Every second, fan % = the hotter of CPU/GPU in C (leaning up to +5 past 70C), so hot always means fast.
+/// Only the first grabber of a header holds the real BIOS settings, so the watchdog (when attached) owns the release.
 /// </summary>
 public sealed class FanController : IDisposable
 {
     private const double TickMs = 1000;
 
-    // When another program is fighting us for the fan registers, tick 4x as fast
-    // so our value is re-asserted within 250ms of any foreign write - holding
-    // control by persistence, since the Super I/O has no concept of ownership.
+    // During a conflict, re-assert every 250ms; the Super I/O has no concept of ownership.
     private const double ConflictTickMs = 250;
 
-    // The one hard rule, and it is NOT a setting. 30% is the floor for every fan,
-    // always: below it Chassis Fan #2 stalls to 0 RPM (measured), and a stalled
-    // fan means no airflow. Making it a constant means no config edit or bug can
-    // ever drop a fan below its stall point - the exact mistake that stalled #2
-    // during testing when the floor was briefly a tunable 20%.
+    // Hard 30% floor, deliberately not a setting: below it Chassis Fan #2 stalls to 0 RPM.
     public const float FloorPercent = 30f;
     public const float CeilingPercent = 100f;
 
@@ -87,28 +67,21 @@ public sealed class FanController : IDisposable
     private const float HotLeanFromC = 70f;
     private const float HotLeanMax = 5f;
 
-    // Ramp up eagerly, coast down gently. Fast down-ramps are what make fan
-    // control audibly "pulse", and being slow to quieten costs nothing.
-    // Per SECOND, not per tick - the tick rate changes during a conflict, and
-    // faster ticks must not mean faster ramps.
+    // Ramp up fast, down slow (fast down-ramps audibly pulse); per second so conflict ticks don't speed ramps.
     private const float SlewUpPerSec = 8f;
     private const float SlewDownPerSec = 3f;
 
-    // Fans track the hottest reading over this window, not the instant's.
-    // Bursty loads (video encoding) sawtooth the CPU temp; holding the recent
-    // peak keeps the fans steady instead of surfing every spike and dip.
+    // Fans track the window's hottest reading so bursty loads don't make them surf the sawtooth.
     private const long PeakHoldMs = 15_000;
 
     private const int MaxBlindTicks = 3;
 
-    // Conflict detection: the chip reporting a duty that differs from what we
-    // last commanded means someone else wrote it. Tolerance covers the chip's
-    // 0-255 PWM quantization; N consecutive misses avoids one-off flukes.
+    // Conflict = chip duty differs from our command; tolerance covers PWM quantization, N misses skips flukes.
     private const float ForeignWriteTolerance = 2.5f;
     private const int ForeignTicksToConfirm = 3;
     private const long ConflictClearMs = 30_000;
 
-    // A SAMPLE line every 5s (time-based - tick rate varies during conflicts).
+    // A SAMPLE log line every 5s, time-based since the tick rate varies.
     private const long SampleEveryMs = 5_000;
 
     private readonly object _gate = new();
@@ -120,25 +93,22 @@ public sealed class FanController : IDisposable
     private List<FanChannel> _controlled = new();
     private List<FanChannel> _candidates = new();
     private float _currentPercent = FloorPercent;
-    // The peak-hold state - see HoldPeak, which owns both fields.
+    // Peak-hold state, owned by HoldPeak.
     private readonly Queue<(long Ms, float Temp, string Src)> _peakWindow = new();
     private float _prevWindowTemp = float.NaN;
     private bool _engaged;
     private bool _paused;
     private int _blindTicks;
-    private int _disposedFlag; // Interlocked - Dispose can race in from the UI thread and ProcessExit at once
+    private int _disposedFlag; // Interlocked: UI thread and ProcessExit can both Dispose
     private bool _publishFaulted; // log-on-change gate for subscriber throws
 
-    // Foreign-writer (SignalRGB & friends) tracking. Interval stamps are
-    // monotonic (TickCount64) - a wall-clock jump must not fake or swallow one.
+    // Foreign-writer tracking, stamped with monotonic TickCount64 so clock jumps can't fake one.
     private int _foreignTicks;
     private bool _conflict;
     private long _lastForeignWriteMs;
     private long _lastSampleLogMs;
 
-    // Session telemetry. Without this the log records that the app ran and
-    // nothing about what it did - useless for tuning, which is the whole reason
-    // the log exists.
+    // Session telemetry for the log, so it records what the app actually did.
     private int _tickCount;
     private bool _sentinelLost;
     private float _peakCpu = float.NaN;
@@ -154,13 +124,11 @@ public sealed class FanController : IDisposable
     private float _dispPeakCpuLoad = float.NaN;
     private float _dispPeakGpuLoad = float.NaN;
 
-    // Peak Info's memory - when each peak was set and who set it, held in
-    // memory only and wiped by Reset peaks.
+    // Peak Info: when and by whom each peak was set; memory only, wiped by Reset peaks.
     private DateTime _dispPeakCpuAt, _dispPeakGpuAt, _dispPeakCpuLoadAt, _dispPeakGpuLoadAt;
     private string? _dispPeakCpuFrom, _dispPeakCpuLoadFrom, _dispPeakGpuFrom, _dispPeakGpuLoadFrom;
 
-    // A load must hold 2 consecutive ~1s captures to count as effort - one-poll
-    // bursts (our own view-switch render, background blips) can't warm anything.
+    // A load must hold 2 consecutive ~1s captures to count, so one-poll blips are ignored.
     private float _prevCpuLoad = float.NaN;
     private float _prevGpuLoad = float.NaN;
     private float _susCpuLoad = float.NaN;
@@ -170,8 +138,7 @@ public sealed class FanController : IDisposable
 
     public event EventHandler<FanReadings>? Updated;
 
-    // Hands out the LIVE instance - safe only while every mutation and every
-    // multi-field read stays on the dispatcher thread (they all do; keep it so).
+    // Live instance: safe only while all mutations and multi-field reads stay on the dispatcher thread.
     public FanSettings Settings
     {
         get { lock (_gate) return _settings; }
@@ -182,17 +149,13 @@ public sealed class FanController : IDisposable
         get { lock (_gate) return _paused; }
     }
 
-    /// <summary>The headers we resolved and will write to - what the watchdog must guard.</summary>
+    /// <summary>The headers we will write to, which the watchdog must guard.</summary>
     public IReadOnlyList<string> ControlledFanNames
     {
         get { lock (_gate) return _controlled.Select(f => f.Name).ToList(); }
     }
 
-    /// <summary>
-    /// Every fan the app COULD drive (controllable, passes the pump/CPU/GPU name
-    /// rule), with a current RPM to help a person identify it - what the fan
-    /// picker lists, regardless of what's currently selected.
-    /// </summary>
+    /// <summary>Every fan the app could drive, with current RPM, for the fan picker.</summary>
     public IReadOnlyList<(string Name, float? Rpm)> CandidateFans
     {
         get { lock (_gate) return _candidates.Select(f => (f.Name, f.Rpm)).ToList(); }
@@ -205,17 +168,12 @@ public sealed class FanController : IDisposable
         _timer.AutoReset = true;
     }
 
-    /// <summary>
-    /// Open the hardware and work out what we can drive - but do NOT write to
-    /// anything yet. The watchdog has to take the fans before we touch them.
-    /// </summary>
+    /// <summary>Open hardware and resolve fans without writing; the watchdog must take them first.</summary>
     public void OpenHardware()
     {
         _hw.Open();
 
-        // A user-entered max (for a card the library doesn't know) outranks the
-        // library - but only while the same card is installed. A swap makes the
-        // stored name mismatch and the number is ignored, never inherited.
+        // A user-entered GPU max outranks the library, but only for the same card.
         lock (_gate)
         {
             if (UserGpuOverrideFor() is { } w)
@@ -228,15 +186,14 @@ public sealed class FanController : IDisposable
         ResolveControlledFans();
     }
 
-    // The ONE precedence rule, written once: a user-entered max stands while the
-    // same card is installed - library values never outrank it. Call under _gate.
+    // User max stands while the same card is installed; call under _gate.
     private int? UserGpuOverrideFor() =>
         _settings.GpuUserMaxWattsFor == _hw.GpuName ? _settings.GpuUserMaxWatts : null;
 
     /// <summary>Same rule, for the notice flow's branch logic.</summary>
     public bool GpuUserOverrideActive { get { lock (_gate) return UserGpuOverrideFor() != null; } }
 
-    /// <summary>Apply a just-entered user max immediately - no restart needed.</summary>
+    /// <summary>Apply a just-entered user max immediately.</summary>
     public void SetGpuMaxWattsOverride(int watts)
     {
         if (_hw.GpuMaxWatts != watts) ResetGpuLoadStream();
@@ -244,9 +201,7 @@ public sealed class FanController : IDisposable
         DebugLog.Write($"GPU max watts: user-set {watts}W for '{_hw.GpuName}' (live).");
     }
 
-    /// <summary>Re-match the card after a library fetch - a fresh install gets
-    /// true load the moment the library lands, and a corrected (or removed) row
-    /// takes effect without a restart instead of lying until one.</summary>
+    /// <summary>Re-match the card after a library fetch so new or changed rows apply without a restart.</summary>
     public void RefreshGpuMaxFromLibrary()
     {
         lock (_gate)
@@ -280,15 +235,7 @@ public sealed class FanController : IDisposable
         DebugLog.Write("Controller started.");
     }
 
-    // Fans we must NOT drive with case-fan logic, matched by name (case-insensitive
-    // substring). Everything else on the board is a case/system fan and is safe to
-    // drive - however many there are.
-    //   pump    - a liquid-cooler pump has to run flat-out; throttle it and the CPU
-    //             cooks. The one genuine landmine.
-    //   cpu     - the CPU cooler stays on the BIOS as a failsafe: no failure of this
-    //             app can then starve the CPU of cooling.
-    //   chipset - cools its own chip on its own temperature, not the CPU/GPU we track.
-    //   gpu     - the GPU's own fan, driven by the GPU's driver, not us.
+    // Name substrings left on the BIOS: pump must run flat-out, cpu stays as a failsafe, chipset/gpu self-manage.
     private static readonly string[] SkipFanPatterns = { "pump", "cpu", "chipset", "gpu" };
 
     private void ResolveControlledFans()
@@ -312,9 +259,7 @@ public sealed class FanController : IDisposable
                 _candidates.Add(f);
             }
 
-            // The user's picker can only NARROW the safety rule, never widen it:
-            // it filters the candidates, and pump/CPU/GPU names never got that far.
-            // Null = never picked (first run drives all candidates until then).
+            // The picker only narrows the safe candidates; null = never picked, so drive them all.
             List<string>? picked = _settings.SelectedFans;
             _controlled = picked == null
                 ? _candidates.ToList()
@@ -331,7 +276,7 @@ public sealed class FanController : IDisposable
         }
     }
 
-    /// <param name="reresolve">True only before the watchdog starts: it guards the set it seized at startup, and only that set.</param>
+    /// <param name="reresolve">True only before the watchdog starts; it guards only the set it seized.</param>
     public void UpdateSettings(Action<FanSettings> mutate, bool reresolve = false)
     {
         lock (_gate)
@@ -344,7 +289,7 @@ public sealed class FanController : IDisposable
 
     // ---- pause / resume -----------------------------------------------------
 
-    /// <summary>Clear the displayed session peaks - every view resets at once.</summary>
+    /// <summary>Clear the displayed session peaks in every view.</summary>
     public void ResetDisplayPeaks()
     {
         _dispPeakCpu = float.NaN;
@@ -352,13 +297,12 @@ public sealed class FanController : IDisposable
         _dispPeakCpuLoad = float.NaN;
         _dispPeakGpuLoad = float.NaN;
 
-        // Peak Info forgets with the peaks - times and names included.
+        // Peak Info times and names reset too.
         _dispPeakCpuAt = _dispPeakGpuAt = _dispPeakCpuLoadAt = _dispPeakGpuLoadAt = default;
         _dispPeakCpuFrom = _dispPeakCpuLoadFrom = _dispPeakGpuFrom = _dispPeakGpuLoadFrom = null;
     }
 
-    /// <summary>The Peak Info button's four lines - built here so the window stays
-    /// display-only.</summary>
+    /// <summary>The Peak Info button's four lines, built here so the window stays display-only.</summary>
     public string BuildPeakReport()
     {
         string gpuLoadLabel = GpuLoadIsTrue ? "Highest GPU load" : "Highest GPU busy time";
@@ -376,7 +320,7 @@ public sealed class FanController : IDisposable
         }
     }
 
-    // MaxInto that also says whether it raised - a raise is what stamps Peak Info.
+    // MaxInto that reports a raise, which stamps Peak Info.
     private static bool RaisedInto(ref float peak, float v)
     {
         if (float.IsNaN(v) || (!float.IsNaN(peak) && v <= peak)) return false;
@@ -416,8 +360,7 @@ public sealed class FanController : IDisposable
         }
         else
         {
-            // No watchdog, so we were the first to take these headers and our own
-            // saved defaults are the real ones.
+            // No watchdog: we grabbed first, so our saved defaults are the real BIOS ones.
             foreach (FanChannel f in controlled)
             {
                 try { f.Release(); }
@@ -430,10 +373,7 @@ public sealed class FanController : IDisposable
 
     // ---- the loop -----------------------------------------------------------
 
-    // 1 while a tick is inside Poll(). A stalled hardware read must not let the
-    // next timer tick pile on top of it - two threads in the sensor library at
-    // once is undefined behaviour. Skipping a beat is harmless: the fans just
-    // hold their speed ~1s longer and the next tick catches up.
+    // 1 while inside Poll(); a stalled read skips ticks since two threads in the sensor library is undefined.
     private int _tickBusy;
 
     private void OnTick(object? sender, ElapsedEventArgs e)
@@ -449,7 +389,7 @@ public sealed class FanController : IDisposable
         }
         catch (Exception ex)
         {
-            // An exception here means we can no longer trust our own readings.
+            // We can no longer trust our readings.
             DebugLog.Write("Tick failed - handing the fans back to the BIOS.", ex);
             SafeRelease();
         }
@@ -477,7 +417,7 @@ public sealed class FanController : IDisposable
         float? cpu = _hw.CpuTemp;
         float? gpu = _hw.GpuTemp;
 
-        // The whole decision: whichever is hotter.
+        // Whichever is hotter.
         float? source = Max(cpu, gpu);
 
         if (controlled.Count == 0)
@@ -487,10 +427,7 @@ public sealed class FanController : IDisposable
             return;
         }
 
-        // If the sentinel died, everything still LOOKS fine - the events outlive it,
-        // Ready stays signalled, Restore gets set for nobody. Left alone we'd keep
-        // driving and have no way at all to hand the fans back, which is worse than
-        // never having had a watchdog. Fall back to owning the release ourselves.
+        // A dead sentinel still looks fine (events outlive it), so fall back to owning the release ourselves.
         if (link != null && !link.SentinelAlive)
         {
             DebugLog.Write(
@@ -507,7 +444,7 @@ public sealed class FanController : IDisposable
 
         if (paused)
         {
-            // Paused = not writing, so there is no conflict left to win.
+            // Not writing, so no conflict to win.
             if (_conflict)
             {
                 _conflict = false;
@@ -515,7 +452,7 @@ public sealed class FanController : IDisposable
                 SetTickRate(TickMs);
                 DebugLog.Write("Paused during a conflict - conflict state cleared.");
             }
-            // Paused is not blind: the log keeps recording what the BIOS does.
+            // Keep logging what the BIOS does.
             TrackPeaks(cpu, gpu, controlled);
             if (Environment.TickCount64 - _lastSampleLogMs >= SampleEveryMs)
             {
@@ -528,7 +465,7 @@ public sealed class FanController : IDisposable
             return;
         }
 
-        // No temperature means no basis for a decision. Hand back to the BIOS.
+        // No temperature, no decision: hand back to the BIOS.
         if (source is not { } temp || float.IsNaN(temp))
         {
             _blindTicks++;
@@ -549,14 +486,11 @@ public sealed class FanController : IDisposable
 
         _blindTicks = 0;
 
-        // Drive off the window's hottest reading, not this instant's - spikes
-        // still land instantly, only quietening waits (why: PeakHoldMs).
+        // Drive off the window's hottest reading; spikes land instantly, only quietening waits.
         string src = (gpu ?? float.MinValue) >= (cpu ?? float.MinValue) ? "GPU" : "CPU";
         (float driving, string drivingSrc) = HoldPeak(temp, src);
 
-        // Never write before the watchdog holds these headers. If we got in first
-        // it would be left with nothing to restore, and a force-kill would strand
-        // the fans - the exact thing it exists to prevent.
+        // Never write before the watchdog holds the headers, or it has no BIOS state to restore.
         if (link != null && !link.Ready.WaitOne(0))
         {
             link.Resume.Set();
@@ -565,17 +499,13 @@ public sealed class FanController : IDisposable
             return;
         }
 
-        // dt = the interval that scheduled THIS tick, read before DetectForeignWriter can change it.
+        // This tick's interval, read before DetectForeignWriter can change it.
         float dt = (float)(_timer.Interval / 1000.0);
 
-        // Before this tick's write: is the chip still holding what WE wrote last
-        // tick? If not, another program (RGB suites often ship fan control and
-        // enable it in updates) is writing too. Answer: out-write it - tick 4x
-        // faster so our value is re-asserted within 250ms of every foreign write.
+        // Check the chip still holds our last write; if another app (often RGB suites) wrote, out-write it.
         DetectForeignWriter(controlled);
 
-        // fan % = temperature, floored so no fan stalls and capped at full.
-        // Past 70C the fans lean ahead: 72C -> 74%, 75C -> 80%, 85C -> 90%.
+        // fan % = temperature plus the hot lean, floored and capped.
         float lean = Math.Clamp(driving - HotLeanFromC, 0f, HotLeanMax);
         float desired = Math.Clamp(driving + lean, FloorPercent, CeilingPercent);
         _currentPercent = Slew(_currentPercent, desired, dt);
@@ -585,8 +515,7 @@ public sealed class FanController : IDisposable
 
         _engaged = true;
 
-        // Label the held peak with the chip that actually reached it - the instant
-        // hotter can be the OTHER chip while a held spike still drives the fans.
+        // Label with the chip that reached the held peak, not the instant hotter one.
         string status = $"Matching {drivingSrc} {driving:F0}°C -> Fans: {_currentPercent:F0}%";
         if (_conflict)
             status += "   ·   another app is fighting for the fans - holding control";
@@ -603,24 +532,17 @@ public sealed class FanController : IDisposable
         Publish(cpu, gpu, driving, status: status);
     }
 
-    // The peak-hold window: fans match the hottest reading of the last PeakHoldMs
-    // rather than the instant's, so bursty loads (video encoding) can't make them
-    // surf the sawtooth. Returns the driving temp and the chip that actually
-    // reached it, so the status line never mislabels a held peak.
+    // Returns the hottest reading of the last PeakHoldMs and the chip that reached it.
     private (float Temp, string Src) HoldPeak(float temp, string src)
     {
-        // A fresh engagement drives from the CURRENT temp: a peak held from
-        // before a pause or sensor loss must not outlive its disengagement.
+        // A fresh engagement starts from the current temp, dropping peaks held from before.
         if (!_engaged)
         {
             _peakWindow.Clear();
             _prevWindowTemp = float.NaN;
         }
 
-        // A reading enters the hold only after surviving 2 consecutive ticks -
-        // one glitched sample must not rule the fans for a whole window. The
-        // instant reading still seeds the fold below, so a real spike lands
-        // this tick; only its hold starts one tick late.
+        // Only readings that survive 2 ticks are held, so a glitch can't rule a whole window.
         long nowMs = Environment.TickCount64;
         float paired = float.IsNaN(_prevWindowTemp) ? temp : MathF.Min(temp, _prevWindowTemp);
         _peakWindow.Enqueue((nowMs, paired, src));
@@ -633,14 +555,10 @@ public sealed class FanController : IDisposable
         return (held.Temp, held.Src);
     }
 
-    /// <summary>
-    /// Compare the chip's reported duty against what we last commanded. A
-    /// persistent mismatch (while we're engaged) means a foreign writer; enter
-    /// conflict mode - 4x tick rate - until it's been quiet for 30 seconds.
-    /// </summary>
+    /// <summary>A persistent duty mismatch means a foreign writer: tick 4x until quiet for 30s.</summary>
     private void DetectForeignWriter(List<FanChannel> controlled)
     {
-        if (!_engaged) return; // nothing of ours on the chip yet to compare against
+        if (!_engaged) return; // nothing of ours on the chip yet
 
         bool foreign = controlled.Any(f =>
             f.Percent is { } p && Math.Abs(p - _currentPercent) > ForeignWriteTolerance);
@@ -682,41 +600,31 @@ public sealed class FanController : IDisposable
         _timer.Start();
     }
 
-    // "Track the max, NaN-safe" - the one fold every peak in this file uses.
+    // NaN-safe max fold used by every peak.
     private static void MaxInto(ref float peak, float v)
     {
         if (!float.IsNaN(v) && (float.IsNaN(peak) || v > peak)) peak = v;
     }
 
-    /// <summary>True when the GPU markers show real load (watts vs the card's max)
-    /// rather than busy time - the card has a power sensor AND a known max. Sensor
-    /// PRESENCE, not this tick's value, so the label can't flicker on a blip.</summary>
+    /// <summary>True when GPU load is watts vs max; keyed on sensor presence so the label can't flicker.</summary>
     public bool GpuLoadIsTrue => _hw.GpuMaxWatts != null && _hw.GpuHasPowerSensor;
 
-    /// <summary>The card's sensor-reported name - for the library notice popup.</summary>
+    /// <summary>The card's sensor-reported name.</summary>
     public string? GpuName => _hw.GpuName;
 
-    /// <summary>Whether the card has a power sensor - the notice popup must not
-    /// ask for max watts it can never use.</summary>
+    /// <summary>Whether the card has a power sensor, so the popup never asks for unusable max watts.</summary>
     public bool GpuHasPowerSensor => _hw.GpuHasPowerSensor;
 
-    // Sustained load = min of the last two ~1s captures, so a one-poll blip can't
-    // become a peak. Captured on its own ~1s cadence, NOT per tick - conflict
-    // mode's 250ms ticks must not shrink the two-capture window to half a second.
+    // Sustained load = min of the last two ~1s captures, on its own cadence so conflict ticks can't shrink it.
     private void CaptureLoads()
     {
         if (Environment.TickCount64 - _lastLoadCaptureMs < 900) return;
         _lastLoadCaptureMs = Environment.TickCount64;
 
-        // CPU load is time-based busy - honest as-is for a CPU (no readable
-        // per-chip power ceiling exists to do better).
+        // CPU load is busy time; no readable CPU power ceiling exists.
         float curCl = _hw.CpuLoad ?? float.NaN;
 
-        // GPU: TRUE LOAD when possible - watts against the card's reference max
-        // (the trailer up the hill, not the revs). Falls back to the D3D engine
-        // counters (busy time) when the card lacks a power sensor or library row.
-        // The mode is decided by sensor PRESENCE, not this tick's value: a blip
-        // must poison the pair (NaN), never slip a busy sample into the stream.
+        // GPU: watts vs reference max when possible, else busy time; a missing reading poisons the pair.
         float curGl;
         if (_hw.GpuHasPowerSensor && _hw.GpuMaxWatts is { } max && max > 0)
             curGl = _hw.GpuPowerW is { } watts ? MathF.Min(watts / max * 100f, 100f) : float.NaN;
@@ -729,8 +637,7 @@ public sealed class FanController : IDisposable
         _prevGpuLoad = curGl;
     }
 
-    // The GPU load measure just switched (busy time <-> true load, or a new
-    // denominator): samples of the old measure must not survive as "peaks".
+    // The GPU load measure changed, so old samples must not survive as peaks.
     private void ResetGpuLoadStream()
     {
         _prevGpuLoad = float.NaN;
@@ -770,8 +677,7 @@ public sealed class FanController : IDisposable
             ? $" gpw={pw:F0}{(_hw.GpuMaxWatts is { } mx ? $"/{mx}" : "")}"
             : "";
         string bt = _hw.BoardTemp is { } b ? $" board={b:F1}" : "";
-        // When the held peak is above the current hotter, show it - that's why
-        // the fans sit where they do while the instantaneous temp has dipped.
+        // Show the held peak when it explains fans running above the current temp.
         string hold = drivingTemp > (hotter ?? float.MinValue) + 0.5f ? $" hold={drivingTemp:F1}" : "";
         DebugLog.Write(bios
             ? $"SAMPLE(bios) cpu={cpu:F1}{cl} gpu={gpu:F1}{gl}{gc}{gp}{bt} hotter={hotter:F1} {rpm}"
@@ -795,7 +701,7 @@ public sealed class FanController : IDisposable
 
     private float Slew(float current, float desired, float dt)
     {
-        // dt scales conflict mode's faster ticks to the same %/second ramp rates.
+        // dt keeps %/second ramps the same at any tick rate.
         float up = SlewUpPerSec * dt;
         float down = SlewDownPerSec * dt;
 
@@ -808,11 +714,7 @@ public sealed class FanController : IDisposable
     private void Publish(float? cpu, float? gpu, float? source, string status,
                          bool noFans = false, bool biosHasFans = false)
     {
-        // Display peaks live here, not in the views: every view renders these, so
-        // switching dial/bar/Game Mode can never show different "peaks". Kept
-        // separate from the SESSION PEAKS log values - Reset peaks clears these,
-        // but the log keeps reporting the true whole-session maximum for support.
-        // A raised record also stamps Peak Info: when and who.
+        // Display peaks (separate from the log's whole-session peaks); a raise stamps Peak Info when and who.
         DateTime stamp = DateTime.Now;
         if (RaisedInto(ref _dispPeakCpu, cpu ?? float.NaN))
         {
@@ -857,7 +759,7 @@ public sealed class FanController : IDisposable
             DrivenFans = ControlledFanNames,
         };
 
-        // A synchronous subscriber throw must not unwind into Poll and cost fan control.
+        // A subscriber throw must not unwind into Poll and cost fan control.
         try
         {
             Updated?.Invoke(this, readings);
@@ -886,10 +788,7 @@ public sealed class FanController : IDisposable
         return MathF.Max(a.Value, b.Value);
     }
 
-    /// <summary>
-    /// Get the fans back on the BIOS curve. Safe to call repeatedly, from any
-    /// thread, and during shutdown - it must never throw.
-    /// </summary>
+    /// <summary>Put the fans back on the BIOS curve; safe from any thread, anytime, and never throws.</summary>
     public void SafeRelease()
     {
         try
@@ -919,14 +818,12 @@ public sealed class FanController : IDisposable
 
         try { _timer.Dispose(); } catch { /* shutting down */ }
 
-        // Before anything else - if this throws or the release hangs, the numbers
-        // from the session are still on disk.
+        // First, so the session numbers reach disk even if the release hangs.
         try { LogSessionSummary(); } catch { /* never block shutdown */ }
 
         SafeRelease();
 
-        // Give the watchdog (or the Super I/O) a moment to actually put the fans
-        // back before this process - and its driver handle - goes away.
+        // Let the fans actually go back before our driver handle goes away.
         Thread.Sleep(400);
 
         // Closing the library restores OUR saved defaults (the watchdog's seized speed) over its BIOS hand-back.

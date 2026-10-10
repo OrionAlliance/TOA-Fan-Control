@@ -8,18 +8,13 @@ using System.Windows.Shapes;
 
 namespace FanControlApp.Controls;
 
-/// <summary>
-/// A case fan drawn as the real thing: a square frame with corner screws, a dished
-/// circular recess, and a set of blades that actually spin - faster the higher the
-/// RPM, stopped when it's stopped. The reading sits in the hub. This is the fan
-/// counterpart to <see cref="Gauge"/>: temps get a dial, fans get a fan.
-/// </summary>
+/// <summary>A drawn case fan whose blades spin faster with RPM; the fan counterpart to <see cref="Gauge"/>.</summary>
 public partial class FanBlade : UserControl
 {
-    // How many blades. Seven reads unmistakably as a computer case fan.
+    // Seven reads unmistakably as a case fan.
     private const int BladeCount = 7;
 
-    // How much of the height is set aside under the fan for the name.
+    // Height reserved under the fan for the name.
     private const double LabelBand = 24;
 
     private RotateTransform? _spin;
@@ -31,7 +26,7 @@ public partial class FanBlade : UserControl
     {
         InitializeComponent();
         SizeChanged += (_, _) => Rebuild();
-        IsVisibleChanged += (_, _) => UpdateSpin(); // a running animation keeps WPF drawing 60 times a second, seen or not
+        IsVisibleChanged += (_, _) => UpdateSpin(); // a running animation redraws 60 fps even when hidden
     }
 
     private double _revs; // speed of the running spin, 0 = stopped
@@ -58,13 +53,13 @@ public partial class FanBlade : UserControl
         DependencyProperty.Register(nameof(Percent), typeof(double), typeof(FanBlade),
             new PropertyMetadata(double.NaN, (d, _) => ((FanBlade)d).UpdateReadout()));
 
-    /// <summary>Fan name, shown under the frame. May be two lines ("Chassis\nFan #2").</summary>
+    /// <summary>Fan name, shown under the frame.</summary>
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
 
-    /// <summary>Current RPM. Drives the spin speed - the blades move at the real rate.</summary>
+    /// <summary>Current RPM; drives the spin speed.</summary>
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
-    /// <summary>The duty the app is driving this fan at. Shown in the hub.</summary>
+    /// <summary>Duty the app is driving this fan at, shown in the hub.</summary>
     public double Percent { get => (double)GetValue(PercentProperty); set => SetValue(PercentProperty, value); }
 
     // ---- geometry -----------------------------------------------------------
@@ -90,7 +85,7 @@ public partial class FanBlade : UserControl
 
         if (ActualWidth <= 20 || ActualHeight <= 20) return;
 
-        // The fan sits in the space above the label band, centred left-to-right.
+        // Fan is centred above the label band.
         double boxH = ActualHeight - LabelBand;
         _cx = ActualWidth / 2;
         _cy = boxH / 2;
@@ -112,7 +107,7 @@ public partial class FanBlade : UserControl
         double left = _cx - side / 2;
         double top = _cy - side / 2;
 
-        // Frame - brushed metal, lit from the top-left like the dials.
+        // Brushed metal frame, lit from the top-left like the dials.
         var frame = new Rectangle
         {
             Width = side,
@@ -140,7 +135,7 @@ public partial class FanBlade : UserControl
         Canvas.SetTop(frame, top);
         FrameLayer.Children.Add(frame);
 
-        // Corner screws, pulled in from the frame edge.
+        // Corner screws.
         double inset = side * 0.13;
         foreach (var (dx, dy) in new[] { (1, 1), (-1, 1), (1, -1), (-1, -1) })
         {
@@ -164,7 +159,7 @@ public partial class FanBlade : UserControl
             FrameLayer.Children.Add(screw);
         }
 
-        // The bore: a round recess the blades sit inside.
+        // Round recess the blades sit inside.
         var bore = new Ellipse
         {
             Width = _r * 2,
@@ -186,7 +181,7 @@ public partial class FanBlade : UserControl
         FrameLayer.Children.Add(bore);
     }
 
-    /// <summary>The blades, arranged round the hub. The whole layer spins as one.</summary>
+    /// <summary>Blades around the hub; the whole layer spins as one.</summary>
     private void DrawBlades()
     {
         double rInner = _r * 0.30;
@@ -216,7 +211,6 @@ public partial class FanBlade : UserControl
             BladeLayer.Children.Add(p);
         }
 
-        // Spin the layer as a whole about the hub.
         _spin = new RotateTransform(0, _cx, _cy);
         _revs = 0; // fresh transform, nothing spinning yet
         BladeLayer.RenderTransform = _spin;
@@ -235,8 +229,7 @@ public partial class FanBlade : UserControl
         Point trail = PointAt(halfOuter + pitch, rOuter);
         Point b = PointAt(halfInner, rInner);
 
-        // Bowed leading/trailing edges give the blade an airfoil curve rather than
-        // a flat paddle.
+        // Bowed edges give an airfoil curve instead of a flat paddle.
         Point leadCtrl = PointAt(-halfOuter + pitch - 8, rMid + 6);
         Point trailCtrl = PointAt(halfInner + pitch + 6, rMid - 4);
 
@@ -302,9 +295,7 @@ public partial class FanBlade : UserControl
         HubLayer.Children.Add(_hubText);
     }
 
-    /// <summary>Fan name, on one line under the frame. Unlike everything else in
-    /// this control it sits on the CARD, not the dark fan housing - so it follows
-    /// the theme's text colour instead of being hardcoded white.</summary>
+    /// <summary>Fan name under the frame; it sits on the card, so it follows the theme text colour.</summary>
     private void DrawLabel()
     {
         var lab = new TextBlock
@@ -331,11 +322,7 @@ public partial class FanBlade : UserControl
             : p.ToString("0", CultureInfo.InvariantCulture) + "%";
     }
 
-    /// <summary>
-    /// Map RPM to a pleasing spin - not literal (a real fan at 1500 RPM would be an
-    /// unreadable blur), just "faster when it's working harder". Restart from the
-    /// current angle so a speed change never snaps the blades back to zero.
-    /// </summary>
+    /// <summary>Maps RPM to a readable (not literal) spin, restarting from the current angle so it never snaps.</summary>
     private void UpdateSpin()
     {
         if (_spin == null) return;

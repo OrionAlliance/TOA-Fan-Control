@@ -6,14 +6,7 @@ using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
 
-/// <summary>
-/// The tiny always-on-top readout for while you're playing. Display only - it
-/// shows what the controller reports and never touches a fan.
-///
-/// Caveat worth knowing: Topmost cannot draw over a game in EXCLUSIVE fullscreen.
-/// Windows hands the display to the game and nothing else gets a look in. Works
-/// fine over Windowed Fullscreen / Borderless.
-/// </summary>
+/// <summary>Display-only always-on-top readout; Topmost can't draw over exclusive fullscreen, only borderless.</summary>
 public partial class GameModeWindow : Window
 {
     private readonly FanController _controller;
@@ -32,8 +25,7 @@ public partial class GameModeWindow : Window
 
         _controller.Updated += OnUpdated;
 
-        // Alt+F4 on the overlay should bring the app back, not leave it running
-        // with every window hidden and no way to reach it.
+        // Alt+F4 restores the app instead of leaving it running with every window hidden.
         Closing += (_, e) =>
         {
             if (_forceClose) return;
@@ -42,10 +34,7 @@ public partial class GameModeWindow : Window
         };
     }
 
-    /// <summary>
-    /// Actually close, for app shutdown. Without this the cancel above would
-    /// refuse the close and leave the process alive with no windows.
-    /// </summary>
+    /// <summary>Really closes on app shutdown, bypassing the Closing cancel above.</summary>
     public void ForceClose()
     {
         _forceClose = true;
@@ -97,8 +86,7 @@ public partial class GameModeWindow : Window
 
     private void Render(FanReadings r)
     {
-        // The overlay stays subscribed while hidden (it's reused between Game
-        // Mode sessions) - don't paint it when it isn't on screen.
+        // Stays subscribed while hidden for reuse, so skip painting when not on screen.
         if (!IsVisible) return;
 
         CpuText.Text = r.CpuTemp is { } c ? $"{c:F0}" : "--";
@@ -110,13 +98,11 @@ public partial class GameModeWindow : Window
         // Red when whatever's driving the fans is genuinely hot.
         FanText.Foreground = r.SourceTemp is >= 85 ? Res("Hot") : Res("Text");
 
-        // The controller's session peaks - the same numbers as the dials and bars,
-        // so no view ever disagrees. Reset peaks (main window) clears them all.
+        // The controller's session peaks, shared with the dials and bars so no view disagrees.
         CpuPeakText.Text = float.IsNaN(r.PeakCpu) ? "peak --" : $"peak {r.PeakCpu:F0}";
         GpuPeakText.Text = float.IsNaN(r.PeakGpu) ? "peak --" : $"peak {r.PeakGpu:F0}";
 
-        // RPM of every fan the app is driving, whatever this machine has - the
-        // main window's rule, not a hardcoded fan list.
+        // RPM of every fan the app drives, not a hardcoded list.
         var rpms = r.DrivenFans
             .Select(name => r.Fans.FirstOrDefault(f =>
                 string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)))
@@ -140,7 +126,7 @@ public partial class GameModeWindow : Window
         }
         catch (InvalidOperationException)
         {
-            // DragMove throws if the button was already released. Nothing to do.
+            // Button already released.
         }
 
         SavePlacement();

@@ -5,17 +5,14 @@ using System.Security.Principal;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// Makes a folder admin-only: administrators and SYSTEM can change it, everyone
-/// else can only read and run - so nothing without admin can swap what's inside.
-/// </summary>
+/// <summary>Makes a folder admin-only: admins and SYSTEM can change it, everyone else can only read and run.</summary>
 public static class FolderLock
 {
     // Well-known group IDs (Administrators, SYSTEM, Users), so this works on any Windows language.
     private const string Grants =
         "*S-1-5-32-544:(OI)(CI)F *S-1-5-18:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX";
 
-    // Only the bits that change things - "Modify" also carries read bits, so it can't be used here.
+    // Write bits only; "Modify" also carries read bits, so it can't be used here.
     private const FileSystemRights Writes =
         FileSystemRights.Write | FileSystemRights.Delete | FileSystemRights.DeleteSubdirectoriesAndFiles
         | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership
@@ -26,7 +23,7 @@ public static class FolderLock
     {
         dir = dir.TrimEnd('\\');
 
-        // Drop the inherited "anyone may modify" rules for our own, then have anything already inside follow them.
+        // Replace inherited rules with ours, then reset anything already inside to follow them.
         bool ok = Icacls($"\"{dir}\" /inheritance:r /grant:r {Grants} /C /Q")
                   && (!Directory.EnumerateFileSystemEntries(dir).Any()
                       || Icacls($"\"{dir}\\*\" /reset /T /C /Q"))
@@ -35,15 +32,15 @@ public static class FolderLock
         return ok && IsLocked(dir);
     }
 
-    /// <summary>Where installers that run as admin get downloaded: an admin-only folder whenever the app's own folder is one.</summary>
+    /// <summary>Download folder for admin installers: admin-only when the app's own folder is locked.</summary>
     public static string DownloadFolder()
     {
-        // A portable copy or a fresh setup from Downloads: the running exe is no safer than Temp, so nothing to gain.
+        // Unlocked app folder (portable or Downloads): no safer than Temp, so use Temp.
         if (!IsLockedSafe(AppPaths.ExeDir)) return Path.GetTempPath();
 
         string exeDir = AppPaths.ExeDir.TrimEnd('\\');
         string dir = Path.GetFileName(exeDir).Equals("Updates", StringComparison.OrdinalIgnoreCase)
-            ? exeDir                           // setup launched by the app updater already sits in it
+            ? exeDir                           // updater-launched setup already runs from Updates
             : Path.Combine(exeDir, "Updates");
         Directory.CreateDirectory(dir);
         if (!LockToAdmins(dir)) throw new InvalidOperationException("couldn't secure the download folder");

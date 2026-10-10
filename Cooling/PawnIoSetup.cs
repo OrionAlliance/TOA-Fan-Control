@@ -9,27 +9,14 @@ using Microsoft.Win32;
 
 namespace FanControlApp.Cooling;
 
-/// <summary>
-/// PawnIO is the signed kernel driver LHM uses to reach the motherboard. Without
-/// it, the app sees no fans at all - so on any machine that doesn't have it, we
-/// offer to install it.
-///
-/// We do NOT bundle it. The signed build's redistribution terms are unclear, and
-/// the GPL build is unsigned so Windows won't load it. Instead we fetch the
-/// author's OWN signed installer from his GitHub release at setup time - no
-/// redistribution on our part - and we verify its Authenticode signature before
-/// running it, because downloading and executing anything unchecked is exactly
-/// how you get burned.
-/// </summary>
+/// <summary>Installs the PawnIO driver from the author's own signed release (not bundled), verifying the signature first.</summary>
 public static class PawnIoSetup
 {
-    // GitHub's /latest/download/<asset> always redirects to the newest release's
-    // asset, so we never hardcode a version that goes stale.
+    // /latest/download/ always redirects to the newest release, so no version goes stale.
     private const string InstallerUrl =
         "https://github.com/namazso/PawnIO.Setup/releases/latest/download/PawnIO_setup.exe";
 
-    // The releases API, for reading the latest version number to compare against
-    // what's installed. Same repo the installer comes from.
+    // Releases API for the latest version number.
     private const string LatestReleaseApi =
         "https://api.github.com/repos/namazso/PawnIO.Setup/releases/latest";
 
@@ -40,11 +27,7 @@ public static class PawnIoSetup
 
     public sealed record InstallResult(bool Success, bool RebootRequired, string Message);
 
-    /// <summary>
-    /// True if the PawnIO kernel service is registered. The installer creates a
-    /// service literally named "PawnIO"; its presence is the authoritative
-    /// "is it installed" signal.
-    /// </summary>
+    /// <summary>True if the "PawnIO" kernel service is registered.</summary>
     public static bool IsInstalled()
     {
         try
@@ -56,34 +39,26 @@ public static class PawnIoSetup
         catch (Exception ex)
         {
             DebugLog.Write("PawnIO detection failed; assuming present so we don't nag.", ex);
-            return true; // fail safe: don't badger the user if the check itself broke
+            return true; // don't nag if the check itself broke
         }
     }
 
     /// <summary>Installed vs newest-available PawnIO, when an update exists.</summary>
     public sealed record UpdateInfo(Version Installed, Version Latest);
 
-    /// <summary>
-    /// Is a newer PawnIO out than the one installed? Returns null when there's
-    /// nothing to do - not installed, already current, or we couldn't reach GitHub
-    /// (offline is not a reason to nag). The installer upgrades in place, so
-    /// applying an update is just the normal <see cref="DownloadVerifyInstallAsync"/>.
-    /// </summary>
+    /// <summary>Returns a newer PawnIO version if one exists; null when missing, current, or offline.</summary>
     public static async Task<UpdateInfo?> CheckForUpdateAsync()
     {
         Version? installed = GetInstalledVersion();
-        if (installed == null) return null; // missing or unreadable - not an "update"
+        if (installed == null) return null; // missing or unreadable
 
         Version? latest = await GetLatestVersionAsync();
-        if (latest == null) return null; // offline / API hiccup - stay quiet
+        if (latest == null) return null; // offline, stay quiet
 
         return latest > installed ? new UpdateInfo(installed, latest) : null;
     }
 
-    /// <summary>
-    /// The installed PawnIO version, read from its uninstall entry (DisplayVersion,
-    /// e.g. "2.2.0.0"). Null if PawnIO isn't there or the value can't be read.
-    /// </summary>
+    /// <summary>Installed PawnIO version from its uninstall entry, or null if absent or unreadable.</summary>
     public static Version? GetInstalledVersion()
     {
         string[] roots =
@@ -137,11 +112,7 @@ public static class PawnIoSetup
         }
     }
 
-    /// <summary>
-    /// Turn "2.2.0", "v2.2.0" or "2.2.0.0" into a 4-part Version so the two sources
-    /// compare cleanly - the tag has three parts, the uninstall entry has four, and
-    /// Version treats a missing part as -1 (which would read as "older").
-    /// </summary>
+    /// <summary>Parses "v2.2.0" or "2.2.0.0" into a 4-part Version, since a missing part would compare as older.</summary>
     private static Version? ParseVersion(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
@@ -154,11 +125,7 @@ public static class PawnIoSetup
         return new Version(n[0], n[1], n[2], n[3]);
     }
 
-    /// <summary>
-    /// Download the official installer, verify it's signed by the expected
-    /// publisher, run it, and report what happened. progress gets short status
-    /// strings for the UI.
-    /// </summary>
+    /// <summary>Downloads the official installer, verifies its publisher signature, and runs it.</summary>
     public static async Task<InstallResult> DownloadVerifyInstallAsync(IProgress<string> progress)
     {
         string temp = "";
@@ -167,8 +134,7 @@ public static class PawnIoSetup
             temp = Path.Combine(FolderLock.DownloadFolder(), $"PawnIO_setup_{Environment.ProcessId}.exe");
             progress.Report("Downloading the official PawnIO installer…");
             await DownloadAsync(InstallerUrl, temp);
-            // Filename only - the full temp path contains the Windows username,
-            // and this log ships with bug reports.
+            // Filename only: the full path holds the Windows username.
             DebugLog.Write($"PawnIO installer downloaded ({Path.GetFileName(temp)}).");
 
             progress.Report("Verifying its signature…");
@@ -221,9 +187,7 @@ public static class PawnIoSetup
 
     private static async Task<int> RunInstallerAsync(string path)
     {
-        // The app is already elevated, so the installer inherits admin - no extra
-        // UAC prompt. Run it interactively (not silent) so the person sees the
-        // real, signed PawnIO installer doing the work.
+        // Inherits our admin rights; runs visibly so the person sees the real PawnIO installer.
         var psi = new ProcessStartInfo
         {
             FileName = path,
@@ -238,20 +202,14 @@ public static class PawnIoSetup
 
     // ---- signature verification ---------------------------------------------
 
-    /// <summary>
-    /// Valid Authenticode signature (chains to a trusted root, file not tampered)
-    /// AND signed by the expected publisher. Both must hold. Public so the setup
-    /// bootstrapper can vet the .NET runtime installer the same way.
-    /// </summary>
+    /// <summary>True only for a valid, trusted Authenticode signature from the expected publisher.</summary>
     public static bool IsTrustedAndSignedBy(string path, string expectedSigner)
     {
         try
         {
             if (!WinVerifyTrustValid(path)) return false;
 
-            // CreateFromSignedFile is the right tool to read a PE's signer, and has
-            // no clean modern replacement - the SYSLIB0057 obsoletion swept it up
-            // with unrelated cert-loading APIs.
+            // CreateFromSignedFile has no modern replacement; SYSLIB0057 flagged it by accident.
 #pragma warning disable SYSLIB0057
             using var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
 #pragma warning restore SYSLIB0057

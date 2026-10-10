@@ -3,10 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
     <Grid>
-        <!-- Face: dial, zones, ticks, numbers. Rebuilt only when the size changes. -->
+        <!-- Dial face, rebuilt only when the size changes. -->
         <Canvas x:Name="Face" />
 
-        <!-- Moving parts: needle and the yellow peak mark. Built once, rotated. -->
+        <!-- Needle and peak mark, built once and rotated. -->
         <Canvas x:Name="Moving" />
     </Grid>
 </UserControl>

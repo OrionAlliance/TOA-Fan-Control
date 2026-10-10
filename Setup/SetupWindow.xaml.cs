@@ -6,13 +6,7 @@ using FanControlApp.Infrastructure;
 
 namespace FanControlSetup;
 
-/// <summary>
-/// The whole installer, start to finish:
-///   1. .NET 10 present? If not, install it (required - the app can't run without it).
-///   2. PawnIO present? If not, ask. Decline = stop and close (required too).
-///   3. Write the app + a Start-menu shortcut, then launch it.
-/// Every step says what it's doing; either prerequisite can stop the whole thing.
-/// </summary>
+/// <summary>The installer flow: ensure .NET 10, ensure PawnIO (both required), install the app, launch it.</summary>
 public partial class SetupWindow : Window
 {
     private TaskCompletionSource<bool>? _choice;
@@ -69,10 +63,7 @@ public partial class SetupWindow : Window
             else DebugLog.Write("PawnIO already present.");
 
             // ---- update mode? ----
-            // --update "<dir>": launched by the app's self-updater, which already
-            // knows where the app lives. No questions - replace in place, refresh
-            // the Start-menu shortcut and the Installed-apps version, relaunch.
-            // The desktop is left exactly as the user has it.
+            // --update "<dir>" from the self-updater: replace in place with no questions, desktop untouched.
             string? updateDir = GetUpdateDir();
             if (updateDir != null)
             {
@@ -102,8 +93,6 @@ public partial class SetupWindow : Window
             }
 
             // ---- where should it go? ----
-            // A visible folder the user picked beats AppData every time - one
-            // obvious place that IS the whole app (exe, settings, log together).
             string? installDir = await AskInstallDirAsync();
             if (installDir == null)
             {
@@ -122,7 +111,7 @@ public partial class SetupWindow : Window
             AppInstaller.CreateStartMenuShortcut();
             AppInstaller.RegisterInInstalledApps();
 
-            // The desktop is the user's space - that one gets asked about.
+            // The desktop is the user's space, so ask.
             bool desktop = await AskAsync(
                 "Add a desktop shortcut?",
                 "Want a desktop shortcut too?",
@@ -161,10 +150,7 @@ public partial class SetupWindow : Window
             : null;
     }
 
-    /// <summary>
-    /// Show the location box (default C:\TOA - Fan Control), let them edit or
-    /// Browse, and create the folder. Re-asks on a bad path; null = they quit.
-    /// </summary>
+    /// <summary>Asks for the install folder and creates it, re-asking on a bad path; null means they quit.</summary>
     private async Task<string?> AskInstallDirAsync()
     {
         PathBox.Text = AppInstaller.DefaultInstallDir;
@@ -211,8 +197,7 @@ public partial class SetupWindow : Window
 
         if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
 
-        // If they picked a generic spot (a drive root, an Apps folder), give the
-        // app its own folder inside it rather than dumping files loose.
+        // Give the app its own subfolder instead of dumping files loose in a generic spot.
         string p = dlg.SelectedPath;
         if (!string.Equals(Path.GetFileName(p.TrimEnd('\\')), AppInstaller.AppName,
                 StringComparison.OrdinalIgnoreCase))
@@ -249,7 +234,7 @@ public partial class SetupWindow : Window
         return _choice.Task;
     }
 
-    /// <summary>Dead-end message with a single Close button (error or reboot-needed).</summary>
+    /// <summary>Final message with a single Close button.</summary>
     private void ShowClose(string message)
     {
         _choice = null;
@@ -281,13 +266,12 @@ public partial class SetupWindow : Window
 
     private void Answer(bool yes)
     {
-        // Grab the pending question BEFORE HideButtons clears it - answering
-        // through the field after that was a guaranteed null-reference crash.
+        // Grab the pending question before HideButtons clears the field.
         TaskCompletionSource<bool>? choice = _choice;
 
         if (choice == null)
         {
-            Close(); // no question pending - the button is a plain Close
+            Close(); // no question pending, so it's a plain Close
             return;
         }
 

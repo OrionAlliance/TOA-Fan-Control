@@ -9,10 +9,7 @@ public partial class App : Application
 {
     public static FanController Controller { get; private set; } = null!;
 
-    // Held for the app's whole life. Two instances would both drive the fans -
-    // and worse, the second one's watchdog captures the FIRST instance's software
-    // state as "BIOS", so whichever exits last parks the fans there until reboot.
-    // Proven live in the 2026-07-21 failure-mode audit.
+    // Single-instance lock: a second watchdog would save the first instance's speeds as "BIOS" and strand the fans.
     private const string InstanceMutexName = @"Global\TOA.FanControl.Instance";
     private System.Threading.Mutex? _instanceMutex;
 
@@ -20,8 +17,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Second instance of this exe, running as the sentinel. No UI, no
-        // controller - it just waits for the main app to die and releases.
+        // Watchdog mode: no UI, just waits for the main app to die and releases the fans.
         if (e.Args.Length > 0 && e.Args[0] == Watchdog.Flag)
         {
             StartAsWatchdog(e.Args);
@@ -29,13 +25,11 @@ public partial class App : Application
         }
 
         // Windows' "Installed apps" Uninstall button runs us with --uninstall.
-        // Same confirm-and-remove flow as Settings → Uninstall, no controller.
         if (e.Args.Contains("--uninstall"))
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            // A running instance holds the exe lock, so the folder removal would
-            // half-fail. Ask for a clean exit first - that also releases the fans.
+            // A running instance locks the exe, so ask for a clean exit first.
             if (System.Threading.Mutex.TryOpenExisting(InstanceMutexName,
                     out System.Threading.Mutex? running))
             {
@@ -59,8 +53,7 @@ public partial class App : Application
             return;
         }
 
-        // One instance only. The tray icon is easy to miss - a second double-click
-        // should point at it, not spawn a rival controller.
+        // One instance only; a second launch points at the tray instead of spawning a rival controller.
         _instanceMutex = new System.Threading.Mutex(
             true, InstanceMutexName, out bool createdNew);
         if (!createdNew)
@@ -76,8 +69,7 @@ public partial class App : Application
         DebugLog.Write(new string('=', 60));
         DebugLog.Write("TOA - Fan Control starting.");
 
-        // Environment banner - the first thing support needs from any "doesn't
-        // work" report. No personal data: versions and bitness only.
+        // Environment banner for support: versions and bitness only, no personal data.
         Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
                     ?? new Version(0, 0, 0);
         DebugLog.Write(
@@ -88,11 +80,7 @@ public partial class App : Application
             $"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}  ·  " +
             $"PawnIO {PawnIoSetup.GetInstalledVersion()?.ToString() ?? "not installed"}");
 
-        // Startup shows dialogs BEFORE the main window exists (first-run PawnIO,
-        // the fan picker). Under the default OnLastWindowClose rule, closing one
-        // of those queues an app shutdown that later executes even though the
-        // main window opened - the app silently died ~15s after first run.
-        // So: nothing shuts us down implicitly until the real window is up.
+        // Closing a pre-window startup dialog would otherwise queue a silent app shutdown.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         FanSettings settings = SettingsStore.Load();
@@ -100,13 +88,10 @@ public partial class App : Application
         // Theme before any window exists, so even the first-run dialog matches.
         ThemeManager.Apply(settings.Theme);
 
-        // GPU power library from cache (no network) - loaded before the hardware
-        // opens so discovery can log this card's match alongside its sensors.
+        // GPU power library from cache (no network), before hardware discovery logs the card's match.
         GpuLibrary.LoadCache();
 
-        // PawnIO is REQUIRED - without it the app can't see or drive a single fan.
-        // So it's mandatory, not optional: if it's missing and the user declines to
-        // install it, there's nothing for the app to do, and it closes.
+        // PawnIO is required to see or drive any fan; declining the install closes the app.
         if (!PawnIoSetup.IsInstalled())
         {
             DebugLog.Write("PawnIO not installed - showing first-run setup.");
@@ -132,17 +117,13 @@ public partial class App : Application
 
         Controller = new FanController(settings);
 
-        // Every path out of this process must give the fans back to the BIOS.
-        // A seized header stuck at a low percent is the one way this app can do
-        // real damage, so the release is wired to all of them.
+        // Every exit path hands the fans back to the BIOS: a header stuck at a low percent can do real damage.
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => Controller.Dispose();
         SessionEnding += OnSessionEnding;
 
-        // Sleep/resume visibility. The controller re-writes the fans every tick,
-        // so control re-asserts within a second of waking - these lines are the
-        // timestamps that prove it when a report says "weird after sleep".
+        // Logs sleep/resume timestamps; control re-asserts on the next tick after waking.
         Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
 
         try
@@ -159,33 +140,27 @@ public partial class App : Application
             return;
         }
 
-        // First run: let the person confirm which case fans the app may drive.
-        // Exists for boards that name every header "Fan #N", where a liquid-cooler
-        // pump is indistinguishable from a case fan - only the builder knows.
-        // Must happen BEFORE the watchdog, so it guards exactly the chosen set.
+        // First run fan picker (a pump can look like a case fan), before the watchdog so it guards the chosen set.
         if (settings.SelectedFans == null && Controller.CandidateFans.Count > 0)
         {
             DebugLog.Write("No fan selection saved - showing the first-run fan picker.");
             var picker = new FanPickerWindow(Controller.CandidateFans, null, firstRun: true);
             picker.ShowDialog();
 
-            // Closing the window without saving counts as "keep them all" - the
-            // default is every candidate, same as before the picker existed.
+            // Closing without saving keeps every candidate.
             IReadOnlyList<(string Name, float? Rpm)> picked = Controller.CandidateFans;
             List<string> chosen = picker.Selection ?? picked.Select(f => f.Name).ToList();
             Controller.UpdateSettings(s =>
             {
                 s.SelectedFans = chosen;
-                NewFans.RecordDecisions(s, picked); // a fan unchecked here was just decided on - never ask about it
+                NewFans.RecordDecisions(s, picked); // unchecked here counts as decided, never ask again
             }, reresolve: true);
         }
 
-        // New fans: ask once about any spinning header the app isn't driving - before the watchdog, so a yes is guarded.
+        // Ask once about new spinning headers, before the watchdog so a yes is guarded.
         AskAboutNewFans();
 
-        // Set-and-forget only works if the app is actually running - so ask ONCE
-        // whether it should start with Windows. Any answer ends the asking forever;
-        // the cog toggle stays the way to change your mind later.
+        // Offer start-with-Windows once; any answer ends the asking, the cog toggle changes it later.
         if (!settings.StartupOffered && !StartupTask.IsEnabled() && StartupTask.FolderIsSafe())
         {
             DebugLog.Write("Offering start-with-Windows (one-time).");
@@ -203,13 +178,10 @@ public partial class App : Application
         // Tasks from older builds die after 3 days of uptime - fix them in place.
         _ = Task.Run(StartupTask.HealIfOutdated);
 
-        // Each update leaves a ~74 MB installer behind - clear out the old ones.
+        // Delete old ~74 MB update installers.
         _ = Task.Run(AppUpdate.CleanUpOldInstallers);
 
-        // The watchdog must take the fans BEFORE we write to any of them: whoever
-        // grabs a header first is the only one holding its real BIOS settings, and
-        // therefore the only one that can ever hand it back. Blocking here is the
-        // whole point - if we got in first, a force-kill would strand the fans.
+        // Block until the watchdog grabs the fans first, so it holds the real BIOS settings to hand back.
         WatchdogLink? link = Watchdog.LaunchAndWait(
             Controller.ControlledFanNames, TimeSpan.FromSeconds(20));
 
@@ -219,9 +191,7 @@ public partial class App : Application
         var main = new MainWindow();
         MainWindow = main;
 
-        // --minimized: the start-with-Windows task uses this so a boot brings the
-        // app up silently in the tray. The window exists (it owns the tray icon
-        // and all rendering) - it just isn't shown until the tray is clicked.
+        // --minimized (start-with-Windows): the window exists for the tray icon but stays hidden.
         if (e.Args.Contains("--minimized"))
         {
             DebugLog.Write("Started minimized to the tray (--minimized).");
@@ -235,17 +205,7 @@ public partial class App : Application
         // From here the real window governs the app's life: closing it exits.
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
-        // Quietly check both prerequisites for newer versions - at launch and then
-        // every 24 hours, since this app can sit in the tray for weeks. Never blocks
-        // startup; offline just no-ops. Each found update gets its own popup - Yes
-        // installs it, No leaves it alone. .NET is checked by the app itself because
-        // Windows Update only services .NET when "Receive updates for other
-        // Microsoft products" is on - and nobody's PC can be trusted to have it on.
-        //
-        // The 15-minute timer is the retry heartbeat: when a check comes due while
-        // something fullscreen is up (game, video, presentation) or Game Mode is on,
-        // the popup would steal focus - so it waits and retries until the screen is
-        // clear, then checks.
+        // Daily update checks, retried every 15 min while fullscreen or Game Mode would make a popup steal focus.
         _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
         _updateTimer.Tick += async (_, _) => await MaybeCheckForUpdatesAsync();
         _updateTimer.Start();
@@ -254,12 +214,7 @@ public partial class App : Application
         _ = MaybeShowGpuLibraryNoticeAsync(main);
     }
 
-    /// <summary>
-    /// One-time honesty notice: if this card has no GPU-library row, the load
-    /// markers silently run on busy time - the user deserves to know, once, at a
-    /// popup-safe moment. The flip side fires when a later library update adds
-    /// their card: a small balloon, and the stored flag clears.
-    /// </summary>
+    /// <summary>One-time notice when this GPU is missing from the library, plus a balloon once it gets added.</summary>
     private async Task MaybeShowGpuLibraryNoticeAsync(MainWindow main)
     {
         string? gpu = Controller.GpuName;
@@ -269,23 +224,17 @@ public partial class App : Application
             return;
         }
 
-        // No power sensor = true load is impossible no matter what watts get
-        // stored - asking for them would be a false promise.
+        // No power sensor means true load is impossible, so don't ask for watts.
         if (!Controller.GpuHasPowerSensor)
         {
             DebugLog.Write($"GPU library notice: '{gpu}' has no power sensor - true load impossible, notice skipped.");
             return;
         }
 
-        // Decide from TODAY's library, not yesterday's cache: a stale "unlisted"
-        // verdict invites a typed guess that would permanently outrank the real
-        // row. One awaited fetch (shared with the launch check); offline just
-        // means the cache is the best truth available.
+        // Decide from a fresh library: a stale "unlisted" invites a typed guess that outranks the real row.
         if (await GpuLibrary.RefreshAsync()) Controller.RefreshGpuMaxFromLibrary();
 
-        // First look as soon as the window has settled; if the screen is busy
-        // (game, video, Game Mode), retry gently - same manners as the update
-        // popups - then decide once and stop.
+        // Wait for a popup-safe moment, then decide once and stop.
         for (int i = 0; i < 40; i++)
         {
             await Task.Delay(TimeSpan.FromSeconds(i == 0 ? 4 : 15));
@@ -344,7 +293,7 @@ public partial class App : Application
     {
         if (DateTime.Now < _nextUpdateCheck) return;
 
-        // Mid-game is the wrong moment for a popup. Hold off; the timer retries.
+        // No popups mid-game; the timer retries.
         if (!ScreenState.PopupsSafe() || GameModeActive())
         {
             DebugLog.Write("Update check due, but the screen is busy (fullscreen/Game Mode) - waiting.");
@@ -355,12 +304,7 @@ public partial class App : Application
         await CheckForUpdatesAsync();
     }
 
-    /// <summary>
-    /// Settings → Check for updates: run all three checks right now, skipping the
-    /// daily gate (the user asked, so popups are welcome). Returns true if any
-    /// update was offered - false means "tell them they're current", because a
-    /// manual check that ends in silence reads as broken.
-    /// </summary>
+    /// <summary>Manual update check that skips the daily gate; false means tell the user they're current.</summary>
     public async Task<bool> CheckForUpdatesNowAsync()
     {
         DebugLog.Write("Manual update check (Settings).");
@@ -368,7 +312,7 @@ public partial class App : Application
         return await CheckForUpdatesAsync();
     }
 
-    /// <summary>Opening the window from the tray is the user coming to look, so every open checks.</summary>
+    /// <summary>Checks for updates every time the window is opened from the tray.</summary>
     public async Task CheckOnUserReturnAsync()
     {
         _nextUpdateCheck = DateTime.Now.AddHours(24); // counts as today's check
@@ -381,7 +325,7 @@ public partial class App : Application
 
     private static Task<bool>? _checkRun;
 
-    // One check at a time - a second request joins the running one, so popups can never stack.
+    // One check at a time; a second request joins the running one so popups never stack.
     private static async Task<bool> CheckForUpdatesAsync()
     {
         if (_checkRun != null)
@@ -401,11 +345,7 @@ public partial class App : Application
         bool offered = false;
         bool restartWanted = false; // restart ONCE after all checks, never mid-run
 
-        // The GPU power library rides the same daily cadence - a whole-file
-        // fetch that carries nothing about this PC, silent when offline. A fresh
-        // fetch re-matches the card so a first session isn't stuck on busy time.
-        // Guarded like its siblings: a library problem must never kill the check
-        // run - or, on the timer path, the whole app.
+        // GPU library refresh (sends nothing about this PC), guarded so a failure can't kill the check run.
         try
         {
             if (await GpuLibrary.RefreshAsync()) Controller.RefreshGpuMaxFromLibrary();
@@ -458,8 +398,7 @@ public partial class App : Application
                 offered = true;
                 var dlg = new PawnIoSetupWindow(app);
                 dlg.ShowDialog();
-                // The app updater's installer owns close-and-relaunch itself -
-                // don't stack a second restart on top of it.
+                // The app installer relaunches on its own, so skip our restart.
                 if (dlg.Installed) restartWanted = false;
             }
         }
@@ -482,7 +421,7 @@ public partial class App : Application
     {
         IReadOnlyList<(string Name, float? Rpm)> candidates = Controller.CandidateFans;
 
-        // First run of this feature: everything already set up counts as decided - never nag about a pump left unchecked on purpose.
+        // First run of this feature: existing setup counts as decided, so a pump left unchecked is never nagged.
         if (Controller.Settings.AskedFans == null)
         {
             Controller.UpdateSettings(s => NewFans.RecordDecisions(s, candidates), reresolve: false);
@@ -513,11 +452,10 @@ public partial class App : Application
 
     private void StartAsWatchdog(string[] args)
     {
-        // Nothing will ever open a window here, so the default
-        // "quit when the last window closes" would never fire.
+        // No windows here, so shutdown must be explicit.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        // Windows quits this process at sign-out/shutdown - hand the fans back first, capped at 3s.
+        // Hand the fans back at sign-out/shutdown, capped at 3s.
         SessionEnding += (_, _) =>
         {
             if (!Watchdog.ReleaseForSessionEnd(TimeSpan.FromSeconds(3)))
@@ -558,7 +496,7 @@ public partial class App : Application
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         DebugLog.Write("Unhandled UI exception - releasing fans.", e.Exception);
-        Controller.Dispose(); // stops the fan timer first, so no tick can re-grab the fans while the process dies
+        Controller.Dispose(); // stops the timer first so no tick re-grabs the fans
     }
 
     private void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -568,7 +506,7 @@ public partial class App : Application
         else
             DebugLog.Write("Unhandled non-exception throw - releasing fans.");
 
-        Controller.Dispose(); // stops the fan timer first, so no tick can re-grab the fans while the process dies
+        Controller.Dispose(); // stops the timer first so no tick re-grabs the fans
     }
 
     protected override void OnExit(ExitEventArgs e)

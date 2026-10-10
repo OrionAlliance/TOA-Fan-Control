@@ -3,17 +3,14 @@ using System.Windows.Input;
 
 namespace FanControlApp;
 
-/// <summary>
-/// Settings → About: what the app does, the TOA copyright, and the legal
-/// disclaimer. Display only.
-/// </summary>
+/// <summary>Settings → About: what the app does, copyright, and legal disclaimer.</summary>
 public partial class AboutWindow : Window
 {
     public AboutWindow()
     {
         InitializeComponent();
 
-        // Same version source as the title bar, so they can never disagree.
+        // Same version source as the title bar, so they never disagree.
         Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
                     ?? new Version(0, 0, 0);
         TitleLine.Text = $"TOA - Fan Control  v{v.Major}.{v.Minor}.{v.Build}";

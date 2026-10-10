@@ -63,10 +63,7 @@
                        Foreground="{DynamicResource TextDim}"
                        Text="Case fans follow your hottest item" />
 
-            <!-- The dash: CPU + GPU on top, then a dial per running fan (built in
-                 code, 4 across, each row centred). Empty headers never appear.
-                 Bars is the same information as compact sensor-panel rows -
-                 Settings switches between the two, the behaviour never changes. -->
+            <!-- The dash: CPU + GPU dials, then fan dials built in code; Bars is the same data as compact rows. -->
             <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="8,12">
                 <StackPanel>
                     <StackPanel x:Name="DialsPanel">
@@ -101,8 +98,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- Actions, centred. The cog opens Settings: theme, hand-to-BIOS,
-                 uninstall. -->
+            <!-- Actions, centred; the cog opens Settings. -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button x:Name="GameModeButton" Content="Game Mode" Click="OnGameModeClick"
                         Margin="0,0,8,0">
@@ -116,8 +112,7 @@
                         ToolTip="What set each peak marker - the value, when, and which program." />
                 <Button x:Name="ResetPeaksButton" Content="Reset peaks"
                         Click="OnResetPeaksClick" Margin="0,0,8,0" />
-                <!-- Explicit TextBlock: a string Content would get the implicit
-                     TextBlock style's Segoe UI and render the gear as a tofu box. -->
+                <!-- Explicit TextBlock so the implicit Segoe UI style can't render the gear as tofu. -->
                 <Button x:Name="SettingsButton" Padding="8,6"
                         Click="OnSettingsClick" MouseLeave="OnSettingsMouseLeave"
                         ToolTip="Settings">

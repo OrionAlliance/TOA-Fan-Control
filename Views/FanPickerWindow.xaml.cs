@@ -4,13 +4,7 @@ using System.Windows.Input;
 
 namespace FanControlApp;
 
-/// <summary>
-/// The safety picker: which of the discovered case fans may the app drive?
-/// Exists for boards that name every header "Fan #N" - there, a liquid-cooler
-/// pump is indistinguishable from a case fan by name, and the person who built
-/// the PC is the only one who knows. This can only NARROW what the app drives:
-/// pump/CPU/GPU-named fans were excluded before this list was built.
-/// </summary>
+/// <summary>Safety picker for which case fans the app may drive; only narrows, since a "Fan #N" pump looks like a fan.</summary>
 public partial class FanPickerWindow : Window
 {
     private readonly List<CheckBox> _boxes = new();
@@ -20,8 +14,7 @@ public partial class FanPickerWindow : Window
 
     /// <param name="fans">Candidate fans (already past the name-safety rule).</param>
     /// <param name="checkedNames">Names to pre-check; null = check everything.</param>
-    /// <param name="firstRun">First run hides Cancel (a choice must be made) and
-    /// the "takes effect next launch" footnote (it applies immediately).</param>
+    /// <param name="firstRun">Hides Cancel and the "next launch" footnote, since a choice is required and applies now.</param>
     public FanPickerWindow(IReadOnlyList<(string Name, float? Rpm)> fans,
                            IReadOnlyCollection<string>? checkedNames,
                            bool firstRun)

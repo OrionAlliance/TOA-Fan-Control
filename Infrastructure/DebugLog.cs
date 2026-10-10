@@ -4,11 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// Append-only log written next to the exe. Ships with every build - when the
-/// app touches fan hardware, "what did it do just before it went wrong" is the
-/// only question that matters.
-/// </summary>
+/// <summary>Append-only log next to the exe, on in every build because the app drives fan hardware.</summary>
 public static class DebugLog
 {
     private static readonly object Gate = new();
@@ -17,12 +13,12 @@ public static class DebugLog
 
     private const long MaxBytes = 2 * 1024 * 1024;
 
-    // Any C:\Users\<name> folder (full or Windows' shortened ~1 form) - the name never reaches the log.
+    // Any C:\Users\<name> folder (full or ~1 short form), so the name never reaches the log.
     private static readonly Regex UserFolder = new(
         @"([A-Za-z]:\\Users\\)[^\\/:*?""<>|\r\n]+",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    // Profiles stored outside C:\Users (rare corporate setups) get caught by their exact path.
+    // Catches profiles stored outside C:\Users by exact path.
     private static readonly string Profile =
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
@@ -30,7 +26,7 @@ public static class DebugLog
     private static readonly List<(string Path, string Label)> Hidden =
         new() { (AppPaths.ExeDir.TrimEnd('\\'), "<exe folder>") };
 
-    /// <summary>From now on, every log line shows this folder as the label instead of its real path.</summary>
+    /// <summary>Log lines show this folder as the label instead of its real path.</summary>
     public static void HidePath(string path, string label)
     {
         lock (Gate) Hidden.Add((path.Trim().TrimEnd('\\'), label));
@@ -49,8 +45,7 @@ public static class DebugLog
         }
         catch
         {
-            // Logging must never take the app down - especially not on the path
-            // that releases the fans.
+            // Logging must never crash the app, especially on the fan release path.
         }
     }
 
@@ -63,7 +58,7 @@ public static class DebugLog
         if (Profile.Length > 0) s = s.Replace(Profile, "<user profile>", StringComparison.OrdinalIgnoreCase);
         foreach ((string path, string label) in Hidden)
         {
-            // A bare drive root like "D:" is never hidden - it would swallow every path on that drive.
+            // Never hide a bare drive root like "D:", it would swallow every path on that drive.
             if (path.Length > 3) s = s.Replace(path, label, StringComparison.OrdinalIgnoreCase);
         }
         return s;

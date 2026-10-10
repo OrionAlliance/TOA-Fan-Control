@@ -6,35 +6,21 @@ using Microsoft.Win32;
 
 namespace FanControlSetup;
 
-/// <summary>
-/// Puts the app on the machine: writes the embedded exe into a per-user program
-/// folder, drops a Start-menu shortcut, and launches it. The app is small and
-/// framework-dependent - it uses the .NET we just made sure is present, so Windows
-/// keeps that runtime patched from here on.
-/// </summary>
+/// <summary>Writes the embedded framework-dependent app exe, adds shortcuts and registration, and launches it.</summary>
 public static class AppInstaller
 {
     public const string AppName = "TOA - Fan Control";
     private const string ExeName = "TOA - Fan Control.exe";
 
-    /// <summary>
-    /// A visible, obvious folder - not AppData, where nobody can find anything.
-    /// The user picks the actual location at install time; this is the suggestion.
-    /// Settings and the debug log live next to the exe, so this one folder IS the
-    /// whole app - same portable convention as every other TOA app.
-    /// </summary>
+    /// <summary>Suggested visible folder (not AppData) that holds the whole app: exe, settings and log.</summary>
     public const string DefaultInstallDir = @"C:\TOA - Fan Control";
 
-    /// <summary>Where the app goes - set from the location popup before extracting.</summary>
+    /// <summary>Install folder, set from the location prompt before extracting.</summary>
     public static string InstallDir { get; set; } = DefaultInstallDir;
 
     public static string InstalledExe => Path.Combine(InstallDir, ExeName);
 
-    /// <summary>
-    /// Write the embedded app exe into the install folder. Retries for a while:
-    /// during a self-update the OLD app is still exiting when we start, and its
-    /// exe stays locked until it (and its watchdog) are gone.
-    /// </summary>
+    /// <summary>Writes the app exe, retrying while a self-updating old app and its watchdog still lock it.</summary>
     public static void ExtractApp()
     {
         Directory.CreateDirectory(InstallDir);
@@ -53,7 +39,7 @@ public static class AppInstaller
             }
             catch (IOException) when (DateTime.Now < deadline)
             {
-                System.Threading.Thread.Sleep(500); // old exe still locked - wait it out
+                System.Threading.Thread.Sleep(500); // old exe still locked
                 src.Position = 0;
             }
         }
@@ -62,7 +48,7 @@ public static class AppInstaller
         LockFolder();
     }
 
-    // Everything this app ever keeps in its folder - anything else means it's someone's shared folder.
+    // Everything the app keeps in its folder; anything else means a shared folder.
     private static readonly string[] OwnEntries =
         { ExeName, "Settings", "Updates", "fan_debug.log", "fan_debug.log.old" };
 
@@ -82,15 +68,11 @@ public static class AppInstaller
             : "App folder lock FAILED - it stays as it was.");
     }
 
-    /// <summary>
-    /// Start-menu shortcut - always created, never asked about. An installed app
-    /// that isn't in the Start menu reads as shady, not minimal. The app's manifest
-    /// asks for admin, so the shortcut triggers UAC on its own - no flag needed.
-    /// </summary>
+    /// <summary>Start-menu shortcut, always created; the app manifest triggers UAC itself.</summary>
     public static void CreateStartMenuShortcut() => WriteShortcut(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Programs), AppName + ".lnk"), "Start menu");
 
-    /// <summary>Desktop shortcut - the optional one; the installer asks first.</summary>
+    /// <summary>Optional desktop shortcut; the installer asks first.</summary>
     public static void CreateDesktopShortcut() => WriteShortcut(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Desktop), AppName + ".lnk"), "Desktop");
 
@@ -110,17 +92,12 @@ public static class AppInstaller
         }
         catch (Exception ex)
         {
-            // A missing shortcut isn't fatal - the exe is installed and launchable.
+            // Non-fatal: the exe is installed and launchable.
             DebugLog.Write("Shortcut creation failed (non-fatal).", ex);
         }
     }
 
-    /// <summary>
-    /// Register in Windows' "Installed apps" list, like a proper install. The
-    /// uninstall command runs the app with --uninstall, which shows the same
-    /// confirm-and-remove flow as Settings → Uninstall. The app's uninstaller
-    /// deletes this key again.
-    /// </summary>
+    /// <summary>Registers in Installed apps; uninstall runs the app with --uninstall, which removes this key.</summary>
     public static void RegisterInInstalledApps()
     {
         try
@@ -145,13 +122,12 @@ public static class AppInstaller
         }
         catch (Exception ex)
         {
-            // Registration is cosmetic - a failure must not fail the install.
+            // Cosmetic, so a failure must not fail the install.
             DebugLog.Write("Installed-apps registration failed (non-fatal).", ex);
         }
     }
 
-    /// <summary>Launch the freshly installed app. Setup is elevated, so it inherits
-    /// admin without a second prompt.</summary>
+    /// <summary>Launches the installed app, inheriting Setup's admin without a second prompt.</summary>
     public static void Launch()
     {
         Process.Start(new ProcessStartInfo

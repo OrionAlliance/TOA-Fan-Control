@@ -40,10 +40,7 @@ internal sealed class UpdateVisitor : IVisitor
     public void VisitParameter(IParameter parameter) { }
 }
 
-/// <summary>
-/// Thin wrapper over LibreHardwareMonitor. Knows how to open the hardware, poll
-/// it, and hand back the temps and fan channels this machine actually exposes.
-/// </summary>
+/// <summary>Thin LibreHardwareMonitor wrapper: opens, polls, and exposes this PC's temps and fan channels.</summary>
 public sealed class HardwareMonitor : IDisposable
 {
     private readonly Computer _computer;
@@ -68,10 +65,7 @@ public sealed class HardwareMonitor : IDisposable
     public string BoardTempName => _boardTemp?.Name ?? "-";
     public float? GpuCoreClockMhz => _gpuClock?.Value;
 
-    /// <summary>True GPU utilization: max across the Windows D3D engine counters
-    /// (clock-independent, matches Task Manager). Falls back to the clock-relative
-    /// GPU Core load when no engine counter has a value - logged once, because the
-    /// fallback number is idle-inflated and the log must say which one it shows.</summary>
+    /// <summary>Max of the D3D engine counters, falling back (logged once) to the idle-inflated GPU Core load.</summary>
     public float? GpuEngineLoad
     {
         get
@@ -82,10 +76,7 @@ public sealed class HardwareMonitor : IDisposable
                 if (s.Value is { } v && (float.IsNaN(max) || v > max)) { max = v; top = s; }
             if (!float.IsNaN(max))
             {
-                // Windows' busy-time accounting can overshoot on bursty engines
-                // (field-seen: a CUDA node at 123% during a media-server nightly
-                // job). Over 100% is impossible - clamp, and name the engine once
-                // so the log can explain the reading.
+                // Windows' busy-time counters can overshoot 100% on bursty engines; clamp and log once.
                 if (max > 100f)
                 {
                     if (!_engineOverflowLogged)
@@ -113,20 +104,16 @@ public sealed class HardwareMonitor : IDisposable
     public string CpuTempName => _cpuTemp?.Name ?? "-";
     public string GpuTempName => _gpuTemp?.Name ?? "-";
 
-    /// <summary>The card's sensor-reported model name - the GPU library's lookup key.</summary>
+    /// <summary>The card's sensor-reported model name, used as the GPU library key.</summary>
     public string? GpuName => _gpuTemp?.Hardware.Name;
 
     /// <summary>Live GPU board power draw in watts, or null if the card has no power sensor.</summary>
     public float? GpuPowerW => _gpuPower?.Value;
 
-    /// <summary>True when the card exposes a power sensor at all - without one,
-    /// true load is impossible and a stored max watts can never be used.</summary>
+    /// <summary>True when the card has a power sensor; without one true load is impossible.</summary>
     public bool GpuHasPowerSensor => _gpuPower != null;
 
-    /// <summary>This card's max watts - the true-load gauge's denominator. Set from
-    /// the GPU library at open; a user-entered value (unlisted card) overwrites it.
-    /// Null = unknown, markers fall back to busy time. Backed by a plain int
-    /// (0 = unknown) so the timer thread can never tear a cross-thread read.</summary>
+    /// <summary>Card max watts for true load (null = unknown); a plain int backs it so cross-thread reads can't tear.</summary>
     public int? GpuMaxWatts
     {
         get { int v = _gpuMaxWatts; return v == 0 ? null : v; }
@@ -156,17 +143,12 @@ public sealed class HardwareMonitor : IDisposable
         Refresh();
         Discover();
 
-        // LHM appends every reading to a per-sensor history list (up to a day's
-        // worth) on each update. We only ever use the live value, so that's
-        // ~15-25 MB/day of diary nobody reads - measured as the app's slow
-        // memory creep across two soak tests. Zero window = keep nothing.
+        // Disable LHM's per-sensor history; only live values are used and it leaks ~15-25 MB a day.
         foreach (IHardware h in Flatten(_computer.Hardware))
             foreach (ISensor s in h.Sensors)
                 s.ValuesTimeWindow = TimeSpan.Zero;
 
-        // Hardware models matter for bug reports (fan control lives on the board's
-        // Super I/O chip, and its behaviour can shift with a BIOS update) and
-        // identify nothing about the person - unlike paths or serial numbers.
+        // Log hardware models for bug reports; they identify nothing personal, unlike paths or serials.
         IHardware? board = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Motherboard);
         string chip = board?.SubHardware.FirstOrDefault(s => s.HardwareType == HardwareType.SuperIO)?.Name ?? "-";
         string cpu = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu)?.Name ?? "-";
@@ -178,16 +160,14 @@ public sealed class HardwareMonitor : IDisposable
             LibreHardwareMonitor.Hardware.BiosInformation? b = _computer.SMBios?.Bios;
             if (b != null) bios = $"{b.Vendor} {b.Version}".Trim();
         }
-        catch { /* SMBIOS can be unreadable on odd systems - never block startup for a log line */ }
+        catch { /* SMBIOS can be unreadable; never block startup for a log line */ }
 
         DebugLog.Write($"Hardware: board='{board?.Name ?? "-"}' bios='{bios}' chip='{chip}' cpu='{cpu}' gpu='{gpu}'");
         DebugLog.Write($"Hardware opened. cpuTemp='{CpuTempName}' gpuTemp='{GpuTempName}' boardTemp='{BoardTempName}' " +
                        $"gpuEngines={_gpuEngineLoads.Length} " +
                        $"fans=[{string.Join(", ", Fans.Select(f => $"{f.Name}{(f.CanControl ? "*" : "")}"))}]");
 
-        // The true-load gauge's denominator, resolved fresh every startup - so a
-        // swapped card re-matches on its own with no stale carry-over. Silent in
-        // the watchdog process, which opens hardware but never loads the library.
+        // Resolve max watts fresh each start so a swapped card re-matches; skipped in the watchdog.
         if (GpuLibrary.IsLoaded)
         {
             GpuMaxWatts = GpuLibrary.MaxWattsFor(gpu);
@@ -207,17 +187,13 @@ public sealed class HardwareMonitor : IDisposable
     {
         ISensor[] all = Flatten(_computer.Hardware).SelectMany(h => h.Sensors).ToArray();
 
-        // Tctl/Tdie is the sensor that actually reflects the die; the Super I/O's
-        // "CPU" temp reads several degrees low and lags badly.
+        // Tctl/Tdie reflects the die; the Super I/O "CPU" temp reads low and lags.
         _cpuTemp = all.FirstOrDefault(s => s.SensorType == SensorType.Temperature
                                            && s.Name.Contains("Tctl", StringComparison.OrdinalIgnoreCase))
                    ?? all.FirstOrDefault(s => s.SensorType == SensorType.Temperature
                                               && s.Hardware.HardwareType == HardwareType.Cpu);
 
-        // Core, not Hot Spot. Hot Spot is the more alarming number and it's what
-        // throttles the card, but it runs 90-100C under a normal load - roughly
-        // 15C above Core. Feeding that into a controller tuned around CPU
-        // temperatures would peg the fans permanently. Core is the comparable one.
+        // Core, not Hot Spot: Hot Spot runs ~15C hotter and would peg fans tuned around CPU temps.
         ISensor[] gpuTemps = all.Where(s => s.SensorType == SensorType.Temperature
                                             && s.Hardware.HardwareType is HardwareType.GpuAmd
                                                 or HardwareType.GpuNvidia
@@ -227,13 +203,10 @@ public sealed class HardwareMonitor : IDisposable
                    ?? gpuTemps.FirstOrDefault(s => s.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase))
                    ?? gpuTemps.FirstOrDefault();
 
-        // Every other GPU sensor is scoped to the SAME chip as the temp - on an
-        // iGPU+dGPU machine, mixing chips would pair one GPU's load or clock with
-        // the other GPU's temperature.
+        // Scope GPU sensors to the temp's chip so iGPU and dGPU readings never mix.
         bool SameGpu(ISensor s) => _gpuTemp == null || s.Hardware == _gpuTemp.Hardware;
 
-        // Case-ambient proxy: the board's own temp - the weather every other
-        // reading happens in. Named sensors first; any plausible one as fallback.
+        // Board temp as a case-ambient proxy: named sensors first, then any plausible one.
         ISensor[] boardTemps = all.Where(s => s.SensorType == SensorType.Temperature
                                               && s.Hardware.HardwareType is HardwareType.Motherboard
                                                   or HardwareType.SuperIO).ToArray();
@@ -241,15 +214,14 @@ public sealed class HardwareMonitor : IDisposable
                      ?? boardTemps.FirstOrDefault(s => s.Name.Contains("Motherboard", StringComparison.OrdinalIgnoreCase))
                      ?? boardTemps.FirstOrDefault(s => s.Value is > 5 and < 80);
 
-        // CPU load feeds the peak-load marker directly (time-based, honest as-is).
+        // CPU load feeds the peak-load marker directly.
         _cpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                            && s.Hardware.HardwareType == HardwareType.Cpu
                                            && s.Name.Contains("Total", StringComparison.OrdinalIgnoreCase))
                    ?? all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                               && s.Hardware.HardwareType == HardwareType.Cpu);
 
-        // Kept ONLY as GpuEngineLoad's fallback - this sensor is "% busy at the
-        // CURRENT clock", which reads 50%+ at idle. Never surface it directly.
+        // Fallback only: this clock-relative load reads 50%+ at idle, never show it directly.
         _gpuLoad = all.FirstOrDefault(s => s.SensorType == SensorType.Load
                                            && SameGpu(s)
                                            && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase)
@@ -262,12 +234,7 @@ public sealed class HardwareMonitor : IDisposable
                                                   or HardwareType.GpuNvidia
                                                   or HardwareType.GpuIntel);
 
-        // The Windows D3D engine counters (Task Manager's numbers): true
-        // utilization, NOT clock-relative, honest at any clock, identical on every
-        // GPU. Use ONLY the 3D + compute engines (NVIDIA names its compute node
-        // "Cuda") - the real graphics/compute horsepower. Excludes the
-        // fixed-function video-decode/copy blocks, which peg high during a video
-        // but use almost no power (why TM over-reports).
+        // D3D 3D and compute/Cuda engines only; video decode/copy blocks peg high on almost no power.
         _gpuEngineLoads = all.Where(s => s.SensorType == SensorType.Load
                                          && SameGpu(s)
                                          && s.Hardware.HardwareType is HardwareType.GpuAmd
@@ -278,8 +245,7 @@ public sealed class HardwareMonitor : IDisposable
                                              || s.Name.Contains("Compute", StringComparison.OrdinalIgnoreCase)
                                              || s.Name.Contains("Cuda", StringComparison.OrdinalIgnoreCase))).ToArray();
 
-        // Core clock, to tell real effort from the idle-clock quirk: a sleeping
-        // GPU reports 50%+ "load" for desktop crumbs because the clock is near zero.
+        // Core clock tells real effort from idle, when a near-zero clock inflates "load".
         _gpuClock = all.FirstOrDefault(s => s.SensorType == SensorType.Clock
                                             && SameGpu(s)
                                             && s.Hardware.HardwareType is HardwareType.GpuAmd
@@ -287,8 +253,7 @@ public sealed class HardwareMonitor : IDisposable
                                                 or HardwareType.GpuIntel
                                             && s.Name.Contains("Core", StringComparison.OrdinalIgnoreCase));
 
-        // Board power draw - the true-load gauge's live numerator. Prefer the
-        // whole-board reading ("GPU Package"/"GPU Power") over per-rail ones.
+        // GPU power draw for true load, preferring whole-board readings over per-rail ones.
         ISensor[] gpuPowers = all.Where(s => s.SensorType == SensorType.Power
                                              && SameGpu(s)
                                              && s.Hardware.HardwareType is HardwareType.GpuAmd
@@ -298,8 +263,7 @@ public sealed class HardwareMonitor : IDisposable
                     ?? gpuPowers.FirstOrDefault(s => s.Name.Contains("Board", StringComparison.OrdinalIgnoreCase))
                     ?? gpuPowers.FirstOrDefault();
 
-        // Pair each Control sensor with the Fan sensor of the same name - that's
-        // how the Nuvoton driver names them (e.g. "Chassis Fan #2" appears as both).
+        // Pair each Control sensor with the same-named Fan sensor, as the Nuvoton driver names them.
         ISensor[] controls = all.Where(s => s.SensorType == SensorType.Control).ToArray();
         ISensor[] rpms = all.Where(s => s.SensorType == SensorType.Fan).ToArray();
 
@@ -314,12 +278,11 @@ public sealed class HardwareMonitor : IDisposable
             });
         }
 
-        // Headers with no fan plugged in still report a control channel; keep them
-        // (so the UI can show them greyed) but they'll read 0 RPM forever.
+        // Add RPM-only headers too, with no control channel.
         foreach (ISensor r in rpms.Where(r => Fans.All(f => f.Name != r.Name)))
             Fans.Add(new FanChannel { Name = r.Name, RpmSensor = r });
 
-        // Context fans for the log - never driven, but their effort tells the thermal story.
+        // Context fans for the log, never driven.
         GpuFan = Fans.FirstOrDefault(f => f.Name.Contains("gpu", StringComparison.OrdinalIgnoreCase));
         CpuFan = Fans.FirstOrDefault(f => f.Name.Equals("CPU Fan", StringComparison.OrdinalIgnoreCase))
                  ?? Fans.FirstOrDefault(f => f.Name.Contains("cpu", StringComparison.OrdinalIgnoreCase));

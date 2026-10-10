@@ -4,11 +4,7 @@ using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
 
-/// <summary>
-/// Shown when PawnIO is missing (first-run install) or out of date (update). Same
-/// download-verify-install pipeline either way; the update path just reworded the
-/// text and points at the newer version. Declining leaves things as they are.
-/// </summary>
+/// <summary>Download-verify-install popup for PawnIO (missing or outdated), app, and .NET updates.</summary>
 public partial class PawnIoSetupWindow : Window
 {
     /// <summary>True once PawnIO is installed (a reboot may still be pending).</summary>
@@ -17,17 +13,14 @@ public partial class PawnIoSetupWindow : Window
     /// <summary>The installer asked for a reboot to finish.</summary>
     public bool RebootRequired { get; private set; }
 
-    /// <summary>Update installed and a restart would apply it now. The update
-    /// orchestrator restarts ONCE after all checks - not each dialog mid-run.</summary>
+    /// <summary>Update installed; the orchestrator restarts once after all checks, not per dialog.</summary>
     public bool RestartWanted { get; private set; }
 
-    // What the Install/Update button actually runs. PawnIO by default; the .NET
-    // update reuses this same window with its own installer plugged in.
+    // What the Install/Update button runs: PawnIO by default, swapped by the other variants.
     private Func<IProgress<string>, Task<PawnIoSetup.InstallResult>> _installer =
         PawnIoSetup.DownloadVerifyInstallAsync;
 
-    // Updates restart the app so they take effect NOW, not "eventually". First-run
-    // PawnIO install keeps its Continue flow; the app updater restarts itself.
+    // Updates restart the app so they take effect now; first-run install keeps its Continue flow.
     private bool _restartAppOnSuccess;
 
     // The app updater closes the app on its own, so its success screen needs no button.
@@ -101,7 +94,7 @@ public partial class PawnIoSetupWindow : Window
 
     private async void OnInstallClick(object sender, RoutedEventArgs e)
     {
-        // The choice is made - the popup becomes a progress window with nothing to click.
+        // Choice made: the popup becomes a progress window with nothing to click.
         ButtonRow.Visibility = Visibility.Collapsed;
         StatusText.Visibility = Visibility.Visible;
         Progress.Visibility = Visibility.Visible;
@@ -127,8 +120,7 @@ public partial class PawnIoSetupWindow : Window
 
             if (_closesItself) return;
 
-            // First-run flow, or a reboot-pending update where a restart is
-            // pointless - leave the result message on screen behind Continue.
+            // First run, or reboot pending so a restart is pointless: show the result behind Continue.
             InstallButton.Content = "Continue";
             InstallButton.Click -= OnInstallClick;
             InstallButton.Click += (_, _) => Close();

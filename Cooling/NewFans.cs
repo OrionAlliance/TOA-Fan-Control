@@ -2,16 +2,13 @@ using FanControlApp.Infrastructure;
 
 namespace FanControlApp.Cooling;
 
-/// <summary>
-/// Spots a fan spinning on a header the app isn't driving and hasn't asked about -
-/// a new hub/board header, or a fan plugged into a header that was empty when picked.
-/// </summary>
+/// <summary>Spots a fan spinning on a header the app isn't driving and hasn't asked about.</summary>
 public static class NewFans
 {
     // Empty headers read 0; real fans idle well above this.
     private const float MinSpinRpm = 100;
 
-    // Same rule as the controller and picker - fan names never differ by case alone.
+    // Same case-insensitive rule as the controller and picker.
     private static readonly StringComparer Names = StringComparer.OrdinalIgnoreCase;
 
     /// <summary>Spinning headers the user hasn't picked and hasn't been asked about yet.</summary>

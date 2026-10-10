@@ -2,11 +2,7 @@ using System.Windows;
 
 namespace FanControlApp;
 
-/// <summary>
-/// The KISS answer to an unlisted GPU: the user is sitting next to the card and
-/// its max watts is one search away - so just ask them. No accounts, no waiting
-/// for a library update, and the gauge works thirty seconds from now.
-/// </summary>
+/// <summary>Asks the user for an unlisted GPU's max watts, which is one search away.</summary>
 public partial class GpuWattsWindow : Window
 {
     /// <summary>The accepted wattage, or null if they skipped.</summary>
@@ -26,9 +22,7 @@ public partial class GpuWattsWindow : Window
         }
         else
         {
-            // Started minimized to tray: nothing anchors this dialog, and modal +
-            // borderless + hidden owner = "the app looks hung" if it gets buried.
-            // A taskbar button and Topmost keep it findable until it's answered.
+            // Started in tray: a buried modal with no owner looks like a hang, so keep it findable.
             ShowInTaskbar = true;
             Topmost = true;
         }

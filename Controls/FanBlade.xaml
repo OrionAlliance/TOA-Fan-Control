@@ -3,13 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
     <Grid>
-        <!-- Static: the square case-fan frame, corner screws, circular recess. -->
+        <!-- Static frame, screws and recess. -->
         <Canvas x:Name="FrameLayer" />
 
-        <!-- The blades. This whole layer spins about the hub. -->
+        <!-- Blades; the whole layer spins about the hub. -->
         <Canvas x:Name="BladeLayer" />
 
-        <!-- Static: raised hub cap with the RPM read out on top of it. -->
+        <!-- Static hub cap with the readout on top. -->
         <Canvas x:Name="HubLayer" />
     </Grid>
 </UserControl>

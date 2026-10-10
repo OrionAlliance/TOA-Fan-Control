@@ -3,11 +3,7 @@ using System.Windows.Input;
 
 namespace FanControlApp;
 
-/// <summary>
-/// The app's own message box - same card styling as every other window, because
-/// a native MessageBox in the middle of a themed app looks like a stranger
-/// walked in. Show() for notices, Confirm() for yes/no questions.
-/// </summary>
+/// <summary>Themed message box: Show() for notices, Confirm() for yes/no questions.</summary>
 public partial class MessageWindow : Window
 {
     private bool _result;
@@ -46,8 +42,7 @@ public partial class MessageWindow : Window
         if (copyButton) CopyButton.Visibility = Visibility.Visible;
     }
 
-    /// <summary>A notice with a single button - copyButton adds a "Copy info"
-    /// that puts the whole notice on the clipboard.</summary>
+    /// <summary>A one-button notice; copyButton adds "Copy info" for the clipboard.</summary>
     public static void Show(Window? owner, string header, string body, string button = "OK",
                             bool copyButton = false, bool autoWidth = false)
         => new MessageWindow(owner, header, body, button, null, copyButton, autoWidth).ShowDialog();
@@ -61,7 +56,7 @@ public partial class MessageWindow : Window
         return w._result;
     }
 
-    /// <summary>A risky question: the safe answer sits on the right and takes Enter and Escape - true only on a real click of the risky button.</summary>
+    /// <summary>Risky question: the safe button takes Enter and Escape; true only on a click of the risky one.</summary>
     public static bool ConfirmRisky(Window? owner, string header, string body,
                                     string risky, string safe)
     {
@@ -69,7 +64,7 @@ public partial class MessageWindow : Window
         w.PrimaryButton.IsCancel = true;
         w.SecondaryButton.IsCancel = false;
 
-        // Can appear at boot with no main window yet - never let it hide behind other windows.
+        // Can appear at boot with no main window, so never let it hide.
         w.Topmost = true;
         w.ShowInTaskbar = true;
         w.ShowDialog();

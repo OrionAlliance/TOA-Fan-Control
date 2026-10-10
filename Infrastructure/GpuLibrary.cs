@@ -4,12 +4,7 @@ using System.Text.Json;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// The GPU power library behind the true-load gauge: model name -> reference
-/// board power in watts. The WHOLE file is downloaded from the app's GitHub
-/// repo - never a per-card query, so the request carries nothing about this PC
-/// - and cached in Settings\. The lookup itself always runs locally.
-/// </summary>
+/// <summary>GPU model to reference watts; fetched whole (no per-card query, for privacy), matched locally.</summary>
 public static class GpuLibrary
 {
     private const string LibraryUrl =
@@ -20,12 +15,10 @@ public static class GpuLibrary
     private static Dictionary<string, int>? _gpus;
     private static string? _updated;
 
-    /// <summary>False in processes that never load it (the watchdog opens the
-    /// same hardware but has no business with the library - or its log lines).</summary>
+    /// <summary>False in processes that never load it, such as the watchdog.</summary>
     public static bool IsLoaded => _gpus != null;
 
-    /// <summary>Load the cached library - no network. Call once at startup,
-    /// before the hardware opens, so the match can be logged with discovery.</summary>
+    /// <summary>Loads the cached library (no network); call before the hardware opens.</summary>
     public static void LoadCache()
     {
         try
@@ -45,11 +38,7 @@ public static class GpuLibrary
         }
     }
 
-    /// <summary>Refresh the cache from GitHub. Rides the daily update check;
-    /// silent on failure - offline is normal and the cached copy keeps working.
-    /// Returns true when a fresh copy landed, so the caller can re-match the card.
-    /// Single-flight: concurrent callers (launch check + notice flow) share one
-    /// download instead of racing two.</summary>
+    /// <summary>Refreshes from GitHub, one shared download; true when a fresh copy landed.</summary>
     public static Task<bool> RefreshAsync()
     {
         if (_refresh == null || _refresh.IsCompleted) _refresh = RefreshCoreAsync();
@@ -66,7 +55,7 @@ public static class GpuLibrary
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("TOA-FanControl");
             json = await http.GetStringAsync(LibraryUrl);
-            Parse(json); // parse FIRST - a bad download must never clobber a good cache
+            Parse(json); // parse first so a bad download never clobbers a good cache
         }
         catch (Exception ex)
         {
@@ -74,8 +63,7 @@ public static class GpuLibrary
             return false;
         }
 
-        // The fresh library is LIVE in memory either way - a failed cache write
-        // only costs the next launch, never this session's re-match.
+        // Already live in memory; a failed cache write only costs the next launch.
         try
         {
             AppPaths.EnsureSettingsDir();
@@ -90,18 +78,14 @@ public static class GpuLibrary
         return true;
     }
 
-    // A match immediately followed by one of these is a DIFFERENT card whose own
-    // row is missing - "…RX 6700 XT" must never fall into "RX 6700"'s row, and a
-    // laptop "…RTX 4080 Laptop GPU" must never get the desktop 4080's watts.
+    // A match followed by one of these is a different card ("RX 6700 XT" is not "RX 6700").
     private static readonly string[] VariantTokens =
         { "XT", "XTX", "Ti", "SUPER", "GRE", "D", "M", "S", "Laptop", "Mobile", "Max-Q" };
 
-    /// <summary>Reference max watts for this card, or null if unknown. Longest
-    /// library key contained in the sensor-reported name wins - "RTX 3080 Ti"
-    /// must never fall into "RTX 3080"'s row.</summary>
+    /// <summary>Reference max watts for this card, or null; the longest matching key wins.</summary>
     public static int? MaxWattsFor(string? cardName)
     {
-        var gpus = _gpus; // one snapshot - Parse swaps the field wholesale
+        var gpus = _gpus; // snapshot, Parse swaps the field wholesale
         if (cardName == null || gpus == null) return null;
         string? best = null;
         foreach (string key in gpus.Keys)
@@ -109,12 +93,11 @@ public static class GpuLibrary
             int at = cardName.IndexOf(key, StringComparison.OrdinalIgnoreCase);
             if (at < 0) continue;
 
-            // A match that cuts a model number short is no match - "RX 550"
-            // must never claim "RX 5500".
+            // Skip partial model numbers ("RX 550" must not claim "RX 5500").
             int end = at + key.Length;
             if (end < cardName.Length && char.IsDigit(cardName[end])) continue;
 
-            // What follows the match? A variant token disqualifies it.
+            // A variant token after the match disqualifies it.
             string rest = cardName[end..].TrimStart();
             string firstWord = rest.Split(' ', 2)[0];
             if (VariantTokens.Any(v => firstWord.Equals(v, StringComparison.OrdinalIgnoreCase)))

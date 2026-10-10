@@ -8,18 +8,12 @@ using FanControlApp.Infrastructure;
 
 namespace FanControlApp;
 
-/// <summary>
-/// Display only - it renders what the controller reports and forwards the two
-/// actions (pause, Game Mode) back to it. No fan logic lives here, and there's
-/// nothing to configure: the app just matches the fans to the hottest part.
-/// </summary>
+/// <summary>Display only: renders controller readings and forwards user actions; no fan logic here.</summary>
 public partial class MainWindow : Window
 {
     private const int FansPerRow = 4;
 
-    // Fan tile footprint. Smaller than the 200x195 temp dials - the fan graphic
-    // shrinks to fit, but the % and label keep the control's minimum readable sizes
-    // rather than scaling away to nothing.
+    // Fan tile footprint, smaller than the temp dials; text keeps its minimum readable size.
     private const double FanTileW = 120;
     private const double FanTileH = 124;
 
@@ -29,13 +23,7 @@ public partial class MainWindow : Window
     private bool _titleBarReady;
     private bool _conflictNotified;
 
-    // A spinning fan tile per running fan, created the first time that fan is seen
-    // spinning and kept after (latched, so a momentary dip doesn't make it vanish).
-    // Each fan also gets a bar - both display styles stay live, Settings just
-    // picks which panel is visible. Fan bars carry a live "RPM: n" right after
-    // the % (StatBar.TrailText) - the visible heartbeat that replaces the dial
-    // view's spinning blades (a bar sitting still at a steady % otherwise reads
-    // as "is this thing frozen?").
+    // Per-fan tile and bar, latched once seen spinning; the bar's live RPM shows it isn't frozen.
     private readonly Dictionary<string, FanBlade> _fanGauges = new();
     private readonly Dictionary<string, StatBar> _fanBars = new();
     private readonly List<string> _shownFans = new();
@@ -44,8 +32,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Stamp the real build version into the caption (and the taskbar title), read
-        // from the assembly so it tracks <Version> in the csproj and never goes stale.
+        // Build version from the assembly into the caption and taskbar title.
         Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
                     ?? new Version(0, 0, 0);
         string label = $"TOA - Fan Control  v{v.Major}.{v.Minor}.{v.Build}";
@@ -54,16 +41,13 @@ public partial class MainWindow : Window
 
         SetupTray();
 
-        // The redline on the temp gauges is the real one: the 5800X throttles at
-        // 90C. Nothing below that is damage.
+        // Redline at the real throttle point (90C); nothing below it is damage.
         CpuGauge.RedFrom = 90;
         GpuGauge.RedFrom = 90;
 
         ApplyDisplayStyle(_controller.Settings.DisplayStyle);
 
-        // We draw the title bar ourselves, so the maximise glyph is kept in step
-        // by hand. The DWM call still colours the window's outer border. Re-applied
-        // whenever the theme flips, so the OS chrome follows the palette.
+        // Custom title bar: sync the maximise glyph by hand; DWM border colour follows the theme.
         StateChanged += OnWindowStateChanged;
         SourceInitialized += (_, _) => { _titleBarReady = true; ApplyTitleBarColors(); };
         ThemeManager.Changed += OnThemeChanged;
@@ -74,13 +58,11 @@ public partial class MainWindow : Window
             _controller.Updated -= OnUpdated;
             ThemeManager.Changed -= OnThemeChanged;
 
-            // The overlay cancels its own Closing (so Alt+F4 there just restores),
-            // which would keep the process alive forever with no window. Tear it
-            // down explicitly when the real window goes.
+            // The overlay cancels its own Closing, so force it or the process lives on windowless.
             _overlay?.ForceClose();
             _overlay = null;
 
-            // Or it lingers in the tray as a ghost until you hover it.
+            // Otherwise a ghost icon lingers in the tray until hovered.
             _tray?.Dispose();
             _tray = null;
 
@@ -94,7 +76,7 @@ public partial class MainWindow : Window
     {
         _tray = new System.Windows.Forms.NotifyIcon
         {
-            // The exe's own embedded icon - our dial - so the tray matches the app.
+            // The exe's embedded icon, so the tray matches the app.
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!),
             Text = "TOA - Fan Control",
             Visible = true,
@@ -108,14 +90,13 @@ public partial class MainWindow : Window
         _tray.ContextMenuStrip = menu;
     }
 
-    /// <summary>Small non-modal tray notice - good news never needs a modal.</summary>
+    /// <summary>Small non-modal tray notice.</summary>
     public void ShowTrayBalloon(string title, string text) =>
         _tray?.ShowBalloonTip(8000, title, text, System.Windows.Forms.ToolTipIcon.Info);
 
     private void ShowFromTray()
     {
-        // If they're in Game Mode, bring back the full window rather than stacking
-        // it behind the overlay.
+        // In Game Mode, leave it properly instead of stacking behind the overlay.
         if (_overlay is { IsVisible: true })
         {
             LeaveGameMode();
@@ -126,7 +107,7 @@ public partial class MainWindow : Window
         WindowState = WindowState.Normal;
         Activate();
 
-        // The user came looking - surface any update they missed while hidden.
+        // Surface any update missed while hidden.
         _ = ((App)Application.Current).CheckOnUserReturnAsync();
     }
 
@@ -134,19 +115,16 @@ public partial class MainWindow : Window
 
     private void Render(FanReadings r)
     {
-        // Tray-facing updates come first - they matter even while hidden.
-        // Live tray tooltip, so you can hover it while minimised and see the state
-        // without reopening. NotifyIcon.Text caps at 63 chars - keep it short.
+        // Tray tooltip first, it matters while hidden; NotifyIcon.Text caps at 63 chars.
         if (_tray != null)
         {
             string hot = r.SourceTemp is { } t ? $"{t:F0}°C" : "--";
-            // While the BIOS owns the fans, say so - never claim a % nobody's driving.
+            // While the BIOS owns the fans, never claim a % nobody's driving.
             string fans = r.BiosHasFans ? "BIOS" : $"{r.OutputPercent:F0}%";
             _tray.Text = $"TOA - Fan Control  ·  {hot}  ·  fans {fans}";
         }
 
-        // One balloon per conflict episode: the app is holding control, but the
-        // real fix is turning fan control off in the other program.
+        // One balloon per conflict episode; the real fix is in the other program.
         if (r.Conflict && !_conflictNotified && _tray != null)
         {
             _conflictNotified = true;
@@ -161,20 +139,15 @@ public partial class MainWindow : Window
             _conflictNotified = false;
         }
 
-        // Nobody's looking: while hidden in the tray or minimized, skip painting the dashboard
-        // entirely - no dial animation, no bar redraws, no per-tick allocations.
-        // Safe because the peaks live in the controller now, so the first tick
-        // after reopening repaints everything current with nothing lost.
+        // Hidden or minimized: skip painting; peaks live in the controller, so nothing is lost.
         if (!IsVisible || WindowState == WindowState.Minimized) return;
 
-        // Live load rides the cyan triangle; peaks come from the controller -
-        // the same numbers in every view. Only the shown panel gets them: dial
-        // needles animate, and an unseen animation still costs frames.
+        // Only the shown panel updates, since unseen dial animations still cost frames.
         if (DialsPanel.Visibility == Visibility.Visible)
         {
             CpuGauge.Value = r.CpuTemp ?? double.NaN;
             GpuGauge.Value = r.GpuTemp ?? double.NaN;
-            GpuGauge.TrueLoad = r.GpuLoadIsTrue; // wording flag first, so the first tooltip uses the right word
+            GpuGauge.TrueLoad = r.GpuLoadIsTrue; // set first so the tooltip wording is right
             CpuGauge.LoadValue = r.CpuLoad;
             GpuGauge.LoadValue = r.GpuLoad;
             CpuGauge.PeakLoad = r.PeakCpuLoad;
@@ -201,11 +174,7 @@ public partial class MainWindow : Window
         UpdateFanGauges(r);
     }
 
-    /// <summary>
-    /// One dial per driven fan that's actually spinning. A fan appears the first
-    /// time it's seen above 0 RPM and stays (latched) - so empty headers never
-    /// show, and a real fan doesn't flicker away on a momentary dip.
-    /// </summary>
+    /// <summary>One dial per driven fan, latched once seen spinning so empty headers never show.</summary>
     private void UpdateFanGauges(FanReadings r)
     {
         bool added = false;
@@ -218,7 +187,7 @@ public partial class MainWindow : Window
 
             if (!_fanGauges.ContainsKey(name))
             {
-                if (rpm is not (> 0)) continue; // not spinning yet - empty header or stopped
+                if (rpm is not (> 0)) continue; // not spinning yet
                 FanBlade g = NewFanGauge(name);
                 _fanGauges[name] = g;
                 _fanBars[name] = new StatBar { Label = FanName.Display(name), Unit = "%" };
@@ -226,8 +195,8 @@ public partial class MainWindow : Window
                 added = true;
             }
 
-            _fanGauges[name].Value = rpm;             // real speed -> how fast it spins
-            _fanGauges[name].Percent = r.OutputPercent; // driven duty -> the hub number
+            _fanGauges[name].Value = rpm;             // spin speed
+            _fanGauges[name].Percent = r.OutputPercent; // hub number
 
             _fanBars[name].Value = r.OutputPercent;
             _fanBars[name].TrailText = rpm is > 0 ? $"RPM: {rpm:F0}" : "RPM: --";
@@ -236,11 +205,10 @@ public partial class MainWindow : Window
         if (added) RebuildFanRows();
     }
 
-    /// <summary>Re-lay the shown fans into centred rows of three.</summary>
+    /// <summary>Re-lay the shown fans into centred dial rows and paired bar rows.</summary>
     private void RebuildFanRows()
     {
-        // Detach every tile from its old row first - WPF throws if you add a
-        // control that still has a parent.
+        // Detach tiles first; WPF throws when adding a control that still has a parent.
         foreach (FanBlade g in _fanGauges.Values)
             (g.Parent as Panel)?.Children.Remove(g);
 
@@ -260,7 +228,7 @@ public partial class MainWindow : Window
             FanRows.Children.Add(row);
         }
 
-        // Fan bars pair up side by side, same as the CPU/GPU line above them.
+        // Fan bars pair up side by side, like the CPU/GPU line.
         foreach (StatBar b in _fanBars.Values)
             (b.Parent as Panel)?.Children.Remove(b);
 
@@ -284,8 +252,7 @@ public partial class MainWindow : Window
                 Grid.SetColumn(right, 1);
                 row.Children.Add(right);
             }
-            // else: the odd one out keeps the left slot, same as reading order -
-            // centred was tried and looked wrong ("ewww", 2026-07-23).
+            // An odd last fan keeps the left slot, in reading order.
 
             FanBarRows.Children.Add(row);
         }
@@ -305,15 +272,10 @@ public partial class MainWindow : Window
 
     // ---- settings (the cog) --------------------------------------------------
 
-    // When the menu is open, a click on the cog dismisses the menu FIRST (on the
-    // press) and then fires the button (on the release) - which would reopen it
-    // instantly, making the cog impossible to toggle shut. Closed fires with the
-    // pointer still on the cog ONLY for that dismiss-press, so exactly that close
-    // arms a one-shot swallow of the coming Click - no timers, no guessing.
+    // A cog click while open closes the menu on press, so swallow the Click that would reopen it.
     private bool _swallowNextSettingsClick;
 
-    // Pressed the cog but released elsewhere: the armed swallow's Click never
-    // comes, so leaving the button disarms it.
+    // Released elsewhere, so the swallowed Click never comes: disarm on leave.
     private void OnSettingsMouseLeave(object sender, MouseEventArgs e)
         => _swallowNextSettingsClick = false;
 
@@ -326,8 +288,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Opens UPWARDS - the cog sits at the bottom edge of the window, so a
-        // downward menu would hang off the app over the desktop.
+        // Opens upward, since the cog sits at the window's bottom edge.
         var menu = new ContextMenu
         {
             PlacementTarget = SettingsButton,
@@ -379,7 +340,7 @@ public partial class MainWindow : Window
         _controller.UpdateSettings(s => s.Theme = next.ToString());
     }
 
-    /// <summary>Dials or bars - same numbers, different dashboard. Saved like the theme.</summary>
+    /// <summary>Toggle dials or bars and save the choice.</summary>
     private void ToggleDisplayStyle()
     {
         string next = BarsPanel.Visibility == Visibility.Visible ? "Dials" : "Bars";
@@ -393,8 +354,7 @@ public partial class MainWindow : Window
         BarsPanel.Visibility = bars ? Visibility.Visible : Visibility.Collapsed;
         DialsPanel.Visibility = bars ? Visibility.Collapsed : Visibility.Visible;
 
-        // SizeToContent only recalculates on content changes while Normal; a
-        // maximised window keeps its size either way.
+        // SizeToContent only recalculates while Normal.
         if (WindowState == WindowState.Normal)
         {
             InvalidateMeasure();
@@ -408,7 +368,7 @@ public partial class MainWindow : Window
         else _controller.Pause();
     }
 
-    /// <summary>Peak Info: what set each peak marker, straight from the controller.</summary>
+    /// <summary>Peak Info: what set each peak marker.</summary>
     private void OnPeakInfoClick(object sender, RoutedEventArgs e) =>
         MessageWindow.Show(this, "What set your peaks", _controller.BuildPeakReport(),
                            copyButton: true, autoWidth: true);
@@ -418,9 +378,7 @@ public partial class MainWindow : Window
     /// <summary>Manual check. Silence would read as broken, so "current" says so.</summary>
     private async void CheckForUpdates()
     {
-        // A flaky connection can take ~30s before anything shows - a wait cursor
-        // over THIS window says "working" (window-scoped, so any update dialog
-        // that opens mid-check keeps its normal arrow).
+        // Window-scoped wait cursor for slow checks; update dialogs keep the normal arrow.
         Cursor = Cursors.Wait;
         bool offered;
         try { offered = await ((App)Application.Current).CheckForUpdatesNowAsync(); }
@@ -433,7 +391,7 @@ public partial class MainWindow : Window
             $"App v{v.Major}.{v.Minor}.{v.Build}, PawnIO, and .NET are all current.");
     }
 
-    /// <summary>Register/unregister the logon task. Menu shows fresh state next open.</summary>
+    /// <summary>Register or unregister the logon task.</summary>
     private void ToggleStartup()
     {
         if (StartupTask.IsEnabled()) StartupTask.Disable();
@@ -447,11 +405,7 @@ public partial class MainWindow : Window
                 "next to the app.");
     }
 
-    /// <summary>
-    /// Re-pick which fans to drive. Applies NEXT launch on purpose: the watchdog
-    /// seized the current set at startup and only it holds their BIOS state - a
-    /// fan added mid-run would be driven unguarded.
-    /// </summary>
+    /// <summary>Re-pick fans; applies next launch so the watchdog guards every driven fan's BIOS state.</summary>
     private void ChooseFans()
     {
         var picker = new FanPickerWindow(
@@ -499,11 +453,7 @@ public partial class MainWindow : Window
 
     // ---- game mode ----------------------------------------------------------
 
-    /// <summary>
-    /// Shrink to a small always-on-top readout. The full window is hidden, not
-    /// closed - closing it would take the controller down with it and stop the
-    /// fans being driven at all.
-    /// </summary>
+    /// <summary>Show the overlay and hide (not close) the main window, which would stop the controller.</summary>
     private void OnGameModeClick(object sender, RoutedEventArgs e)
     {
         if (_overlay == null)
@@ -529,8 +479,7 @@ public partial class MainWindow : Window
 
     // ---- caption buttons (ours, since we draw the title bar) -----------------
 
-    // Minimise goes to the tray, not the taskbar - this is a set-and-forget
-    // background app. Hide() drops the taskbar button; the tray icon brings it back.
+    // Minimise hides to the tray: a set-and-forget background app.
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
     {
         Hide();
@@ -544,7 +493,7 @@ public partial class MainWindow : Window
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
-    /// <summary>Swap the glyph so it says what the button will DO, not what state it's in.</summary>
+    /// <summary>The glyph shows what the button will do, not the current state.</summary>
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
         bool max = WindowState == WindowState.Maximized;

@@ -6,28 +6,19 @@ using FanControlApp.Cooling; // PawnIoSetup: signature check + InstallResult rec
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// Detects, updates, and (for Setup) installs the .NET 10 Desktop Runtime the app
-/// runs on. Windows Update *can* keep .NET patched, but only when "Receive updates
-/// for other Microsoft products" is on - and it was off on our own main PC, so no
-/// stranger's machine can be trusted to have it right. The app therefore checks
-/// for itself on startup, PawnIO-style: compare what's installed against
-/// Microsoft's release metadata, and offer the update (Yes installs, No skips).
-/// Everything downloaded is verified Microsoft-signed before it runs.
-/// </summary>
+/// <summary>Checks and installs the .NET 10 Desktop Runtime itself, since Windows Update often skips it.</summary>
 public static class DotNetUpdate
 {
     private const string ReleasesIndex =
         "https://builds.dotnet.microsoft.com/dotnet/release-metadata/releases-index.json";
 
-    // The app targets net10.0-windows: it needs the WindowsDesktop shared
-    // framework, major version 10.
+    // The app targets net10.0-windows, so it needs WindowsDesktop 10.x.
     private const string DesktopFramework = "Microsoft.WindowsDesktop.App";
     private const int RequiredMajor = 10;
 
     public sealed record UpdateInfo(Version Installed, Version Latest);
 
-    /// <summary>Is any 10.x desktop runtime present? (Setup's install-or-not check.)</summary>
+    /// <summary>Is any 10.x desktop runtime present?</summary>
     public static bool IsInstalled() => InstalledVersion() != null;
 
     /// <summary>The newest 10.x WindowsDesktop runtime on this machine, or null.</summary>
@@ -61,16 +52,13 @@ public static class DotNetUpdate
         if (!string.IsNullOrWhiteSpace(envRoot)) yield return envRoot;
     }
 
-    /// <summary>
-    /// Is a newer 10.x runtime out than the one installed? Null when there's nothing
-    /// to do - already current, or offline (not a reason to nag).
-    /// </summary>
+    /// <summary>Newer 10.x runtime available? Null when current or offline.</summary>
     public static async Task<UpdateInfo?> CheckForUpdateAsync()
     {
         try
         {
             Version? installed = InstalledVersion();
-            if (installed == null) return null; // Setup's problem, not an "update"
+            if (installed == null) return null; // Setup installs it, not an update
 
             using var http = NewClient();
             string latestStr = await GetLatestReleaseAsync(http);
@@ -85,11 +73,7 @@ public static class DotNetUpdate
         }
     }
 
-    /// <summary>
-    /// Download the current runtime installer from Microsoft, verify it's
-    /// Microsoft-signed, and run it quietly. Same result shape as the PawnIO
-    /// installer so the one update window can drive either.
-    /// </summary>
+    /// <summary>Downloads the runtime installer, verifies the Microsoft signature, and runs it quietly.</summary>
     public static async Task<PawnIoSetup.InstallResult> InstallAsync(IProgress<string> progress)
     {
         string temp = "";

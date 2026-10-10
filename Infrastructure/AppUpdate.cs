@@ -7,15 +7,7 @@ using FanControlApp.Cooling; // InstallResult record
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// The app's own updater: compares this build against the latest GitHub release
-/// and, on the user's OK, downloads that release's installer, starts it, and
-/// closes the app so the installer can replace the locked exe. Settings and the
-/// fan selection live in the app folder and survive the swap. Trust anchor is
-/// TLS to github.com + ownership of the repo - our releases are unsigned, so
-/// there is no Authenticode check to make (unlike the PawnIO/.NET downloads,
-/// which are signed by their vendors and verified).
-/// </summary>
+/// <summary>Self-updater from GitHub releases; releases are unsigned, so trust is TLS plus repo ownership.</summary>
 public static class AppUpdate
 {
     private const string LatestApi =
@@ -26,12 +18,12 @@ public static class AppUpdate
     private static readonly string UpdatesDir = Path.Combine(AppPaths.ExeDir, "Updates");
     private static readonly string UnpackDir = Path.Combine(UpdatesDir, "Unpacked");
 
-    /// <summary>Deletes installers left by earlier updates - each one is ~74 MB that's never needed again.</summary>
+    /// <summary>Deletes leftover update installers (about 74 MB each).</summary>
     public static void CleanUpOldInstallers()
     {
         try
         {
-            // Older versions downloaded to the temp folder; newer ones use Updates.
+            // Checks both Updates and the old Temp location.
             IEnumerable<string> old = Directory.Exists(UpdatesDir)
                 ? Directory.EnumerateFiles(UpdatesDir, "TOA-FanControl-Setup-*.exe")
                 : Enumerable.Empty<string>();
@@ -57,7 +49,7 @@ public static class AppUpdate
                 DebugLog.Write($"Old update installers: removed {removed} ({bytes / (1024 * 1024)} MB), " +
                                $"{inUse} still in use - removed next start.");
 
-            // The parts installers unpacked: older ones into Temp\.net, newer ones into Updates\Unpacked.
+            // Installer unpack folders, in Temp\.net or Updates\Unpacked.
             string dotnetTemp = Path.Combine(Path.GetTempPath(), ".net");
             IEnumerable<string> unpacked = Directory.Exists(dotnetTemp)
                 ? Directory.EnumerateDirectories(dotnetTemp, "TOA-FanControl-Setup-*")
@@ -93,8 +85,7 @@ public static class AppUpdate
             if (tag == null) return null;
             var latest = Version.Parse(tag.TrimStart('v', 'V'));
 
-            // First .exe asset is the installer (GitHub dots the spaces in the name;
-            // browser_download_url is always the truth - never build the URL by hand).
+            // First .exe asset is the installer; use browser_download_url, never a hand-built URL.
             string? url = null;
             foreach (JsonElement a in doc.RootElement.GetProperty("assets").EnumerateArray())
             {
@@ -104,7 +95,7 @@ public static class AppUpdate
                     break;
                 }
             }
-            if (url == null) return null; // release without an installer - nothing to offer
+            if (url == null) return null; // no installer in this release
 
             return latest > installed ? new UpdateInfo(installed, latest, url) : null;
         }
@@ -115,12 +106,7 @@ public static class AppUpdate
         }
     }
 
-    /// <summary>
-    /// The install action for the update window: download the release installer,
-    /// hand it our install folder, start it, and close this app so the exe is
-    /// free to replace. The watchdog returns the fans to the BIOS on our way out;
-    /// the freshly installed version takes them again when it launches.
-    /// </summary>
+    /// <summary>Downloads and starts the installer, then exits so it can replace the exe (fans go back to BIOS).</summary>
     public static Func<IProgress<string>, Task<PawnIoSetup.InstallResult>> InstallerFor(UpdateInfo u)
         => async progress =>
     {
@@ -143,23 +129,22 @@ public static class AppUpdate
                 await src.CopyToAsync(file);
             }
 
-            // Filename only - where things live never goes in the log.
+            // Filename only, paths never go in the log.
             DebugLog.Write($"App update downloaded: {Path.GetFileName(temp)}");
             progress.Report("Starting the installer - the app will close…");
 
-            // --update = silent replace-in-place: no location or shortcut questions,
-            // just swap the app where it already lives and relaunch it.
+            // --update = silent replace in place, then relaunch.
             var psi = new ProcessStartInfo
             {
                 FileName = temp,
                 Arguments = $"--update \"{AppPaths.ExeDir.TrimEnd('\\')}\"",
                 UseShellExecute = false,
             };
-            // The installer unpacks its own parts before running; keep that inside the locked folder too, not Temp.
+            // Keep the installer's unpack inside the locked folder, not Temp.
             psi.Environment["DOTNET_BUNDLE_EXTRACT_BASE_DIR"] = UnpackDir;
             Process.Start(psi);
 
-            // Give the dialog a beat to show the message, then get out of the way.
+            // Let the dialog show the message, then exit.
             _ = Application.Current.Dispatcher.BeginInvoke(async () =>
             {
                 await Task.Delay(1500);

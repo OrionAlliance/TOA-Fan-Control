@@ -4,23 +4,8 @@ using FanControlApp.Infrastructure;
 namespace FanControlApp.Cooling;
 
 /// <summary>
-/// A second copy of this exe whose only job is to make sure the fans always end
-/// up back under the BIOS - however the main app dies.
-///
-/// The trick this is built around: the fan chip has no "hand back to BIOS"
-/// command. The library restores a header by writing back the register values it
-/// read the first time IT took that header. So whoever grabs the fans first is
-/// the only one holding the real BIOS settings.
-///
-/// Therefore the watchdog grabs them first, before the app writes anything, and
-/// never lets go until it's time to hand back. That makes it - not the app - the
-/// only thing that can truly release. Measured on this machine: a watchdog that
-/// starts after the app reports success and changes nothing, because it's
-/// restoring settings it never saw.
-///
-/// It never tries to tell a clean exit from a force-kill. "Always release" is a
-/// far easier promise to keep than "release only when needed", and restoring
-/// fans that are already restored costs nothing.
+/// A second copy of this exe that grabs the fans first (only the first grabber holds the real BIOS settings).
+/// It always hands them back to the BIOS when the app dies, however it dies; restoring twice costs nothing.
 /// </summary>
 public static class Watchdog
 {
@@ -28,10 +13,10 @@ public static class Watchdog
 
     private const int ParentPollMs = 300;
 
-    // Windows quits this process at sign-out/shutdown - this wakes the sentinel to hand back first.
+    // Wakes the sentinel to hand back before Windows quits it at sign-out/shutdown.
     private static readonly ManualResetEvent SessionEnd = new(false);
 
-    // Set whenever the BIOS has the fans, so a session-end handler knows the process may go.
+    // Set whenever the BIOS has the fans, so session end knows the process may go.
     private static readonly ManualResetEvent HandedBack = new(false);
 
     private enum Wake { Signal, ParentGone, SessionEnd }
@@ -43,11 +28,7 @@ public static class Watchdog
         return HandedBack.WaitOne(timeout);
     }
 
-    /// <summary>
-    /// Start the sentinel and block until it actually holds the fans. The caller
-    /// MUST NOT write to any fan before this returns true, or it will grab them
-    /// first and the watchdog will be left holding nothing.
-    /// </summary>
+    /// <summary>Start the sentinel and block until it holds the fans; never write a fan before this returns.</summary>
     public static WatchdogLink? LaunchAndWait(IEnumerable<string> fanNames, TimeSpan timeout)
     {
         string[] fans = fanNames.ToArray();
@@ -103,15 +84,11 @@ public static class Watchdog
         }
     }
 
-    /// <summary>
-    /// The sentinel itself. Runs in a second instance of this exe with no window:
-    /// take the fans, tell the app it's safe to drive, then hand them back the
-    /// moment the app is gone (or asks).
-    /// </summary>
+    /// <summary>The windowless sentinel: take the fans, signal Ready, hand back when the app asks or dies.</summary>
     public static void RunSentinel(string[] args)
     {
         try { RunSentinelCore(args); }
-        finally { HandedBack.Set(); } // holding nothing anymore - a session end needn't wait
+        finally { HandedBack.Set(); } // holding nothing, so session end needn't wait
     }
 
     private static void RunSentinelCore(string[] args)
@@ -162,8 +139,7 @@ public static class Watchdog
                 return;
             }
 
-            // The sentinel now just waits, possibly for days - give its idle
-            // pages back so two Task Manager rows don't read as two full apps.
+            // Trim idle memory so the waiting sentinel doesn't look like a second full app.
             Infrastructure.WorkingSet.Trim();
 
             Loop(link, hw, fans, parentPid);
@@ -199,7 +175,7 @@ public static class Watchdog
 
             DebugLog.Write("[watchdog] App asked for the BIOS to take over; waiting to be told to resume.");
 
-            // Paused. The BIOS has the fans; nothing to undo if the app dies now.
+            // Paused: the BIOS has the fans, nothing to undo if the app dies.
             Wake paused = WaitFor(link.Resume, parentPid);
             if (paused == Wake.ParentGone)
             {
@@ -216,11 +192,7 @@ public static class Watchdog
         }
     }
 
-    /// <summary>
-    /// Take the headers at the speed they're already running, so nothing audibly
-    /// changes - the point is purely to make the library record the BIOS settings
-    /// for these fans inside THIS process, while they're still pristine.
-    /// </summary>
+    /// <summary>Take the headers at their current speed so this process records the pristine BIOS settings.</summary>
     private static void Seize(HardwareMonitor hw, List<FanChannel> fans)
     {
         hw.Refresh();

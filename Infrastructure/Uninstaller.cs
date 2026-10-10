@@ -4,15 +4,7 @@ using System.Windows;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// Removes the app from this PC: shortcuts now, then the app's own files (exe,
-/// Settings, Updates, log) once the process has exited - a running exe can't delete
-/// itself, so a detached cmd waits a few seconds and removes them after
-/// both the app AND its watchdog (a second copy of this exe) are gone. The
-/// normal shutdown path hands the fans back to the BIOS on the way out, so
-/// uninstalling can never strand them. PawnIO and .NET are left alone: shared
-/// system components other software may use.
-/// </summary>
+/// <summary>Removes shortcuts now and app files after exit; fans go back to BIOS, shared PawnIO/.NET stay.</summary>
 public static class Uninstaller
 {
     public static void Run()
@@ -21,19 +13,14 @@ public static class Uninstaller
 
         DeleteShortcuts();
         DeleteInstalledAppsEntry();
-        StartupTask.Disable(); // remove the start-with-Windows task, if registered
+        StartupTask.Disable();
         ScheduleFolderRemoval();
 
-        // Normal shutdown: controller disposes, watchdog restores the BIOS curve
-        // and exits, then the scheduled removal sweeps the folder.
+        // Normal shutdown so the watchdog restores the BIOS curve before the folder sweep.
         Application.Current.Shutdown();
     }
 
-    /// <summary>
-    /// Remove our Start-menu and desktop shortcuts - but only ones that actually
-    /// point at THIS copy of the app, so uninstalling one install can't strip the
-    /// shortcuts of another.
-    /// </summary>
+    /// <summary>Removes Start menu and desktop shortcuts that point at this copy only.</summary>
     private static void DeleteShortcuts()
     {
         string exe = Path.Combine(AppPaths.ExeDir.TrimEnd('\\'), "TOA - Fan Control.exe");
@@ -69,7 +56,7 @@ public static class Uninstaller
         }
     }
 
-    /// <summary>Remove the entry the installer put in Windows' "Installed apps".</summary>
+    /// <summary>Removes the "Installed apps" entry.</summary>
     private static void DeleteInstalledAppsEntry()
     {
         try
@@ -90,12 +77,11 @@ public static class Uninstaller
         string dir = AppPaths.ExeDir.TrimEnd('\\');
         string exe = Path.GetFileName(Environment.ProcessPath) ?? "TOA - Fan Control.exe";
 
-        // Only our own files, then the folder only if that left it empty (a portable copy may sit in Downloads).
+        // Our own files only, then the folder if empty (a portable copy may sit in Downloads).
         string own = $"del /f /q \"{dir}\\{exe}\" \"{dir}\\fan_debug.log\" \"{dir}\\fan_debug.log.old\" 2>nul" +
                      $" & rd /s /q \"{dir}\\Settings\" 2>nul & rd /s /q \"{dir}\\Updates\" 2>nul & rd \"{dir}\" 2>nul";
 
-        // 5 seconds covers the app's release-and-exit plus the watchdog noticing
-        // the parent died, restoring the fans, and exiting (it polls at 300ms).
+        // 5s covers app exit plus the watchdog restoring the fans and exiting.
         var psi = new ProcessStartInfo
         {
             FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),

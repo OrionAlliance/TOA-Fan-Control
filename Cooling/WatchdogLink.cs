@@ -3,18 +3,7 @@ using System.Threading;
 
 namespace FanControlApp.Cooling;
 
-/// <summary>
-/// The three signals between the app and its watchdog.
-///
-/// Why any of this exists: the fan chip has no "give control back to the BIOS"
-/// command. The library restores a header by writing back the register values it
-/// read the first time it took that header - so only the process that grabbed the
-/// fans FIRST is holding the real BIOS settings. Everyone else has nothing to
-/// restore.
-///
-/// So the watchdog grabs them first and is the sole owner of handing them back.
-/// The app asks; the watchdog acts.
-/// </summary>
+/// <summary>The three signals between the app and its watchdog: the app asks, the watchdog acts.</summary>
 public sealed class WatchdogLink : IDisposable
 {
     /// <summary>Set by the watchdog once it holds the fans (and the real defaults).</summary>
@@ -26,15 +15,10 @@ public sealed class WatchdogLink : IDisposable
     /// <summary>Set by the app to ask the watchdog to take them again.</summary>
     public EventWaitHandle Resume { get; }
 
-    /// <summary>The sentinel process itself. Set by the app after launching it.</summary>
+    /// <summary>The sentinel process, set by the app after launching it.</summary>
     public Process? Sentinel { get; set; }
 
-    /// <summary>
-    /// False once the sentinel is gone. Worth checking every tick: these events
-    /// keep working after the process behind them dies - Restore would be set for
-    /// nobody, and Ready is manual-reset so it stays signalled forever. The app
-    /// would carry on driving and quietly lose any way to hand the fans back.
-    /// </summary>
+    /// <summary>False once the sentinel is gone; check every tick since the events outlive it.</summary>
     public bool SentinelAlive
     {
         get
@@ -51,8 +35,7 @@ public sealed class WatchdogLink : IDisposable
         Resume = resume;
     }
 
-    // Scoped to the app's pid so a stale watchdog from a previous run can never
-    // answer for this one.
+    // Scoped to the app's pid so a stale watchdog from a previous run can't answer.
     private static string ReadyName(int pid) => $@"Local\TOA_FanControl_{pid}_Ready";
     private static string RestoreName(int pid) => $@"Local\TOA_FanControl_{pid}_Restore";
     private static string ResumeName(int pid) => $@"Local\TOA_FanControl_{pid}_Resume";

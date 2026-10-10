@@ -5,19 +5,12 @@ namespace FanControlApp.Infrastructure;
 
 public enum AppTheme { Dark, Light }
 
-/// <summary>
-/// Swaps the chrome palette (window, cards, buttons, text, menus) between dark and
-/// light by overwriting the named brushes in Application.Resources - everything
-/// references them via DynamicResource, so the switch is live. The gauge dials and
-/// fan tiles are deliberately NOT themed: they're drawn as physical instruments,
-/// and a car dash is dark in any theme. Semantic colours (Cool/Warm/Hot, peak
-/// yellow, close-button red) never change either - they're information.
-/// </summary>
+/// <summary>Live dark/light swap of the chrome brushes; dials and status colours stay fixed on purpose.</summary>
 public static class ThemeManager
 {
     public static AppTheme Current { get; private set; } = AppTheme.Dark;
 
-    /// <summary>Raised after a swap, so windows can re-paint their DWM title bars.</summary>
+    /// <summary>Raised after a swap so windows can repaint their title bars.</summary>
     public static event EventHandler? Changed;
 
     public static void Apply(string? name) =>
@@ -49,7 +42,7 @@ public static class ThemeManager
             r["CapBtnHover"] = Solid("#333B4D");
             r["CapBtnPressed"] = Solid("#454E63");
 
-            // Bar view: dark machined groove, matching the dials' faces.
+            // Bar view: dark groove matching the dials.
             r["BarTrack"] = Grad(("#0C0E13", 0), ("#191D27", 0.55), ("#232735", 1));
             r["BarTrackEdge"] = Solid("#323848");
             r["BarTrackText"] = Solid("#FFFFFF");
@@ -74,8 +67,7 @@ public static class ThemeManager
             r["CapBtnHover"] = Solid("#D9DDE5");
             r["CapBtnPressed"] = Solid("#C0C6D1");
 
-            // Bar view: a recessed light groove instead of the dark one - naked
-            // dark tracks on a light card read as holes, not instruments.
+            // Bar view: light groove, since dark tracks on a light card read as holes.
             r["BarTrack"] = Grad(("#C6CBD6", 0), ("#DDE1E8", 0.55), ("#EDEFF4", 1));
             r["BarTrackEdge"] = Solid("#A9B0BF");
             r["BarTrackText"] = Solid("#14171F");

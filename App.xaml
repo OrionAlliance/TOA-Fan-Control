@@ -3,15 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
 
-        <!-- Chrome palette. These are the DARK defaults; ThemeManager overwrites
-             every one of them at runtime (dark or light), and all references below
-             are DynamicResource so the swap is live. The gauges/fan tiles draw
-             their own dark faces in code and are deliberately not themed. -->
+        <!-- Dark defaults; ThemeManager overwrites these at runtime (gauges and fan tiles are not themed). -->
         <SolidColorBrush x:Key="Bg"        Color="#12141A" />
         <SolidColorBrush x:Key="Panel"     Color="#1A1D26" />
         <SolidColorBrush x:Key="PanelEdge" Color="#2A2F3D" />
-        <!-- Text and TextDim identical on purpose (user call, 2026-07-20): the
-             muted grey tier was hard to read. Hierarchy comes from font size. -->
+        <!-- Text and TextDim match on purpose: muted grey was hard to read, font size gives hierarchy. -->
         <SolidColorBrush x:Key="Text"      Color="#FFFFFF" />
         <SolidColorBrush x:Key="TextDim"   Color="#FFFFFF" />
         <SolidColorBrush x:Key="Accent"    Color="#4C8DFF" />
@@ -21,9 +17,7 @@
         <SolidColorBrush x:Key="Warm" Color="#D29922" />
         <SolidColorBrush x:Key="Hot"  Color="#F85149" />
 
-        <!-- Title bar face: same recipe as a card, but only bevelled along the
-             bottom edge - it's the top of the window, so there's no light coming
-             from above it. -->
+        <!-- Title bar face: like a card but bevelled only along the bottom edge. -->
         <LinearGradientBrush x:Key="TitleFace" StartPoint="0,0" EndPoint="0,1">
             <GradientStop Color="#2A3040" Offset="0" />
             <GradientStop Color="#1E222D" Offset="0.55" />
@@ -43,8 +37,7 @@
             <GradientStop Color="#0E1116" Offset="1" />
         </LinearGradientBrush>
 
-        <!-- Raised keycap, same light source as the cards and gauges. Pressing it
-             flips the gradient so the button reads as pushed in. -->
+        <!-- Raised keycap faces; the pressed face flips the gradient so it reads as pushed in. -->
         <LinearGradientBrush x:Key="BtnFace" StartPoint="0,0" EndPoint="0,1">
             <GradientStop Color="#333A4C" Offset="0" />
             <GradientStop Color="#242938" Offset="1" />
@@ -69,25 +62,12 @@
         <SolidColorBrush x:Key="CapBtnHover"   Color="#333B4D" />
         <SolidColorBrush x:Key="CapBtnPressed" Color="#454E63" />
 
-        <!-- Deliberately does NOT set Foreground.
-
-             An implicit TextBlock style reaches inside control templates -
-             including a ToolTip's popup, which is light - so a global
-             "everything is near-white" setter paints that text white-on-white.
-             Worse, a local override on the element does NOT win: implicit
-             styles for template-generated elements resolve against
-             Application.Resources, not the element's own resources.
-
-             So text colour is inherited from the Window instead. Inheritance is
-             overridable at any level; an implicit style setter isn't. -->
+        <!-- No Foreground here: an implicit TextBlock style reaches into templates and can't be overridden locally. -->
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI" />
         </Style>
 
-        <!-- Explicit colours, not inherited ones. A ToolTip's content sits in a popup
-             but still inherits Foreground down the logical tree from the Window - which
-             is near-white here. Left alone, tooltips render white on a light default
-             background and disappear, exactly like the ComboBox did. -->
+        <!-- Explicit colours: tooltips inherit the Window's white text and would vanish on the light default. -->
         <Style TargetType="ToolTip">
             <Setter Property="Background" Value="{DynamicResource Panel}" />
             <Setter Property="Foreground" Value="{DynamicResource Text}" />
@@ -97,10 +77,7 @@
             <Setter Property="FontSize" Value="12" />
         </Style>
 
-        <!-- Raised panel, lit from above so it agrees with the gauges.
-             No DropShadowEffect on purpose: an Effect renders the border AND its
-             whole subtree through an intermediate surface, which disables ClearType
-             and softens every label inside the card. -->
+        <!-- Raised panel; no DropShadowEffect because an Effect disables ClearType and blurs the labels. -->
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardFace}" />
             <Setter Property="BorderBrush" Value="{DynamicResource CardEdge}" />
@@ -109,13 +86,7 @@
             <Setter Property="Padding" Value="14,12" />
         </Style>
 
-        <!-- Caption buttons: flat until hovered, so they don't compete with the
-             raised cards below. Segoe MDL2 Assets is the system glyph font - the
-             same shapes Windows' own buttons use. -->
-        <!-- The glyph is drawn by an explicit TextBlock with the icon font set
-             LOCALLY - a ContentPresenter would auto-create a TextBlock that picks
-             up the implicit Segoe UI style above and render every glyph as a tofu
-             box. Local values are the one thing an implicit style can't beat. -->
+        <!-- Flat caption buttons; the glyph font is set locally so the implicit Segoe UI style can't tofu it. -->
         <Style x:Key="CaptionButton" TargetType="Button">
             <Setter Property="Width" Value="46" />
             <Setter Property="Background" Value="Transparent" />
@@ -158,8 +129,7 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
-                            <!-- Red on hover, like every other Windows close button.
-                                 Semantic - stays red in both themes. -->
+                            <!-- Windows-style red close hover, same in both themes. -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="b" Property="Background" Value="#C42B1C" />
                                 <Setter Property="Foreground" Value="White" />
@@ -204,8 +174,7 @@
             </Setter>
         </Style>
 
-        <!-- The settings menu (cog button). Default WPF menus are light-on-light
-             system chrome; these keep it on the app's palette in both themes. -->
+        <!-- Cog settings menu, kept on the app palette instead of light system chrome. -->
         <Style TargetType="ContextMenu">
             <Setter Property="Background" Value="{DynamicResource Panel}" />
             <Setter Property="BorderBrush" Value="{DynamicResource PanelEdge}" />

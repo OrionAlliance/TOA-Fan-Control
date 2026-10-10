@@ -9,15 +9,10 @@ using System.Windows.Shapes;
 
 namespace FanControlApp.Controls;
 
-/// <summary>
-/// A car-dash gauge: machined bezel, dished face, glass, a white needle floating
-/// above it, an optional green safe band and red danger band, and a yellow mark
-/// that sticks at the highest value seen so far this run.
-/// </summary>
+/// <summary>Car-dash dial with needle, optional green/red bands, a load lane and session peak marks.</summary>
 public partial class Gauge : UserControl
 {
-    // Classic car sweep: 135 deg (bottom-left) round through the top to 405 deg
-    // (bottom-right). Screen angles, so 270 is straight up.
+    // Sweep 135 to 405 deg through the top; screen angles, so 270 is straight up.
     private const double StartAngle = 135;
     private const double SweepAngle = 270;
     private const double EndAngle = StartAngle + SweepAngle;
@@ -37,7 +32,7 @@ public partial class Gauge : UserControl
 
     private double _cx, _cy, _r;
 
-    // Radii, outside in. Everything is derived from the bezel so the dial scales.
+    // Radii derived from the bezel so the dial scales.
     private double FaceR => _r - 5;
     private double BandR => _r - 13;
     private double TickOuter => _r - 14;
@@ -82,8 +77,7 @@ public partial class Gauge : UserControl
     private double _loadValue = double.NaN;
     private bool _trueLoad;
 
-    /// <summary>True = the load lane shows real load (watts vs the card's max);
-    /// false = busy time. Only changes the words - a gauge must say what it measures.</summary>
+    /// <summary>True labels the load lane as real load (watts vs max), false as busy time; wording only.</summary>
     public bool TrueLoad
     {
         set
@@ -97,8 +91,7 @@ public partial class Gauge : UserControl
 
     private string LoadWord => _trueLoad ? "load" : "busy time";
 
-    /// <summary>Live load % right now (0-100) - the cyan triangle sweeps with it,
-    /// the load lane's needle. NaN hides the triangle.</summary>
+    /// <summary>Live load % (0-100) for the cyan triangle; NaN hides it.</summary>
     public double LoadValue
     {
         set
@@ -109,9 +102,7 @@ public partial class Gauge : UserControl
         }
     }
 
-    /// <summary>Independent session peak load % (0-100), fed by the controller -
-    /// the cyan tick that stays at the highest point the triangle reached.
-    /// NaN hides the tick.</summary>
+    /// <summary>Session peak load % (0-100) from the controller for the cyan tick; NaN hides it.</summary>
     public double PeakLoad
     {
         set
@@ -122,11 +113,7 @@ public partial class Gauge : UserControl
         }
     }
 
-    /// <summary>
-    /// The session peak, fed by the controller - one truth shared by every view
-    /// (dials, bars, Game Mode), so switching views can never disagree. NaN hides
-    /// the marker.
-    /// </summary>
+    /// <summary>Session peak from the controller, shared by every view so they agree; NaN hides it.</summary>
     public double Peak
     {
         get => _peak;
@@ -172,7 +159,7 @@ public partial class Gauge : UserControl
         Canvas.SetTop(e, _cy - radius);
     }
 
-    // Band tooltips are sentences - wrap them into a readable block, not a ribbon.
+    // Wraps sentence-length band tooltips into a readable block.
     private static ToolTip Tip(string text) => new()
     {
         Content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, MaxWidth = 230 },
@@ -209,8 +196,7 @@ public partial class Gauge : UserControl
         Face.Children.Clear();
         Moving.Children.Clear();
 
-        // Drop the old parts too - if we bail out below, UpdateMoving must not
-        // animate orphans that are no longer in the tree.
+        // Drop old parts so an early return leaves no orphans for UpdateMoving to animate.
         _needle = null;
         _needleRotate = null;
         _peakMark = null;
@@ -244,7 +230,7 @@ public partial class Gauge : UserControl
     /// <summary>Machined ring, dished face, and the shadow the rim casts inward.</summary>
     private void DrawBezel()
     {
-        // Lit from the top-left, like everything else on the dial.
+        // Lit from the top-left.
         var bezel = new Ellipse
         {
             Fill = new LinearGradientBrush
@@ -271,7 +257,7 @@ public partial class Gauge : UserControl
         PlaceCentered(bezel, _r);
         Face.Children.Add(bezel);
 
-        // Dished face: light pools toward the upper-left, falls away to the rim.
+        // Dished face, brightest at the upper-left.
         var face = new Ellipse
         {
             Fill = new RadialGradientBrush
@@ -291,7 +277,7 @@ public partial class Gauge : UserControl
         PlaceCentered(face, FaceR);
         Face.Children.Add(face);
 
-        // Inner shadow - sells the idea that the face sits below the rim.
+        // Inner shadow so the face sits below the rim.
         var innerShadow = new Ellipse
         {
             Fill = new RadialGradientBrush
@@ -325,7 +311,7 @@ public partial class Gauge : UserControl
             Face.Children.Add(green);
         }
 
-        // The tax zone: safe, but boost quietly erodes as the heat climbs.
+        // Amber tax zone: safe, but boost erodes as heat climbs.
         if (!double.IsNaN(GreenTo) && !double.IsNaN(RedFrom) && RedFrom > GreenTo)
         {
             Path amber = Arc(AngleFor(GreenTo), AngleFor(RedFrom), BandR, B("#E8D44C"), 7);
@@ -348,7 +334,7 @@ public partial class Gauge : UserControl
             Face.Children.Add(red);
         }
 
-        // The redline itself - a hard mark at where trouble starts
+        // Redline mark.
         if (double.IsNaN(RedFrom)) return;
 
         double a = AngleFor(RedFrom);
@@ -368,9 +354,7 @@ public partial class Gauge : UserControl
         Brush tick = B("#9AA3B8");
         Brush num = B("#FFFFFF");
 
-        // Every NUMBERED value (each 10 on the temp dials) gets the long heavy
-        // marker - a number deserves a real tick. The short faint ticks sit on
-        // the unnumbered midpoints between them (5, 15, 25, ...).
+        // Numbered values get long heavy ticks; unnumbered midpoints get short faint ones.
         double numberedStep = MajorTick / 2;
         double step = MajorTick / 4;
 
@@ -405,7 +389,7 @@ public partial class Gauge : UserControl
         }
     }
 
-    /// <summary>The glass: a soft highlight across the upper face, clipped to the dial.</summary>
+    /// <summary>Glass highlight across the upper face, clipped to the dial.</summary>
     private void DrawGloss()
     {
         double gw = FaceR * 1.75;
@@ -428,7 +412,7 @@ public partial class Gauge : UserControl
                     new GradientStop(Colors.Transparent, 1),
                 },
             },
-            // Clip in the gloss's own coordinate space, so it can't spill past the rim.
+            // Clip in the gloss's own coordinates so it can't spill past the rim.
             Clip = new EllipseGeometry(new Point(_cx - left, _cy - top), FaceR, FaceR),
             IsHitTestVisible = false,
         };
@@ -449,7 +433,7 @@ public partial class Gauge : UserControl
             FontWeight = FontWeights.SemiBold,
             TextAlignment = TextAlignment.Center,
             Width = _r * 1.6,
-            IsHitTestVisible = false, // its invisible layout box must not eat band tooltips
+            IsHitTestVisible = false, // its layout box must not eat band tooltips
             Effect = new DropShadowEffect
             {
                 Color = Colors.Black, BlurRadius = 4, ShadowDepth = 1.5,
@@ -467,22 +451,13 @@ public partial class Gauge : UserControl
             FontSize = 10,
             TextAlignment = TextAlignment.Center,
             Width = _r * 1.6,
-            IsHitTestVisible = false, // same - the label's box overlaps the red band's arc
+            IsHitTestVisible = false, // its box overlaps the red band
             LineHeight = 12,
             LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
         };
         Canvas.SetLeft(lab, _cx - _r * 0.8);
 
-        // Sit the label's BOTTOM on a fixed baseline low in the dial's dark gap,
-        // rather than its top. Anchoring the top makes a one-line "CPU" and a
-        // two-line "Chassis / Fan #2" finish at different heights, so the row
-        // doesn't line up. This way every label ends on the same line whatever
-        // its height.
-        //
-        // 0.86r puts a two-line label wholly inside the gap: the band's ends stop
-        // at ~0.58r vertically, so anything above that straddles them instead of
-        // sitting in the dark. It's also near the floor - the circle narrows fast
-        // down here and the text soon runs out of dial to sit on.
+        // Anchor the label's bottom at 0.86r so one and two line labels end level, below the band ends.
         lab.Measure(new Size(_r * 1.6, double.PositiveInfinity));
         Canvas.SetTop(lab, _cy + _r * 0.86 - lab.DesiredSize.Height);
         Face.Children.Add(lab);
@@ -494,22 +469,20 @@ public partial class Gauge : UserControl
     {
         double len = NeedleLen;
 
-        // Yellow peak mark - drawn under the needle so the needle wins on overlap.
+        // Yellow peak mark, drawn under the needle so the needle wins on overlap.
         _peakRotate = new RotateTransform(StartAngle);
         var peakFig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
         peakFig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
         var peakGeo = new PathGeometry();
         peakGeo.Figures.Add(peakFig);
 
-        // Shared, so the mark and its hit area can never drift apart.
+        // Shared so the mark and its hit area never drift apart.
         var peakTransform = new TransformGroup
         {
             Children = { _peakRotate, new TranslateTransform(_cx, _cy) },
         };
 
-        // A fat invisible copy of the mark, purely to catch the mouse. The visible
-        // line is 3px on a rotated dial - nobody is landing on that. Transparent
-        // still hit-tests; null wouldn't.
+        // Fat invisible copy to catch the mouse; Transparent hit-tests, null wouldn't.
         _peakHit = new Path
         {
             Data = peakGeo,
@@ -534,8 +507,7 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_peakMark);
 
-        // Peak-load mark: the yellow peak line's twin in load blue, parked at the
-        // session's highest load.
+        // Peak-load mark in load blue at the session's highest load.
         _loadPeakRotate = new RotateTransform(StartAngle);
         var loadPeakFig = new PathFigure { StartPoint = new Point(BandR - 11, 0) };
         loadPeakFig.Segments.Add(new LineSegment(new Point(BandR + 6, 0), true));
@@ -560,9 +532,7 @@ public partial class Gauge : UserControl
         _loadPeakMark = new Path
         {
             Data = loadPeakGeo,
-            // Electric cyan, NOT the triangle's deep cyan: this line crosses the
-            // bright green band, where dark cyan melts invisibly at 2-3px. Same
-            // reason the temp tick is luminous yellow.
+            // Electric cyan, since the triangle's deep cyan vanishes over the green band.
             Stroke = B("#4DEEFF"),
             StrokeThickness = 3,
             IsHitTestVisible = false,
@@ -574,8 +544,7 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_loadPeakMark);
 
-        // Live load: a small triangle riding OUTSIDE the band, tip pointing at the
-        // current load - its own lane, so a load never reads as a temperature.
+        // Live-load triangle outside the band, so a load never reads as a temperature.
         _loadRotate = new RotateTransform(StartAngle);
         var loadTransform = new TransformGroup
         {
@@ -611,8 +580,7 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_loadMark);
 
-        // White needle. The gradient across its width reads as a rounded edge;
-        // the shadow lifts it off the face.
+        // White needle; gradient gives a rounded edge, shadow lifts it off the face.
         _needleRotate = new RotateTransform(StartAngle);
         _needle = new Polygon
         {
@@ -646,7 +614,7 @@ public partial class Gauge : UserControl
         };
         Moving.Children.Add(_needle);
 
-        // Raised hub, capping the needle's pivot.
+        // Hub cap over the needle pivot.
         var hub = new Ellipse
         {
             Width = 15,
@@ -689,8 +657,7 @@ public partial class Gauge : UserControl
             : !double.IsNaN(GreenTo) && v <= GreenTo ? B("#3FB950")
             : B("#FFFFFF");
 
-        // Animate rather than snap - a needle that jumps once a second reads as
-        // broken; one that sweeps reads as a gauge.
+        // Sweep rather than snap; a jumping needle reads as broken.
         double target = AngleFor(has ? v : Minimum);
         _needleRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
         {
@@ -700,13 +667,12 @@ public partial class Gauge : UserControl
         });
     }
 
-    // Markers repaint only when a peak actually changes - never on value ticks.
+    // Repaints only when a peak changes, never on value ticks.
     private void UpdatePeakMarks()
     {
         if (_peakMark == null || _peakRotate == null || _peakHit == null) return;
 
-        // Labels may be stacked on the dial ("Chassis\nFan #2"); flatten it here or
-        // the tooltips break across two lines mid-sentence.
+        // Flatten two-line labels so tooltips don't break mid-sentence.
         string flat = Label.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
 
         bool hasPeak = !double.IsNaN(Peak);
@@ -735,8 +701,7 @@ public partial class Gauge : UserControl
             _loadPeakHit.ToolTip = $"{flat} peak {LoadWord} this run: {_peakLoad:0}%";
             double loadAngle = LoadAngle(_peakLoad);
 
-            // His rule: temp and load peaks on the same spot = park the load
-            // mark exactly one dial unit above the temp mark.
+            // If the peaks overlap, park the load mark one dial unit off the temp mark.
             double oneUnit = SweepAngle / 100.0;
             if (hasPeak)
             {
@@ -754,8 +719,7 @@ public partial class Gauge : UserControl
         }
     }
 
-    // The live cyan triangle - the load lane's needle. Sweeps with the current
-    // load every capture, so it animates like the temp needle does.
+    // Sweeps the live load triangle like the temp needle.
     private void UpdateLiveLoad()
     {
         if (_loadMark == null || _loadHit == null || _loadRotate == null) return;
@@ -776,8 +740,7 @@ public partial class Gauge : UserControl
         });
     }
 
-    // Load is a % of the WHOLE sweep (a tachometer fraction), not a point on the
-    // temperature axis - identical only while the dial runs 0-100.
+    // Load is a fraction of the whole sweep, not a point on the temperature axis.
     private double LoadAngle(double pct) =>
         StartAngle + Math.Clamp(pct / 100.0, 0, 1) * SweepAngle;
 }

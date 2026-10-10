@@ -5,13 +5,7 @@ using System.Windows.Media.Effects;
 
 namespace FanControlApp.Controls;
 
-/// <summary>
-/// A horizontal readout bar - the "sensor panel" counterpart to the dials, styled
-/// after the classic AIDA strip displays: every reading lives INSIDE the bar
-/// (name left, value right, a fan's RPM just before the value). Same visual
-/// language as <see cref="Gauge"/>: dark machined track, zone-coloured fill
-/// (green/amber/red for temps, neutral steel for fan %), yellow peak tick.
-/// </summary>
+/// <summary>Horizontal readout bar, the sensor-panel counterpart to <see cref="Gauge"/> with zone fill and peak ticks.</summary>
 public partial class StatBar : UserControl
 {
     private double _peak = double.NaN;
@@ -19,8 +13,7 @@ public partial class StatBar : UserControl
     private double _loadValue = double.NaN;
     private bool _trueLoad;
 
-    /// <summary>True = the load lane shows real load (watts vs the card's max);
-    /// false = busy time. Only changes the words - a bar must say what it measures.</summary>
+    /// <summary>True labels the load lane as real load (watts vs max), false as busy time; wording only.</summary>
     public bool TrueLoad
     {
         set
@@ -73,10 +66,10 @@ public partial class StatBar : UserControl
         DependencyProperty.Register(nameof(RedFrom), typeof(double), typeof(StatBar),
             new PropertyMetadata(double.NaN, (d, _) => ((StatBar)d).UpdateVisual()));
 
-    /// <summary>Name inside the bar's left end. Long fan names ellipsize with a tooltip.</summary>
+    /// <summary>Name inside the bar; long names ellipsize with a tooltip.</summary>
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
 
-    /// <summary>The reading. NaN renders an empty bar and "--".</summary>
+    /// <summary>The reading; NaN shows an empty bar and "--".</summary>
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
     /// <summary>Shown after the number: "C" renders as "47 C", "%" as "47%".</summary>
@@ -91,8 +84,7 @@ public partial class StatBar : UserControl
     /// <summary>Values at or above this fill red; NaN = no red zone.</summary>
     public double RedFrom { get => (double)GetValue(RedFromProperty); set => SetValue(RedFromProperty, value); }
 
-    /// <summary>Live load % right now (0-100) - the cyan triangle slides with it,
-    /// the load lane's needle. NaN hides the triangle.</summary>
+    /// <summary>Live load % (0-100) for the cyan triangle; NaN hides it.</summary>
     public double LoadValue
     {
         set
@@ -104,9 +96,7 @@ public partial class StatBar : UserControl
         }
     }
 
-    /// <summary>Independent session peak load % (0-100), fed by the controller -
-    /// the cyan tick that stays at the highest point the triangle reached.
-    /// NaN hides the tick.</summary>
+    /// <summary>Session peak load % (0-100) from the controller for the cyan tick; NaN hides it.</summary>
     public double PeakLoad
     {
         set
@@ -118,10 +108,7 @@ public partial class StatBar : UserControl
         }
     }
 
-    /// <summary>
-    /// The session peak, fed by the controller - one truth shared by every view.
-    /// NaN hides the marker (fan bars simply never get one).
-    /// </summary>
+    /// <summary>Session peak from the controller, shared by every view; NaN hides it.</summary>
     public double Peak
     {
         get => _peak;
@@ -137,11 +124,7 @@ public partial class StatBar : UserControl
 
     // ---- rendering ----------------------------------------------------------
 
-    /// <summary>
-    /// Live secondary reading shown right after the value ("37%  RPM: 706").
-    /// Null/empty hides it and gives the bar the space back. The value column
-    /// is content-sized, so the bar always gets every pixel the text doesn't use.
-    /// </summary>
+    /// <summary>Secondary reading after the value; null or empty hides it and gives the bar the space.</summary>
     public string? TrailText
     {
         set
@@ -168,8 +151,7 @@ public partial class StatBar : UserControl
         double v = Value;
         bool has = !double.IsNaN(v);
 
-        // The number outside the bar, coloured exactly like the dials colour
-        // theirs: zone colour for temps, the theme's text colour when zoneless.
+        // Zone colour for temps, theme text colour when zoneless, like the dials.
         string unit = Unit == "%" ? "%" : string.IsNullOrEmpty(Unit) ? "" : $" {Unit}";
         ValueText.Text = has ? $"{v:F0}{unit}" : "--";
 
@@ -182,19 +164,15 @@ public partial class StatBar : UserControl
         double frac = has ? Math.Clamp((v - Minimum) / (Maximum - Minimum), 0, 1) : 0;
         Fill.Width = frac * w;
 
-        // Paint only changes when the value crosses a zone line - reuse the
-        // frozen cached brushes instead of mixing fresh paint every tick.
+        // Reuse frozen cached brushes instead of allocating paint every tick.
         Fill.Background = FillFor(zone);
         Fill.Effect = has && frac > 0 ? GlowFor(zone) : null;
 
-        // Black text exists only over the fill: the black layer is clipped to the
-        // fill's width, and the white layer shows past its edge. One geometry,
-        // resized in place.
+        // Clip the black text layer to the fill width; white shows past its edge.
         _clip.Rect = new Rect(0, 0, Math.Max(0, Fill.Width + 1), TrackHost.ActualHeight);
         TextBlackLayer.Clip ??= _clip;
 
-        // Marker tooltips are set in the Peak/PeakLoad setters - only position
-        // and visibility belong here, so value ticks allocate nothing.
+        // Tooltips live in the setters; only position and visibility here, so ticks allocate nothing.
         if (!double.IsNaN(_peak))
         {
             double pf = Math.Clamp((_peak - Minimum) / (Maximum - Minimum), 0, 1);
@@ -206,14 +184,12 @@ public partial class StatBar : UserControl
             PeakTick.Visibility = Visibility.Collapsed;
         }
 
-        // Load is a % of the WHOLE track (a tachometer fraction), not a point
-        // on the temperature axis - identical only while the bar runs 0-100.
+        // Load is a fraction of the whole track, not a point on the temperature axis.
         if (!double.IsNaN(_peakLoad))
         {
             double x = Math.Clamp(_peakLoad / 100.0, 0, 1) * w;
 
-            // His rule: temp and load peaks on the same spot = park the load
-            // tick exactly one track unit above the temp tick.
+            // If the peaks overlap, park the load tick one track unit off the temp tick.
             double oneUnit = w / 100.0;
             if (!double.IsNaN(_peak))
             {
@@ -242,7 +218,7 @@ public partial class StatBar : UserControl
         }
     }
 
-    // The clip geometry is reused and resized in place, never reallocated.
+    // Reused and resized in place, never reallocated.
     private readonly System.Windows.Media.RectangleGeometry _clip = new();
 
     private Color ZoneColor(double v, bool has)
@@ -251,12 +227,10 @@ public partial class StatBar : UserControl
         if (!double.IsNaN(RedFrom) && v >= RedFrom) return C("#F85149");
         if (!double.IsNaN(GreenTo) && v <= GreenTo) return C("#3FB950");
         if (!double.IsNaN(GreenTo) || !double.IsNaN(RedFrom)) return C("#E3B341");
-        return C("#AEB6C6"); // zoneless (fan %): neutral steel, same as the needle metal
+        return C("#AEB6C6"); // zoneless (fan %): neutral steel
     }
 
-    // ---- shared frozen paint: one instance per zone colour, app-wide.
-    // Frozen Freezables are thread-safe, shareable, and never re-created, so a
-    // day in the tray allocates zero paint. Four zone colours = tiny caches.
+    // ---- shared frozen paint: one instance per zone colour, app-wide, so ticks allocate nothing.
 
     private static readonly Dictionary<Color, SolidColorBrush> SolidCache = new();
     private static readonly Dictionary<Color, LinearGradientBrush> FillCache = new();
@@ -277,7 +251,7 @@ public partial class StatBar : UserControl
     {
         if (!FillCache.TryGetValue(c, out LinearGradientBrush? b))
         {
-            // Lit from the top like everything else on the dash.
+            // Lit from the top.
             b = new LinearGradientBrush(
                 Color.FromRgb((byte)Math.Min(255, c.R + 40), (byte)Math.Min(255, c.G + 40), (byte)Math.Min(255, c.B + 40)),
                 Color.FromRgb((byte)(c.R * 0.55), (byte)(c.G * 0.55), (byte)(c.B * 0.55)),

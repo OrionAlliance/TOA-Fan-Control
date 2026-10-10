@@ -3,61 +3,33 @@ using System.Text.Json;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>
-/// What little there is to remember. The behaviour isn't configurable - the app
-/// drives every case fan (all of them, whatever the board has), skips pumps and
-/// CPU coolers by name, and matches fan % to the hotter of CPU/GPU, floored at
-/// 30%. Which fans to drive is worked out live from the hardware, not stored - so
-/// nothing here is machine-specific. All that persists is the overlay position.
-/// </summary>
+/// <summary>Persisted user choices; fan behaviour itself is fixed and not configurable.</summary>
 public sealed class FanSettings
 {
-    /// <summary>
-    /// Where the Game Mode overlay was left. NaN = never placed, so it starts
-    /// top-centre. Worth persisting: you position it once around your HUD and
-    /// never want to think about it again.
-    /// </summary>
+    /// <summary>Game Mode overlay position; NaN = never placed, starts top centre.</summary>
     public double OverlayLeft { get; set; } = double.NaN;
     public double OverlayTop { get; set; } = double.NaN;
 
-    /// <summary>"Dark" or "Light" - the chrome palette picked in Settings.</summary>
+    /// <summary>"Dark" or "Light" theme.</summary>
     public string Theme { get; set; } = "Dark";
 
-    /// <summary>
-    /// "Dials" (car-dash gauges + spinning fan tiles) or "Bars" (compact
-    /// sensor-panel rows). Pure display taste - the fan behaviour is identical.
-    /// </summary>
+    /// <summary>"Dials" (gauges) or "Bars" (compact rows); display only.</summary>
     public string DisplayStyle { get; set; } = "Dials";
 
-    /// <summary>
-    /// The fans the user confirmed the app may drive (Settings → Choose fans, or
-    /// the first-run picker). Null = never picked yet, which triggers the picker.
-    /// Only ever narrows the built-in safety rule - fans named like pumps/CPU/GPU
-    /// coolers are excluded before this list is even consulted.
-    /// </summary>
+    /// <summary>Fans the user allowed; null shows the picker. Pumps and CPU/GPU coolers are excluded first.</summary>
     public List<string>? SelectedFans { get; set; }
 
-    /// <summary>
-    /// The card name the "your GPU isn't in the library yet" notice was already
-    /// shown for - so it fires once per distinct card, never nags. Cleared when
-    /// that card later gains a library row, which triggers the one-time
-    /// "now supported" balloon instead. Null = nothing shown or pending.
-    /// </summary>
+    /// <summary>Card the "GPU not in library" notice was shown for, so it fires once per card.</summary>
     public string? GpuNoticeShownFor { get; set; }
 
-    /// <summary>
-    /// User-entered max watts for an unlisted card, keyed by the card's name so
-    /// a GPU swap can never inherit a stale number. The user's value outranks
-    /// the library - they know their exact card, the library knows the reference.
-    /// </summary>
+    /// <summary>User max watts, keyed by card name so a GPU swap never inherits it; outranks the library.</summary>
     public string? GpuUserMaxWattsFor { get; set; }
     public int? GpuUserMaxWatts { get; set; }
 
-    /// <summary>The one-time "Start with Windows?" question was asked - never ask again,
-    /// whatever the answer. The cog toggle remains the way to change it later.</summary>
+    /// <summary>The one-time "Start with Windows?" question was already asked.</summary>
     public bool StartupOffered { get; set; }
 
-    /// <summary>Headers the user already decided on, so the new-fan popup never asks about them again; null until first set up.</summary>
+    /// <summary>Fan headers already decided on, so the new-fan popup skips them; null until first set up.</summary>
     public List<string>? AskedFans { get; set; }
 }
 
@@ -66,9 +38,7 @@ public static class SettingsStore
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
-        // OverlayLeft/Top are NaN until the overlay is first placed, and
-        // System.Text.Json rejects NaN by default - which made BOTH save and load
-        // throw (caught + logged, so it just looked like settings never stuck).
+        // Overlay position defaults to NaN, which System.Text.Json rejects unless allowed.
         NumberHandling = System.Text.Json.Serialization.JsonNumberHandling
             .AllowNamedFloatingPointLiterals,
     };

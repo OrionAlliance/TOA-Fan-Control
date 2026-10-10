@@ -1,13 +1,4 @@
-# Builds the one-file installer: TOA - Fan Control Setup.exe
-#
-# It's for a FRESH PC. On run it installs .NET 10 and PawnIO if they're missing
-# (with prompts - decline either and it stops), then installs and launches the app.
-# The installer is self-contained (carries its own .NET) so it runs on a PC that
-# has none. The APP it installs stays framework-dependent, so Windows Update keeps
-# its .NET patched.
-#
-# For your own PCs that already have .NET, you don't need this - just copy the small
-# app exe from dist\ (Publish-Portable.ps1).
+# Builds the self-contained fresh-PC installer that adds .NET 10 and PawnIO, then the framework-dependent app.
 
 $ErrorActionPreference = 'Stop'
 $root         = $PSScriptRoot

@@ -20,28 +20,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- WinForms is enabled ONLY for the system-tray icon (NotifyIcon). Drop its
-         global usings so WPF types (Application, Brush, Color) stay unambiguous;
-         the few WinForms/Drawing types we use are fully qualified. -->
+    <!-- WinForms is only for the tray icon; drop its global usings so WPF type names stay unambiguous. -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Hand-run dev tools, each with its own Main - keep them out of the app's
-         compile or the build breaks on multiple entry points.
-           IconGen\      draws Icon.ico, plus a proof sheet of every size
-           GaugePreview\ renders the real gauge cluster offscreen to a PNG, so
-                         layout can be looked at instead of guessed at
-           GlyphSheet\   renders a labelled sheet of a symbol font, so a glyph
-                         gets picked by looking rather than by guessing a hex code -->
+    <!-- Tools\ holds hand-run dev tools with their own Main; excluded to avoid multiple entry points. -->
     <Compile Remove="Tools\**" />
     <Page Remove="Tools\**" />
     <Resource Remove="Tools\**" />
     <None Remove="Tools\**" />
 
-    <!-- The installer is its own self-contained project (Setup\Setup.csproj); keep
-         its files (and its embedded copy of the app) out of the app's own build. -->
+    <!-- The installer is its own project (Setup\Setup.csproj), kept out of the app build. -->
     <Compile Remove="Setup\**" />
     <Page Remove="Setup\**" />
     <Resource Remove="Setup\**" />
@@ -50,19 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 0.9.6 uses PawnIO, NOT WinRing0. This matters a lot:
-         WinRing0 (used by <=0.9.4) is on Microsoft's vulnerable-driver blocklist
-         (CVE-2020-14979) and Defender now flags + stops it as
-         VulnerableDriver:WinNT/Winring0, which kills the app. 0.9.5+ swapped to
-         PawnIO - a signed, un-flagged kernel driver - so the flag is gone.
-
-         REQUIRES PawnIO installed system-wide (winget install namazso.PawnIO).
-         Without it, LHM finds ZERO motherboard sensors and the app drives
-         nothing - which is exactly why 0.9.6 looked "broken" on 2026-07-16 (that
-         test just had no PawnIO). With PawnIO 2.2.0 present, 0.9.6 detects the
-         Nuvoton NCT6798D and all 8 headers, writable - verified 2026-07-17.
-
-         Stable 0.9.6 chosen over 0.9.7-pre* on purpose; both work with PawnIO. -->
+    <!-- 0.9.6 uses PawnIO, not Defender-blocked WinRing0; needs PawnIO installed or no fan sensors appear. -->
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
   </ItemGroup>
 

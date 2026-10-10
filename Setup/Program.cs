@@ -3,11 +3,7 @@ using System.Windows;
 
 namespace FanControlSetup;
 
-/// <summary>
-/// The installer's entry point. A self-contained exe (it carries its own .NET) so
-/// it runs on a brand-new PC that has no .NET at all - which is the whole reason a
-/// separate installer exists: the app can't install the .NET it needs to run.
-/// </summary>
+/// <summary>Installer entry point; self-contained so it runs on a PC with no .NET and can install it.</summary>
 public static class Program
 {
     [STAThread]
@@ -20,7 +16,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            // A startup crash must never be silent - write it down (usernames scrubbed) and show it.
+            // Never fail silently: log the crash (usernames scrubbed) and show it.
             string details = FanControlApp.Infrastructure.DebugLog.Scrub(ex.ToString());
             try
             {
