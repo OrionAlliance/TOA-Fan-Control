@@ -31,6 +31,17 @@ public partial class FanBlade : UserControl
     {
         InitializeComponent();
         SizeChanged += (_, _) => Rebuild();
+        IsVisibleChanged += (_, _) => UpdateSpin(); // a running animation keeps WPF drawing 60 times a second, seen or not
+    }
+
+    private double _revs; // speed of the running spin, 0 = stopped
+    private bool _hold;
+
+    /// <summary>Freeze the blades (e.g. window minimized); IsVisible doesn't cover that.</summary>
+    public bool Hold
+    {
+        get => _hold;
+        set { _hold = value; UpdateSpin(); }
     }
 
     // ---- properties ---------------------------------------------------------
@@ -207,6 +218,7 @@ public partial class FanBlade : UserControl
 
         // Spin the layer as a whole about the hub.
         _spin = new RotateTransform(0, _cx, _cy);
+        _revs = 0; // fresh transform, nothing spinning yet
         BladeLayer.RenderTransform = _spin;
     }
 
@@ -329,17 +341,22 @@ public partial class FanBlade : UserControl
         if (_spin == null) return;
 
         double rpm = Value;
-        bool spinning = !double.IsNaN(rpm) && rpm > 0;
+        bool spinning = !double.IsNaN(rpm) && rpm > 0 && IsVisible && !_hold;
 
         if (!spinning)
         {
             double held = _spin.Angle;
             _spin.BeginAnimation(RotateTransform.AngleProperty, null);
             _spin.Angle = held;
+            _revs = 0;
             return;
         }
 
         double revsPerSec = 0.35 + Math.Clamp(rpm, 0, 2000) / 2000.0 * 2.4;
+
+        // RPM jitters every tick; only restart the spin for a change you could see.
+        if (_revs > 0 && Math.Abs(revsPerSec - _revs) / _revs < 0.05) return;
+        _revs = revsPerSec;
         double from = _spin.Angle;
 
         _spin.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation

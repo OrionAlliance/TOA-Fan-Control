@@ -161,11 +161,10 @@ public static class PawnIoSetup
     /// </summary>
     public static async Task<InstallResult> DownloadVerifyInstallAsync(IProgress<string> progress)
     {
-        string temp = Path.Combine(Path.GetTempPath(),
-            $"PawnIO_setup_{Environment.ProcessId}.exe");
-
+        string temp = "";
         try
         {
+            temp = Path.Combine(FolderLock.DownloadFolder(), $"PawnIO_setup_{Environment.ProcessId}.exe");
             progress.Report("Downloading the official PawnIO installer…");
             await DownloadAsync(InstallerUrl, temp);
             // Filename only - the full temp path contains the Windows username,

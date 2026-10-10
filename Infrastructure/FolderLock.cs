@@ -29,8 +29,36 @@ public static class FolderLock
         // Drop the inherited "anyone may modify" rules for our own, then have anything already inside follow them.
         bool ok = Icacls($"\"{dir}\" /inheritance:r /grant:r {Grants} /C /Q")
                   && (!Directory.EnumerateFileSystemEntries(dir).Any()
-                      || Icacls($"\"{dir}\\*\" /reset /T /C /Q"));
+                      || Icacls($"\"{dir}\\*\" /reset /T /C /Q"))
+                  // An owner can always rewrite the rules, so hand ownership to Administrators too.
+                  && Icacls($"\"{dir}\" /setowner *S-1-5-32-544 /T /C /Q");
         return ok && IsLocked(dir);
+    }
+
+    /// <summary>Where installers that run as admin get downloaded: an admin-only folder whenever the app's own folder is one.</summary>
+    public static string DownloadFolder()
+    {
+        // A portable copy or a fresh setup from Downloads: the running exe is no safer than Temp, so nothing to gain.
+        if (!IsLockedSafe(AppPaths.ExeDir)) return Path.GetTempPath();
+
+        string exeDir = AppPaths.ExeDir.TrimEnd('\\');
+        string dir = Path.GetFileName(exeDir).Equals("Updates", StringComparison.OrdinalIgnoreCase)
+            ? exeDir                           // setup launched by the app updater already sits in it
+            : Path.Combine(exeDir, "Updates");
+        Directory.CreateDirectory(dir);
+        if (!LockToAdmins(dir)) throw new InvalidOperationException("couldn't secure the download folder");
+        return dir;
+    }
+
+    /// <summary>IsLocked that answers false instead of throwing.</summary>
+    public static bool IsLockedSafe(string dir)
+    {
+        try { return IsLocked(dir); }
+        catch (Exception ex)
+        {
+            DebugLog.Write("Folder lock check failed.", ex);
+            return false;
+        }
     }
 
     /// <summary>True when ordinary users can't add, change or delete anything in the folder.</summary>
@@ -38,6 +66,7 @@ public static class FolderLock
     {
         DirectorySecurity acl = new DirectoryInfo(dir).GetAccessControl();
         if (!acl.AreAccessRulesProtected) return false;
+        if (acl.GetOwner(typeof(SecurityIdentifier))?.Value is not ("S-1-5-32-544" or "S-1-5-18")) return false;
 
         foreach (FileSystemAccessRule r in acl.GetAccessRules(true, true, typeof(SecurityIdentifier)))
         {

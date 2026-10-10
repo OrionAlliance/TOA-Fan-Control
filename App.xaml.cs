@@ -177,7 +177,7 @@ public partial class App : Application
             {
                 s.SelectedFans = chosen;
                 NewFans.RecordDecisions(s, picked); // a fan unchecked here was just decided on - never ask about it
-            });
+            }, reresolve: true);
         }
 
         // New fans: ask once about any spinning header the app isn't driving - before the watchdog, so a yes is guarded.
@@ -186,7 +186,7 @@ public partial class App : Application
         // Set-and-forget only works if the app is actually running - so ask ONCE
         // whether it should start with Windows. Any answer ends the asking forever;
         // the cog toggle stays the way to change your mind later.
-        if (!settings.StartupOffered && !StartupTask.IsEnabled())
+        if (!settings.StartupOffered && !StartupTask.IsEnabled() && StartupTask.FolderIsSafe())
         {
             DebugLog.Write("Offering start-with-Windows (one-time).");
             bool wants = MessageWindow.Confirm(null, "Start with Windows?",

@@ -5,9 +5,9 @@ using System.Windows;
 namespace FanControlApp.Infrastructure;
 
 /// <summary>
-/// Removes the app from this PC: shortcuts now, then the install folder (exe,
-/// Settings, log) once the process has exited - a running exe can't delete
-/// itself, so a detached cmd waits a few seconds and removes the folder after
+/// Removes the app from this PC: shortcuts now, then the app's own files (exe,
+/// Settings, Updates, log) once the process has exited - a running exe can't delete
+/// itself, so a detached cmd waits a few seconds and removes them after
 /// both the app AND its watchdog (a second copy of this exe) are gone. The
 /// normal shutdown path hands the fans back to the BIOS on the way out, so
 /// uninstalling can never strand them. PawnIO and .NET are left alone: shared
@@ -88,13 +88,18 @@ public static class Uninstaller
     private static void ScheduleFolderRemoval()
     {
         string dir = AppPaths.ExeDir.TrimEnd('\\');
+        string exe = Path.GetFileName(Environment.ProcessPath) ?? "TOA - Fan Control.exe";
+
+        // Only our own files, then the folder only if that left it empty (a portable copy may sit in Downloads).
+        string own = $"del /f /q \"{dir}\\{exe}\" \"{dir}\\fan_debug.log\" \"{dir}\\fan_debug.log.old\" 2>nul" +
+                     $" & rd /s /q \"{dir}\\Settings\" 2>nul & rd /s /q \"{dir}\\Updates\" 2>nul & rd \"{dir}\" 2>nul";
 
         // 5 seconds covers the app's release-and-exit plus the watchdog noticing
         // the parent died, restoring the fans, and exiting (it polls at 300ms).
         var psi = new ProcessStartInfo
         {
-            FileName = "cmd.exe",
-            Arguments = $"/c timeout /t 5 /nobreak >nul & rd /s /q \"{dir}\"",
+            FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+            Arguments = $"/c timeout /t 5 /nobreak >nul & {own}",
             CreateNoWindow = true,
             UseShellExecute = false,
         };

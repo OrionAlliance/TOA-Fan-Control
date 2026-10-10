@@ -92,11 +92,10 @@ public static class DotNetUpdate
     /// </summary>
     public static async Task<PawnIoSetup.InstallResult> InstallAsync(IProgress<string> progress)
     {
-        string temp = Path.Combine(Path.GetTempPath(),
-            $"windowsdesktop-runtime-{Environment.ProcessId}.exe");
-
+        string temp = "";
         try
         {
+            temp = Path.Combine(FolderLock.DownloadFolder(), $"windowsdesktop-runtime-{Environment.ProcessId}.exe");
             progress.Report("Finding the latest .NET 10…");
             string url = await GetInstallerUrlAsync();
             DebugLog.Write($".NET runtime installer URL: {url}");

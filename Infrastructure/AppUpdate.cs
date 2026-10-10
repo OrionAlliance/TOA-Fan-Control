@@ -24,6 +24,7 @@ public static class AppUpdate
     public sealed record UpdateInfo(Version Installed, Version Latest, string DownloadUrl);
 
     private static readonly string UpdatesDir = Path.Combine(AppPaths.ExeDir, "Updates");
+    private static readonly string UnpackDir = Path.Combine(UpdatesDir, "Unpacked");
 
     /// <summary>Deletes installers left by earlier updates - each one is ~74 MB that's never needed again.</summary>
     public static void CleanUpOldInstallers()
@@ -55,6 +56,20 @@ public static class AppUpdate
             if (removed + inUse > 0)
                 DebugLog.Write($"Old update installers: removed {removed} ({bytes / (1024 * 1024)} MB), " +
                                $"{inUse} still in use - removed next start.");
+
+            // The parts installers unpacked: older ones into Temp\.net, newer ones into Updates\Unpacked.
+            string dotnetTemp = Path.Combine(Path.GetTempPath(), ".net");
+            IEnumerable<string> unpacked = Directory.Exists(dotnetTemp)
+                ? Directory.EnumerateDirectories(dotnetTemp, "TOA-FanControl-Setup-*")
+                : Enumerable.Empty<string>();
+            if (Directory.Exists(UnpackDir)) unpacked = unpacked.Append(UnpackDir);
+            int gone = 0;
+            foreach (string d in unpacked.ToList())
+            {
+                try { Directory.Delete(d, recursive: true); gone++; }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* still in use - next start */ }
+            }
+            if (gone > 0) DebugLog.Write($"Old installer unpack folders removed: {gone}.");
         }
         catch (Exception ex)
         {
@@ -134,12 +149,15 @@ public static class AppUpdate
 
             // --update = silent replace-in-place: no location or shortcut questions,
             // just swap the app where it already lives and relaunch it.
-            Process.Start(new ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = temp,
                 Arguments = $"--update \"{AppPaths.ExeDir.TrimEnd('\\')}\"",
                 UseShellExecute = false,
-            });
+            };
+            // The installer unpacks its own parts before running; keep that inside the locked folder too, not Temp.
+            psi.Environment["DOTNET_BUNDLE_EXTRACT_BASE_DIR"] = UnpackDir;
+            Process.Start(psi);
 
             // Give the dialog a beat to show the message, then get out of the way.
             _ = Application.Current.Dispatcher.BeginInvoke(async () =>

@@ -20,16 +20,16 @@ public static class Program
         }
         catch (Exception ex)
         {
-            // A startup crash must never be silent - write it down and show it.
+            // A startup crash must never be silent - write it down (usernames scrubbed) and show it.
+            string details = FanControlApp.Infrastructure.DebugLog.Scrub(ex.ToString());
             try
             {
-                File.WriteAllText(
-                    Path.Combine(AppContext.BaseDirectory, "setup_crash.log"), ex.ToString());
+                File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "setup_crash.log"), details);
             }
             catch { /* nothing more we can do */ }
 
-            MessageBox.Show(ex.ToString(), "TOA - Fan Control Setup - startup error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(details, "TOA - Fan Control Setup - startup error",
+                MessageBoxButton.OK, MessageBoxImage.None);
         }
     }
 }

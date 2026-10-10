@@ -331,10 +331,8 @@ public sealed class FanController : IDisposable
         }
     }
 
-    /// <param name="reresolve">False = save only, don't touch the driven set. Used
-    /// when a fan-selection change must wait for the next launch: the watchdog
-    /// guards the set it seized at startup, and only that set.</param>
-    public void UpdateSettings(Action<FanSettings> mutate, bool reresolve = true)
+    /// <param name="reresolve">True only before the watchdog starts: it guards the set it seized at startup, and only that set.</param>
+    public void UpdateSettings(Action<FanSettings> mutate, bool reresolve = false)
     {
         lock (_gate)
         {
@@ -534,14 +532,18 @@ public sealed class FanController : IDisposable
         if (source is not { } temp || float.IsNaN(temp))
         {
             _blindTicks++;
-            if (_blindTicks >= MaxBlindTicks && _engaged)
+            bool handedBack = _blindTicks >= MaxBlindTicks;
+            // The watchdog holds the fans from startup, so a blind start must hand back too.
+            bool held = _engaged || (link != null && link.Ready.WaitOne(0));
+            if (handedBack && held)
             {
                 DebugLog.Write($"No temperature for {_blindTicks} ticks - handing the fans back.");
                 HandBackToBios();
             }
 
-            Publish(cpu, gpu, null,
-                    status: "No temperature reading - BIOS has the fans.");
+            Publish(cpu, gpu, null, biosHasFans: handedBack,
+                    status: handedBack ? "No temperature reading - BIOS has the fans."
+                                       : "No temperature reading - handing the fans to the BIOS...");
             return;
         }
 
@@ -927,7 +929,11 @@ public sealed class FanController : IDisposable
         // back before this process - and its driver handle - goes away.
         Thread.Sleep(400);
 
-        if (drained) _hw.Dispose();
+        // Closing the library restores OUR saved defaults (the watchdog's seized speed) over its BIOS hand-back.
+        bool watchdogOwns;
+        lock (_gate) watchdogOwns = _link != null;
+        if (watchdogOwns) DebugLog.Write("Watchdog owns the hand-back - leaving the hardware open so it isn't overwritten.");
+        else if (drained) _hw.Dispose();
         DebugLog.Write("Controller disposed.");
     }
 }

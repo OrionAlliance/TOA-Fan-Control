@@ -57,7 +57,7 @@ public static class DebugLog
     public static void Write(string message, Exception ex) =>
         Write($"{message} :: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
 
-    private static string Scrub(string s)
+    public static string Scrub(string s)
     {
         s = UserFolder.Replace(s, "$1<user>");
         if (Profile.Length > 0) s = s.Replace(Profile, "<user profile>", StringComparison.OrdinalIgnoreCase);

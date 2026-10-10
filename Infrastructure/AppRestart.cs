@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 
 namespace FanControlApp.Infrastructure;
 
@@ -28,7 +28,7 @@ public static class AppRestart
 
         Process.Start(new ProcessStartInfo
         {
-            FileName = "powershell.exe",
+            FileName = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe"),
             Arguments = "-NoProfile -WindowStyle Hidden -Command " +
                         $"\"Wait-Process -Id {Environment.ProcessId} -Timeout 60 -ErrorAction SilentlyContinue; {relaunch}\"",
             WindowStyle = ProcessWindowStyle.Hidden,

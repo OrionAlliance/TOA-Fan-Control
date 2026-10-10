@@ -20,10 +20,18 @@ public static class StartupTask
     /// <summary>Is the logon task registered? (schtasks is the source of truth.)</summary>
     public static bool IsEnabled() => Run($"/Query /TN \"{TaskName}\"", out _) == 0;
 
+    /// <summary>An admin logon task may only launch an exe nothing without admin can swap.</summary>
+    public static bool FolderIsSafe() => FolderLock.IsLockedSafe(AppPaths.ExeDir);
+
     public static bool Enable()
     {
         string? exe = Environment.ProcessPath;
         if (exe == null) return false;
+        if (!FolderIsSafe())
+        {
+            DebugLog.Write("Start-with-Windows refused - the app's folder isn't protected (portable copy?).");
+            return false;
+        }
 
         bool ok = Register(exe);
         DebugLog.Write(ok
@@ -58,6 +66,11 @@ public static class StartupTask
                 DebugLog.Write("Start-with-Windows task is outdated but launches another copy - left for that copy to heal.");
                 return;
             }
+            if (!FolderIsSafe())
+            {
+                DebugLog.Write("Start-with-Windows task is outdated, but the app's folder isn't protected - not re-registering.");
+                return;
+            }
 
             bool ok = Register(exe);
             DebugLog.Write(ok
@@ -72,7 +85,8 @@ public static class StartupTask
 
     private static bool Register(string exe)
     {
-        string file = Path.Combine(Path.GetTempPath(), $"toa-fan-task-{Guid.NewGuid():N}.xml");
+        // Written inside the locked app folder, so nothing without admin can rewrite it before schtasks reads it.
+        string file = Path.Combine(AppPaths.ExeDir, $"toa-fan-task-{Guid.NewGuid():N}.xml");
         try
         {
             File.WriteAllText(file, BuildXml(exe), Encoding.Unicode);
@@ -133,7 +147,7 @@ public static class StartupTask
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = Path.Combine(Environment.SystemDirectory, "schtasks.exe"),
                 Arguments = args,
                 UseShellExecute = false,
                 CreateNoWindow = true,

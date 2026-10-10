@@ -161,34 +161,39 @@ public partial class MainWindow : Window
             _conflictNotified = false;
         }
 
-        // Nobody's looking: while hidden in the tray, skip painting the dashboard
+        // Nobody's looking: while hidden in the tray or minimized, skip painting the dashboard
         // entirely - no dial animation, no bar redraws, no per-tick allocations.
         // Safe because the peaks live in the controller now, so the first tick
         // after reopening repaints everything current with nothing lost.
-        if (!IsVisible) return;
-
-        CpuGauge.Value = r.CpuTemp ?? double.NaN;
-        GpuGauge.Value = r.GpuTemp ?? double.NaN;
-        CpuBar.Value = r.CpuTemp ?? double.NaN;
-        GpuBar.Value = r.GpuTemp ?? double.NaN;
+        if (!IsVisible || WindowState == WindowState.Minimized) return;
 
         // Live load rides the cyan triangle; peaks come from the controller -
-        // the same numbers in every view. Wording flag first, so the first
-        // tooltip a marker ever gets already uses the right word.
-        GpuGauge.TrueLoad = r.GpuLoadIsTrue;
-        GpuBar.TrueLoad = r.GpuLoadIsTrue;
-        CpuGauge.LoadValue = r.CpuLoad;
-        GpuGauge.LoadValue = r.GpuLoad;
-        CpuBar.LoadValue = r.CpuLoad;
-        GpuBar.LoadValue = r.GpuLoad;
-        CpuGauge.PeakLoad = r.PeakCpuLoad;
-        GpuGauge.PeakLoad = r.PeakGpuLoad;
-        CpuBar.PeakLoad = r.PeakCpuLoad;
-        GpuBar.PeakLoad = r.PeakGpuLoad;
-        CpuGauge.Peak = r.PeakCpu;
-        GpuGauge.Peak = r.PeakGpu;
-        CpuBar.Peak = r.PeakCpu;
-        GpuBar.Peak = r.PeakGpu;
+        // the same numbers in every view. Only the shown panel gets them: dial
+        // needles animate, and an unseen animation still costs frames.
+        if (DialsPanel.Visibility == Visibility.Visible)
+        {
+            CpuGauge.Value = r.CpuTemp ?? double.NaN;
+            GpuGauge.Value = r.GpuTemp ?? double.NaN;
+            GpuGauge.TrueLoad = r.GpuLoadIsTrue; // wording flag first, so the first tooltip uses the right word
+            CpuGauge.LoadValue = r.CpuLoad;
+            GpuGauge.LoadValue = r.GpuLoad;
+            CpuGauge.PeakLoad = r.PeakCpuLoad;
+            GpuGauge.PeakLoad = r.PeakGpuLoad;
+            CpuGauge.Peak = r.PeakCpu;
+            GpuGauge.Peak = r.PeakGpu;
+        }
+        else
+        {
+            CpuBar.Value = r.CpuTemp ?? double.NaN;
+            GpuBar.Value = r.GpuTemp ?? double.NaN;
+            GpuBar.TrueLoad = r.GpuLoadIsTrue;
+            CpuBar.LoadValue = r.CpuLoad;
+            GpuBar.LoadValue = r.GpuLoad;
+            CpuBar.PeakLoad = r.PeakCpuLoad;
+            GpuBar.PeakLoad = r.PeakGpuLoad;
+            CpuBar.Peak = r.PeakCpu;
+            GpuBar.Peak = r.PeakGpu;
+        }
 
         TopStatus.Text = $"Case fans follow your hottest item - {r.Status}";
         TopStatus.Foreground = r.NoControllableFans || r.SentinelLost ? Res("Hot") : Res("TextDim");
@@ -432,6 +437,10 @@ public partial class MainWindow : Window
     private void ToggleStartup()
     {
         if (StartupTask.IsEnabled()) StartupTask.Disable();
+        else if (!StartupTask.FolderIsSafe())
+            MessageWindow.Show(this, "Start with Windows needs the installer",
+                "This copy isn't in a protected folder, so Windows can't safely start it as admin. " +
+                "Install it with the setup from the official Releases page, then turn this on.");
         else if (!StartupTask.Enable())
             MessageWindow.Show(this, "Couldn't register the startup task",
                 "Windows refused the scheduled task. Details are in fan_debug.log, " +
@@ -541,6 +550,10 @@ public partial class MainWindow : Window
         bool max = WindowState == WindowState.Maximized;
         MaxButton.Content = max ? "" : "";   // Segoe MDL2: restore / maximise
         MaxButton.ToolTip = max ? "Restore" : "Maximise";
+
+        // Minimized still counts as visible to WPF, so freeze the blades by hand.
+        bool min = WindowState == WindowState.Minimized;
+        foreach (FanBlade g in _fanGauges.Values) g.Hold = min;
     }
 
     private Brush Res(string key) => (Brush)FindResource(key);
