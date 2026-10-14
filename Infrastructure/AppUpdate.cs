@@ -26,8 +26,10 @@ public static class AppUpdate
         try
         {
             // Checks both Updates and the old Temp location.
+            // .NET and PawnIO installers too: one that closes the app mid-run never gets to delete itself.
             IEnumerable<string> old = Directory.Exists(UpdatesDir)
-                ? Directory.EnumerateFiles(UpdatesDir, "TOA-FanControl-Setup-*.exe")
+                ? new[] { "TOA-FanControl-Setup-*.exe", "windowsdesktop-runtime-*.exe", "PawnIO_setup_*.exe" }
+                    .SelectMany(pattern => Directory.EnumerateFiles(UpdatesDir, pattern))
                 : Enumerable.Empty<string>();
             old = old.Concat(Directory.EnumerateFiles(Path.GetTempPath(), "TOA-FanControl-Setup-*.exe"));
 

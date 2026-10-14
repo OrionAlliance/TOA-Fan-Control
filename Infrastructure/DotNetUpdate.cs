@@ -75,7 +75,8 @@ public static class DotNetUpdate
     }
 
     /// <summary>Downloads the runtime installer, verifies the Microsoft signature, and runs it quietly.</summary>
-    public static async Task<PawnIoSetup.InstallResult> InstallAsync(IProgress<string> progress)
+    /// <param name="installerStarted">Gets the installer's process ID, since the installer may close this app mid-run.</param>
+    public static async Task<PawnIoSetup.InstallResult> InstallAsync(IProgress<string> progress, Action<int>? installerStarted = null)
     {
         string temp = "";
         try
@@ -97,7 +98,7 @@ public static class DotNetUpdate
             }
 
             progress.Report("Installing .NET 10…");
-            int exit = await Downloads.RunAndWaitAsync(temp, "/install /quiet /norestart");
+            int exit = await Downloads.RunAndWaitAsync(temp, "/install /quiet /norestart", installerStarted);
 
             return exit switch
             {

@@ -28,12 +28,13 @@ public static class Downloads
     }
 
     /// <summary>Runs an installer without the shell and returns its exit code, or -1 if it never started.</summary>
-    public static async Task<int> RunAndWaitAsync(string path, string args = "")
+    public static async Task<int> RunAndWaitAsync(string path, string args = "", Action<int>? started = null)
     {
         // The caller is already elevated, so the installer inherits admin.
         var psi = new ProcessStartInfo { FileName = path, Arguments = args, UseShellExecute = false };
         using Process? p = Process.Start(psi);
         if (p == null) return -1;
+        started?.Invoke(p.Id);
         await p.WaitForExitAsync();
         return p.ExitCode;
     }

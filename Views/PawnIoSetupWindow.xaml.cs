@@ -75,7 +75,8 @@ public partial class PawnIoSetupWindow : Window
     public PawnIoSetupWindow(DotNetUpdate.UpdateInfo update)
     {
         InitializeComponent();
-        _installer = DotNetUpdate.InstallAsync;
+        // The installer can close this app to swap .NET files; a helper brings it back when the install ends.
+        _installer = p => DotNetUpdate.InstallAsync(p, AppRestart.IfGoneAfter);
 
         Title = "TOA - Fan Control · Update";
         HeaderText.Text = ".NET update available";
