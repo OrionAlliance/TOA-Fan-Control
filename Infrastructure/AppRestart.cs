@@ -15,10 +15,32 @@ public static class AppRestart
     {
         // Still alive = the installer left it alone, and its own restart takes over (never two copies).
         string name = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "").Replace("'", "''");
-        RunHelper($"Wait-Process -Id {pid} -ErrorAction SilentlyContinue; " +
+        _standingBy = RunHelper($"Wait-Process -Id {pid} -ErrorAction SilentlyContinue; " +
                   $"if (-not (Get-Process -Id {Environment.ProcessId} -ErrorAction SilentlyContinue) -and " +
                   $"-not (Get-Process -Name '{name}' -ErrorAction SilentlyContinue)) {{ {Relaunch()} }}");
         DebugLog.Write("Relaunch helper waiting on the installer, in case it closes the app.");
+    }
+
+    private static Process? _standingBy;
+    private static bool _sessionEnding;
+
+    /// <summary>Windows (or an installer) is closing the app: the standing-by helper must stay to bring it back.</summary>
+    public static void SessionEnding() => _sessionEnding = true;
+
+    /// <summary>The app is closing; if he chose it (not a session end), the standing-by helper must not reopen it.</summary>
+    public static void AppClosing()
+    {
+        if (_sessionEnding || _standingBy == null) return;
+        try
+        {
+            if (!_standingBy.HasExited)
+            {
+                _standingBy.Kill();
+                DebugLog.Write("Closed on purpose during an install - relaunch helper stood down.");
+            }
+        }
+        catch (Exception ex) { DebugLog.Write("Couldn't stand down the relaunch helper.", ex); }
+        _standingBy = null;
     }
 
     // Forwards the original args so a tray-started app (--minimized) comes back to the tray.
@@ -32,10 +54,10 @@ public static class AppRestart
             : $"Start-Process -FilePath '{exe}' -ArgumentList {argList}";
     }
 
-    private static void RunHelper(string script)
+    private static Process? RunHelper(string script)
     {
-        if (Environment.ProcessPath == null) return;
-        Process.Start(new ProcessStartInfo
+        if (Environment.ProcessPath == null) return null;
+        return Process.Start(new ProcessStartInfo
         {
             FileName = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe"),
             Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{script}\"",

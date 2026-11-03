@@ -49,6 +49,7 @@ public partial class MainWindow : Window
         _controller.Updated += OnUpdated;
         Closing += (_, _) =>
         {
+            AppRestart.AppClosing(); // his Exit wins over a pending post-install relaunch
             _controller.Updated -= OnUpdated;
             ThemeManager.Changed -= OnThemeChanged;
 

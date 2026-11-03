@@ -11,6 +11,7 @@ public partial class App
     private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e)
     {
         DebugLog.Write($"Windows session ending ({e.ReasonSessionEnding}) - releasing fans.");
+        AppRestart.SessionEnding(); // an installer closing us this way still gets its relaunch
         Controller.Dispose();
     }
 
