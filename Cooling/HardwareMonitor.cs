@@ -121,14 +121,18 @@ public sealed partial class HardwareMonitor : IDisposable
     }
     private int _gpuMaxWatts;
 
-    public HardwareMonitor()
+    private readonly bool _fansOnly;
+
+    /// <param name="fansOnly">The watchdog only needs the motherboard's fan chip; no CPU, GPU or controller drivers.</param>
+    public HardwareMonitor(bool fansOnly = false)
     {
+        _fansOnly = fansOnly;
         _computer = new Computer
         {
-            IsCpuEnabled = true,
-            IsGpuEnabled = true,
+            IsCpuEnabled = !fansOnly,
+            IsGpuEnabled = !fansOnly,
             IsMotherboardEnabled = true,
-            IsControllerEnabled = true,
+            IsControllerEnabled = !fansOnly,
             IsMemoryEnabled = false,
             IsStorageEnabled = false,
             IsNetworkEnabled = false,
@@ -147,6 +151,8 @@ public sealed partial class HardwareMonitor : IDisposable
         foreach (IHardware h in Flatten(_computer.Hardware))
             foreach (ISensor s in h.Sensors)
                 s.ValuesTimeWindow = TimeSpan.Zero;
+
+        if (_fansOnly) return; // the app already logged the hardware; the watchdog adds nothing new
 
         // Log hardware models for bug reports; they identify nothing personal, unlike paths or serials.
         IHardware? board = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Motherboard);

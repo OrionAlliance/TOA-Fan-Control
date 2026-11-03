@@ -125,7 +125,7 @@ public static class Watchdog
         }
 
         using (link)
-        using (var hw = new HardwareMonitor())
+        using (var hw = new HardwareMonitor(fansOnly: true))
         {
             try
             {
