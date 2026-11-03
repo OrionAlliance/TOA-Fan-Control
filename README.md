@@ -48,7 +48,7 @@ There are no curves, no profiles, no targets, no tuning. If that's what you want
 
 There's nothing you *have* to do. It sits in the system tray and does its job on its own. But when you want to check in on things, you get:
 
-- **A dashboard:** CPU/GPU temperature dials or bars with peak markers, plus a spinning fan tile per case fan showing the driven % (the blades spin faster or slower with the fan's real speed).
+- **A dashboard:** CPU/GPU temperature dials or bars with peak markers (Peak Info shows when each peak hit and what app was running), plus a spinning fan tile per case fan showing the driven %, or BIOS while your BIOS has them (the blades spin faster or slower with the fan's real speed).
 
   <p align="center"><img src="Docs/images/dials-dark.png" width="300" alt="Temperature dials, dark theme" />&nbsp;&nbsp;<img src="Docs/images/dials-light.png" width="300" alt="Temperature dials, light theme" /></p>
 
