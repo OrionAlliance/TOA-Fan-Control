@@ -38,7 +38,8 @@ public static class Watchdog
         try
         {
             int pid = Environment.ProcessId;
-            link = WatchdogLink.Create(pid);
+            string token = WatchdogLink.NewToken();
+            link = WatchdogLink.Create(pid, token);
 
             string? exe = Environment.ProcessPath;
             if (exe == null)
@@ -57,6 +58,7 @@ public static class Watchdog
 
             psi.ArgumentList.Add(Flag);
             psi.ArgumentList.Add(pid.ToString());
+            psi.ArgumentList.Add(token);
             foreach (string f in fans) psi.ArgumentList.Add(f);
 
             Process? p = Process.Start(psi);
@@ -100,20 +102,21 @@ public static class Watchdog
 
     private static void RunSentinelCore(string[] args)
     {
-        // args: --watchdog <parentPid> <fan name> [<fan name> ...]
-        if (args.Length < 3 || !int.TryParse(args[1], out int parentPid))
+        // args: --watchdog <parentPid> <token> <fan name> [<fan name> ...]
+        if (args.Length < 4 || !int.TryParse(args[1], out int parentPid) || !WatchdogLink.IsToken(args[2]))
         {
             DebugLog.Write("[watchdog] Bad arguments; exiting.");
             return;
         }
 
-        string[] names = args.Skip(2).ToArray();
+        string token = args[2];
+        string[] names = args.Skip(3).ToArray();
         DebugLog.Write($"[watchdog] Guarding pid {parentPid} / [{string.Join(", ", names)}].");
 
         WatchdogLink link;
         try
         {
-            link = WatchdogLink.Open(parentPid);
+            link = WatchdogLink.Open(parentPid, token);
         }
         catch (Exception ex)
         {

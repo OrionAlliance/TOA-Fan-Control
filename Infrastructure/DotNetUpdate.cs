@@ -90,7 +90,7 @@ public static class DotNetUpdate
             await Downloads.DownloadToFileAsync(url, temp, HttpTimeout);
 
             progress.Report("Checking the download…");
-            if (!PawnIoSetup.IsTrustedAndSignedBy(temp, "Microsoft"))
+            if (!PawnIoSetup.IsTrustedAndSignedBy(temp, "Microsoft Corporation"))
             {
                 DebugLog.Write(".NET installer failed signature verification - NOT running it.");
                 return new PawnIoSetup.InstallResult(false, false,

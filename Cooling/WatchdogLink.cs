@@ -34,22 +34,35 @@ public sealed class WatchdogLink : IDisposable
         Resume = resume;
     }
 
-    // Scoped to the app's pid so a stale watchdog from a previous run can't answer.
-    private static string ReadyName(int pid) => $@"Local\TOA_FanControl_{pid}_Ready";
-    private static string RestoreName(int pid) => $@"Local\TOA_FanControl_{pid}_Restore";
-    private static string ResumeName(int pid) => $@"Local\TOA_FanControl_{pid}_Resume";
+    // Scoped to the app's pid plus a random token, so no other program can guess the names and make them first.
+    private static string Name(int pid, string token, string what) => $@"Local\TOA_FanControl_{pid}_{token}_{what}";
 
-    /// <summary>App side: create the signals before launching the watchdog.</summary>
-    public static WatchdogLink Create(int pid) => new(
-        new EventWaitHandle(false, EventResetMode.ManualReset, ReadyName(pid)),
-        new EventWaitHandle(false, EventResetMode.AutoReset, RestoreName(pid)),
-        new EventWaitHandle(false, EventResetMode.AutoReset, ResumeName(pid)));
+    /// <summary>A fresh random token for one app run; passed to the watchdog on its command line.</summary>
+    public static string NewToken() => Guid.NewGuid().ToString("N");
+
+    /// <summary>True for a token this app could have made (32 hex digits).</summary>
+    public static bool IsToken(string s) => s.Length == 32 && s.All(Uri.IsHexDigit);
+
+    /// <summary>App side: create the signals before launching the watchdog; refuses names that already exist.</summary>
+    public static WatchdogLink Create(int pid, string token) => new(
+        CreateNew(Name(pid, token, "Ready"), EventResetMode.ManualReset),
+        CreateNew(Name(pid, token, "Restore"), EventResetMode.AutoReset),
+        CreateNew(Name(pid, token, "Resume"), EventResetMode.AutoReset));
+
+    // An existing name means someone else made it first, possibly already set; never trust it.
+    private static EventWaitHandle CreateNew(string name, EventResetMode mode)
+    {
+        var e = new EventWaitHandle(false, mode, name, out bool createdNew);
+        if (createdNew) return e;
+        e.Dispose();
+        throw new InvalidOperationException("a watchdog signal already existed");
+    }
 
     /// <summary>Watchdog side: attach to the signals the app already made.</summary>
-    public static WatchdogLink Open(int pid) => new(
-        EventWaitHandle.OpenExisting(ReadyName(pid)),
-        EventWaitHandle.OpenExisting(RestoreName(pid)),
-        EventWaitHandle.OpenExisting(ResumeName(pid)));
+    public static WatchdogLink Open(int pid, string token) => new(
+        EventWaitHandle.OpenExisting(Name(pid, token, "Ready")),
+        EventWaitHandle.OpenExisting(Name(pid, token, "Restore")),
+        EventWaitHandle.OpenExisting(Name(pid, token, "Resume")));
 
     public void Dispose()
     {

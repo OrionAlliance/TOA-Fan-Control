@@ -74,6 +74,45 @@ public static class FolderLock
         return true;
     }
 
+    /// <summary>True when nobody without admin can rename or replace a folder above this one (which would swap the whole app).</summary>
+    public static bool ParentsSafe(string dir)
+    {
+        try
+        {
+            for (DirectoryInfo? p = new DirectoryInfo(dir.TrimEnd('\\')).Parent; p != null; p = p.Parent)
+            {
+                DirectorySecurity acl = p.GetAccessControl();
+
+                // Delete-child on a folder lets its holder rename or remove anything inside it.
+                if (NonAdminHas(acl, FileSystemRights.DeleteSubdirectoriesAndFiles)) return false;
+                if (p.Parent == null) break; // a drive root itself can't be renamed
+
+                bool adminOwned = IsAdmin(acl.GetOwner(typeof(SecurityIdentifier))?.Value);
+                if (!adminOwned || NonAdminHas(acl, FileSystemRights.Delete | FileSystemRights.ChangePermissions
+                                                    | FileSystemRights.TakeOwnership))
+                    return false;
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("Parent folder check failed.", ex);
+            return false;
+        }
+    }
+
+    // A non-admin Allow rule that applies to this folder itself (not only to what's created inside it).
+    private static bool NonAdminHas(DirectorySecurity acl, FileSystemRights rights) =>
+        acl.GetAccessRules(true, true, typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>().Any(r =>
+            !IsAdmin(r.IdentityReference.Value)
+            && r.AccessControlType == AccessControlType.Allow
+            && (r.PropagationFlags & PropagationFlags.InheritOnly) == 0
+            && (r.FileSystemRights & (rights | (FileSystemRights)0x10000000)) != 0); // or generic all
+
+    // Administrators, SYSTEM and TrustedInstaller.
+    private static bool IsAdmin(string? sid) =>
+        sid is "S-1-5-32-544" or "S-1-5-18" or "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464";
+
     private static bool Icacls(string args)
     {
         try

@@ -17,6 +17,9 @@
     <!-- Own Main in Program.cs, no App.xaml. -->
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <StartupObject>FanControlSetup.Program</StartupObject>
+
+    <!-- Runs as admin: ignore user-level .NET startup hooks. -->
+    <StartupHookSupport>false</StartupHookSupport>
   </PropertyGroup>
 
   <ItemGroup>

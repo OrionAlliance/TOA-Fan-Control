@@ -19,7 +19,7 @@ public static class PawnIoSetup
     private const string LatestReleaseApi =
         "https://api.github.com/repos/namazso/PawnIO.Setup/releases/latest";
 
-    // The installer must be signed by this publisher, or we refuse to run it.
+    // The installer's signing organization (O=) must be exactly this, or we refuse to run it.
     private const string ExpectedSigner = "namazso";
 
     public const int RebootRequiredExitCode = 3010; // ERROR_SUCCESS_REBOOT_REQUIRED
@@ -173,8 +173,8 @@ public static class PawnIoSetup
 
     // ---- signature verification ---------------------------------------------
 
-    /// <summary>True only for a valid, trusted Authenticode signature from the expected publisher.</summary>
-    public static bool IsTrustedAndSignedBy(string path, string expectedSigner)
+    /// <summary>True only for a valid, trusted, unrevoked signature whose organization is exactly the expected one.</summary>
+    public static bool IsTrustedAndSignedBy(string path, string expectedOrganization)
     {
         try
         {
@@ -184,7 +184,10 @@ public static class PawnIoSetup
 #pragma warning disable SYSLIB0057
             using var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
 #pragma warning restore SYSLIB0057
-            return cert.Subject.Contains(expectedSigner, StringComparison.OrdinalIgnoreCase);
+            // The O= field, matched whole: "contains" would also pass a stranger with the name inside theirs.
+            string? org = cert.SubjectName.EnumerateRelativeDistinguishedNames()
+                .FirstOrDefault(n => n.GetSingleElementType().Value == "2.5.4.10")?.GetSingleElementValue();
+            return string.Equals(org, expectedOrganization, StringComparison.Ordinal);
         }
         catch (Exception ex)
         {
@@ -214,7 +217,7 @@ public static class PawnIoSetup
             {
                 cbStruct = (uint)Marshal.SizeOf<WINTRUST_DATA>(),
                 dwUIChoice = WTD_UI_NONE,
-                fdwRevocationChecks = WTD_REVOKE_NONE,
+                fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN, // a stolen, revoked signing key must fail
                 dwUnionChoice = WTD_CHOICE_FILE,
                 pFile = pFile,
                 dwStateAction = WTD_STATEACTION_VERIFY,
@@ -237,7 +240,7 @@ public static class PawnIoSetup
     }
 
     private const uint WTD_UI_NONE = 2;
-    private const uint WTD_REVOKE_NONE = 0;
+    private const uint WTD_REVOKE_WHOLECHAIN = 1;
     private const uint WTD_CHOICE_FILE = 1;
     private const uint WTD_STATEACTION_VERIFY = 1;
     private const uint WTD_STATEACTION_CLOSE = 2;

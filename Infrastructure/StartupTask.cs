@@ -18,7 +18,7 @@ public static class StartupTask
     public static bool IsEnabled() => Run($"/Query /TN \"{TaskName}\"", out _) == 0;
 
     /// <summary>An admin logon task may only launch an exe nothing without admin can swap.</summary>
-    public static bool FolderIsSafe() => FolderLock.IsLockedSafe(AppPaths.ExeDir);
+    public static bool FolderIsSafe() => FolderLock.IsLockedSafe(AppPaths.ExeDir) && FolderLock.ParentsSafe(AppPaths.ExeDir);
 
     public static bool Enable()
     {
