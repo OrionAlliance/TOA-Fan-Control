@@ -48,12 +48,9 @@ public sealed partial class FanController
     /// <summary>Whether the card has a power sensor, so the popup never asks for unusable max watts.</summary>
     public bool GpuHasPowerSensor => _hw.GpuHasPowerSensor;
 
-    // Sustained load = min of the last two ~1s captures, on its own cadence so conflict ticks can't shrink it.
+    // Sustained load = min of the last two ~1s captures; called only on full sensor reads, so conflict ticks can't shrink it.
     private void CaptureLoads()
     {
-        if (Environment.TickCount64 - _lastLoadCaptureMs < 900) return;
-        _lastLoadCaptureMs = Environment.TickCount64;
-
         // CPU load is busy time; no readable CPU power ceiling exists.
         float curCl = _hw.CpuLoad ?? float.NaN;
 

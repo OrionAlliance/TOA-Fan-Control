@@ -37,8 +37,15 @@ public sealed partial class FanController
 
     private void Poll()
     {
-        _hw.Refresh();
-        CaptureLoads(); // before ANY peak tracking, so log and display agree
+        // In a conflict the extra 4x ticks only need the fan chip; the rest stays at about once a second.
+        long nowMs = Environment.TickCount64;
+        if (_conflict && nowMs - _lastFullRefreshMs < TickMs - 100) _hw.RefreshFans();
+        else
+        {
+            _hw.Refresh();
+            _lastFullRefreshMs = nowMs;
+            CaptureLoads(); // before ANY peak tracking, so log and display agree
+        }
 
         List<FanChannel> controlled;
         WatchdogLink? link;

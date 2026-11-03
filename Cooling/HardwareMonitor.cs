@@ -183,6 +183,16 @@ public sealed partial class HardwareMonitor : IDisposable
         _computer.Accept(_visitor);
     }
 
+    /// <summary>Re-reads only the fan chip (speeds and controls); falls back to everything if there's no chip.</summary>
+    public void RefreshFans()
+    {
+        if (!_opened) return;
+        _fanChip ??= Flatten(_computer.Hardware).FirstOrDefault(h => h.HardwareType == HardwareType.SuperIO);
+        if (_fanChip != null) _fanChip.Update();
+        else Refresh();
+    }
+    private IHardware? _fanChip;
+
     public FanChannel? FindFan(string name) =>
         Fans.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
 

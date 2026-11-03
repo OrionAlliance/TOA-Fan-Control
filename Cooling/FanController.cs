@@ -110,6 +110,7 @@ public sealed partial class FanController : IDisposable
     private bool _conflict;
     private long _lastForeignWriteMs;
     private long _lastSampleLogMs;
+    private long _lastFullRefreshMs;
     private float _lastSampleHotter = float.NaN, _lastSampleOut = float.NaN;
 
     // Session telemetry for the log, so it records what the app actually did.
@@ -131,7 +132,6 @@ public sealed partial class FanController : IDisposable
     private float _prevGpuLoad = float.NaN;
     private float _susCpuLoad = float.NaN;
     private float _susGpuLoad = float.NaN;
-    private long _lastLoadCaptureMs;
     private readonly long _startedMs = Environment.TickCount64;
 
     public event EventHandler<FanReadings>? Updated;
