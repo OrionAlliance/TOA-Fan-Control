@@ -10,7 +10,7 @@
         </Grid.ColumnDefinitions>
 
         <Grid x:Name="TrackHost" Grid.Column="0" VerticalAlignment="Bottom" Height="22" Margin="0,0,0,2">
-            <Border x:Name="Track" VerticalAlignment="Stretch"
+            <Border VerticalAlignment="Stretch"
                     CornerRadius="5" BorderThickness="1"
                     BorderBrush="{DynamicResource BarTrackEdge}"
                     Background="{DynamicResource BarTrack}" />

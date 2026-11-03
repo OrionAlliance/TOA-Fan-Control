@@ -17,7 +17,6 @@ public partial class Gauge : UserControl
     private const double SweepAngle = 270;
     private const double EndAngle = StartAngle + SweepAngle;
 
-    private Polygon? _needle;
     private RotateTransform? _needleRotate;
     private Path? _peakMark;
     private Path? _peakHit;
@@ -110,7 +109,6 @@ public partial class Gauge : UserControl
         Moving.Children.Clear();
 
         // Drop old parts so an early return leaves no orphans for UpdateMoving to animate.
-        _needle = null;
         _needleRotate = null;
         _peakMark = null;
         _peakHit = null;

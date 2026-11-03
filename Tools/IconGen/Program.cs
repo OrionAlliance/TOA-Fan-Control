@@ -238,11 +238,11 @@ internal static class Program
 
         // Recessed track, skipped when small - it only muddies the colour.
         if (size >= 48)
-            Stroke(dc, c, StartAngle, EndAngle, r, C("#323848"), thickness, 1);
+            Stroke(dc, c, StartAngle, EndAngle, r, C("#323848"), thickness);
 
-        Stroke(dc, c, StartAngle, greenEnd, r, C("#3FB950"), thickness, 1);
-        Stroke(dc, c, greenEnd, amberEnd, r, C("#D29922"), thickness, 1);
-        Stroke(dc, c, amberEnd, EndAngle, r, C("#F85149"), thickness, 1);
+        Stroke(dc, c, StartAngle, greenEnd, r, C("#3FB950"), thickness);
+        Stroke(dc, c, greenEnd, amberEnd, r, C("#D29922"), thickness);
+        Stroke(dc, c, amberEnd, EndAngle, r, C("#F85149"), thickness);
     }
 
     private static void DrawGloss(DrawingContext dc, Point c, double rFace)
@@ -346,7 +346,7 @@ internal static class Program
     // ---- helpers ------------------------------------------------------------
 
     private static void Stroke(DrawingContext dc, Point c, double a0, double a1,
-                               double r, Color color, double thickness, double opacity)
+                               double r, Color color, double thickness)
     {
         var fig = new PathFigure { StartPoint = At(c, a0, r) };
         fig.Segments.Add(new ArcSegment
@@ -360,8 +360,7 @@ internal static class Program
         var geo = new PathGeometry();
         geo.Figures.Add(fig);
 
-        var brush = new SolidColorBrush(color) { Opacity = opacity };
-        dc.DrawGeometry(null, new Pen(brush, thickness), geo);
+        dc.DrawGeometry(null, new Pen(new SolidColorBrush(color), thickness), geo);
     }
 
     private static Point At(Point c, double angleDeg, double radius)

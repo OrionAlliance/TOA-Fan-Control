@@ -61,7 +61,7 @@ public partial class Gauge
 
         // White needle; gradient gives a rounded edge, shadow lifts it off the face.
         _needleRotate = new RotateTransform(StartAngle);
-        _needle = new Polygon
+        var needle = new Polygon
         {
             Fill = new LinearGradientBrush
             {
@@ -88,7 +88,7 @@ public partial class Gauge
             },
             RenderTransform = Pivot(_needleRotate),
         };
-        Moving.Children.Add(_needle);
+        Moving.Children.Add(needle);
 
         // Hub cap over the needle pivot.
         var hub = new Ellipse

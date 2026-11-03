@@ -43,9 +43,9 @@ public partial class MessageWindow : Window
     }
 
     /// <summary>A one-button notice; copyButton adds "Copy info" for the clipboard.</summary>
-    public static void Show(Window? owner, string header, string body, string button = "OK",
+    public static void Show(Window? owner, string header, string body,
                             bool copyButton = false, bool autoWidth = false)
-        => new MessageWindow(owner, header, body, button, null, copyButton, autoWidth).ShowDialog();
+        => new MessageWindow(owner, header, body, "OK", null, copyButton, autoWidth).ShowDialog();
 
     /// <summary>A two-button question. True = the primary (right) button.</summary>
     public static bool Confirm(Window? owner, string header, string body,
