@@ -13,4 +13,14 @@ public static class AppPaths
     public static string SettingsFile { get; } = Path.Combine(SettingsDir, "fan_settings.json");
 
     public static void EnsureSettingsDir() => Directory.CreateDirectory(SettingsDir);
+
+    /// <summary>The running app holds this; Setup checks it to know the app is open.</summary>
+    public const string InstanceMutexName = @"Global\TOA.FanControl.Instance";
+
+    public static bool AppIsRunning()
+    {
+        if (!System.Threading.Mutex.TryOpenExisting(InstanceMutexName, out System.Threading.Mutex? m)) return false;
+        m.Dispose();
+        return true;
+    }
 }

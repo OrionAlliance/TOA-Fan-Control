@@ -10,7 +10,7 @@ public partial class App : Application
     public static FanController Controller { get; private set; } = null!;
 
     // Single-instance lock: a second watchdog would save the first instance's speeds as "BIOS" and strand the fans.
-    private const string InstanceMutexName = @"Global\TOA.FanControl.Instance";
+    private const string InstanceMutexName = AppPaths.InstanceMutexName;
     private System.Threading.Mutex? _instanceMutex;
 
     protected override void OnStartup(StartupEventArgs e)

@@ -74,9 +74,26 @@ public partial class SetupWindow : Window
                 HeaderText.Text = "Updating TOA - Fan Control";
                 SetStatus("Updating TOA - Fan Control…");
                 ShowProgress(true);
-                AppInstaller.Install();
+                await AppInstaller.InstallAsync();
                 Finish("Updated", "Update complete - app relaunched.");
                 return;
+            }
+
+            // ---- app already open? ----
+            // A running copy locks its exe and would block the new one from starting, so ask for a normal Exit first.
+            while (AppPaths.AppIsRunning())
+            {
+                DebugLog.Write("App is running - asking for it to be closed first.");
+                bool retry = await AskAsync("TOA - Fan Control is running",
+                    "Close it first: right-click the fan icon in the system tray, then click Exit. " +
+                    "Your fans go back to your BIOS while it's closed. Then click Try again.",
+                    "Try again", "Quit");
+                if (!retry)
+                {
+                    DebugLog.Write("App still running - setup cancelled.");
+                    ShowClose("Setup cancelled - the app wasn't installed.");
+                    return;
+                }
             }
 
             // ---- where should it go? ----
@@ -94,7 +111,7 @@ public partial class SetupWindow : Window
             // ---- the app ----
             SetStatus("Installing TOA - Fan Control…");
             ShowProgress(true);
-            AppInstaller.Install();
+            await AppInstaller.InstallAsync();
 
             // The desktop is the user's space, so ask.
             bool desktop = await AskAsync(

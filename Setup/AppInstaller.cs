@@ -21,15 +21,15 @@ public static class AppInstaller
     public static string InstalledExe => Path.Combine(InstallDir, ExeName);
 
     /// <summary>The steps a fresh install and an update share: app, Start menu shortcut, Installed apps entry.</summary>
-    public static void Install()
+    public static async Task InstallAsync()
     {
-        ExtractApp();
+        await ExtractAppAsync();
         CreateStartMenuShortcut();
         RegisterInInstalledApps();
     }
 
-    /// <summary>Writes the app exe, retrying while a self-updating old app and its watchdog still lock it.</summary>
-    public static void ExtractApp()
+    /// <summary>Writes the app exe, retrying while a self-updating old app and its watchdog still lock it; the window stays responsive.</summary>
+    private static async Task ExtractAppAsync()
     {
         Directory.CreateDirectory(InstallDir);
 
@@ -47,7 +47,7 @@ public static class AppInstaller
             }
             catch (IOException) when (DateTime.Now < deadline)
             {
-                System.Threading.Thread.Sleep(500); // old exe still locked
+                await Task.Delay(500); // old exe still locked
                 src.Position = 0;
             }
         }
