@@ -34,7 +34,7 @@ public sealed class WatchdogLink : IDisposable
         Resume = resume;
     }
 
-    // Scoped to the app's pid plus a random token, so no other program can guess the names and make them first.
+    // Names carry the app's pid plus a random token.
     private static string Name(int pid, string token, string what) => $@"Local\TOA_FanControl_{pid}_{token}_{what}";
 
     /// <summary>A fresh random token for one app run; passed to the watchdog on its command line.</summary>
@@ -49,7 +49,7 @@ public sealed class WatchdogLink : IDisposable
         CreateNew(Name(pid, token, "Restore"), EventResetMode.AutoReset),
         CreateNew(Name(pid, token, "Resume"), EventResetMode.AutoReset));
 
-    // An existing name means someone else made it first, possibly already set; never trust it.
+    // Fails if the name already exists.
     private static EventWaitHandle CreateNew(string name, EventResetMode mode)
     {
         var e = new EventWaitHandle(false, mode, name, out bool createdNew);

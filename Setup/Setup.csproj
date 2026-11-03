@@ -11,14 +11,14 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>TOA - Fan Control Setup</AssemblyName>
     <RootNamespace>FanControlSetup</RootNamespace>
-    <Version>1.11.3</Version>
+    <Version>1.11.4</Version>
     <ApplicationIcon>..\Icon.ico</ApplicationIcon>
 
     <!-- Own Main in Program.cs, no App.xaml. -->
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <StartupObject>FanControlSetup.Program</StartupObject>
 
-    <!-- Runs as admin: ignore user-level .NET startup hooks. -->
+    <!-- Startup hooks off. -->
     <StartupHookSupport>false</StartupHookSupport>
   </PropertyGroup>
 

@@ -184,7 +184,7 @@ public static class PawnIoSetup
 #pragma warning disable SYSLIB0057
             using var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
 #pragma warning restore SYSLIB0057
-            // The O= field, matched whole: "contains" would also pass a stranger with the name inside theirs.
+            // The O= field, matched whole.
             string? org = cert.SubjectName.EnumerateRelativeDistinguishedNames()
                 .FirstOrDefault(n => n.GetSingleElementType().Value == "2.5.4.10")?.GetSingleElementValue();
             return string.Equals(org, expectedOrganization, StringComparison.Ordinal);
@@ -217,7 +217,7 @@ public static class PawnIoSetup
             {
                 cbStruct = (uint)Marshal.SizeOf<WINTRUST_DATA>(),
                 dwUIChoice = WTD_UI_NONE,
-                fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN, // a stolen, revoked signing key must fail
+                fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN, // checks the whole chain for revoked certificates
                 dwUnionChoice = WTD_CHOICE_FILE,
                 pFile = pFile,
                 dwStateAction = WTD_STATEACTION_VERIFY,

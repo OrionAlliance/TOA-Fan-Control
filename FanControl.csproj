@@ -13,7 +13,7 @@
     <Version>1.18.25</Version>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
 
-    <!-- Runs as admin at logon: ignore user-level .NET settings that could load outside code into it. -->
+    <!-- Startup hooks off; .NET only from its standard install. -->
     <StartupHookSupport>false</StartupHookSupport>
     <AppHostDotNetSearch>Global</AppHostDotNetSearch>
   </PropertyGroup>
@@ -47,7 +47,7 @@
   <ItemGroup>
     <!-- 0.9.6 uses PawnIO, not Defender-blocked WinRing0; needs PawnIO installed or no fan sensors appear. -->
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
-    <!-- Linux-only helper DLLs; leaving them out means nothing gets unpacked into Temp at start. -->
+    <!-- Linux-only helper DLLs; Windows never uses them. -->
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" ExcludeAssets="native" />
   </ItemGroup>
 

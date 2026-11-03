@@ -74,7 +74,7 @@ public static class FolderLock
         return true;
     }
 
-    /// <summary>True when nobody without admin can rename or replace a folder above this one (which would swap the whole app).</summary>
+    /// <summary>True when only admins can change the folders above this one.</summary>
     public static bool ParentsSafe(string dir)
     {
         try
@@ -83,7 +83,7 @@ public static class FolderLock
             {
                 DirectorySecurity acl = p.GetAccessControl();
 
-                // Delete-child on a folder lets its holder rename or remove anything inside it.
+                // Delete-child counts as a change right.
                 if (NonAdminHas(acl, FileSystemRights.DeleteSubdirectoriesAndFiles)) return false;
                 if (p.Parent == null) break; // a drive root itself can't be renamed
 
