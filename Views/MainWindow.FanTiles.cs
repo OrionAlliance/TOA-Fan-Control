@@ -32,11 +32,15 @@ public partial class MainWindow
                 added = true;
             }
 
-            _fanGauges[name].Value = rpm;             // spin speed
-            _fanGauges[name].Percent = r.OutputPercent; // hub number
+            // While the BIOS has the fans, show no % the app isn't commanding.
+            double driven = r.BiosHasFans ? double.NaN : r.OutputPercent;
+            string rpmText = rpm is > 0 ? $"RPM: {rpm:F0}" : "RPM: --";
 
-            _fanBars[name].Value = r.OutputPercent;
-            _fanBars[name].TrailText = rpm is > 0 ? $"RPM: {rpm:F0}" : "RPM: --";
+            _fanGauges[name].Value = rpm;        // spin speed
+            _fanGauges[name].Percent = driven;   // hub number, "BIOS" when NaN
+
+            _fanBars[name].Value = driven;
+            _fanBars[name].TrailText = r.BiosHasFans ? $"BIOS  ·  {rpmText}" : rpmText;
         }
 
         if (added) RebuildFanRows();

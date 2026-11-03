@@ -59,7 +59,7 @@ public partial class FanBlade : UserControl
     /// <summary>Current RPM; drives the spin speed.</summary>
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
-    /// <summary>Duty the app is driving this fan at, shown in the hub.</summary>
+    /// <summary>Duty the app is driving this fan at, shown in the hub; NaN = the BIOS has it.</summary>
     public double Percent { get => (double)GetValue(PercentProperty); set => SetValue(PercentProperty, value); }
 
     // ---- geometry -----------------------------------------------------------
@@ -107,7 +107,7 @@ public partial class FanBlade : UserControl
         if (_hubText == null) return;
         double p = Percent;
         _hubText.Text = double.IsNaN(p)
-            ? "--"
+            ? "BIOS"
             : p.ToString("0", CultureInfo.InvariantCulture) + "%";
     }
 

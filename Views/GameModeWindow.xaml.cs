@@ -77,7 +77,7 @@ public partial class GameModeWindow : Window
         GpuText.Text = r.GpuTemp is { } g ? $"{g:F0}" : "--";
         GpuText.Foreground = TempBrush(r.GpuTemp);
 
-        FanText.Text = $"{r.OutputPercent:F0}%";
+        FanText.Text = r.BiosHasFans ? "BIOS" : $"{r.OutputPercent:F0}%";
         // Red when whatever's driving the fans is genuinely hot.
         FanText.Foreground = r.SourceTemp is >= 85 ? Res("Hot") : Res("Text");
 

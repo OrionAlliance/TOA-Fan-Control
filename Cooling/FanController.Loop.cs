@@ -66,16 +66,25 @@ public sealed partial class FanController
         // A dead sentinel still looks fine (events outlive it), so fall back to owning the release ourselves.
         if (link != null && !link.SentinelAlive)
         {
-            DebugLog.Write(
-                "!! Watchdog process is GONE. Falling back to app-owned release. " +
-                "Our own saved defaults are the state the watchdog seized (the BIOS's " +
-                "idle speed), not the live BIOS curve - so a clean exit now parks the " +
-                "fans at a fixed safe speed rather than restoring the curve. " +
-                "Reboot to get the BIOS curve back.");
+            // Only a watchdog that took the fans leaves its seized speed behind as our "defaults".
+            if (_watchdogHeld || link.Ready.WaitOne(0))
+            {
+                DebugLog.Write(
+                    "!! Watchdog process is GONE. Falling back to app-owned release. " +
+                    "Our own saved defaults are the state the watchdog seized (the BIOS's " +
+                    "idle speed), not the live BIOS curve - so a clean exit now parks the " +
+                    "fans at a fixed safe speed rather than restoring the curve. " +
+                    "Reboot to get the BIOS curve back.");
+                _sentinelLost = true;
+            }
+            else
+            {
+                DebugLog.Write("Watchdog exited before taking the fans - this app owns the release; " +
+                               "a clean exit still restores the BIOS curve.");
+            }
 
             lock (_gate) _link = null;
             link = null;
-            _sentinelLost = true;
         }
 
         if (paused)
@@ -130,10 +139,11 @@ public sealed partial class FanController
         if (link != null && !link.Ready.WaitOne(0))
         {
             link.Resume.Set();
-            Publish(cpu, gpu, temp,
+            Publish(cpu, gpu, temp, biosHasFans: true,
                     status: "Waiting for the watchdog to take the fans...");
             return;
         }
+        if (link != null) _watchdogHeld = true;
 
         // This tick's interval, read before DetectForeignWriter can change it.
         float dt = (float)(_timer.Interval / 1000.0);
@@ -144,6 +154,11 @@ public sealed partial class FanController
         // fan % = temperature plus the hot lean, floored and capped.
         float lean = Math.Clamp(driving - HotLeanFromC, 0f, HotLeanMax);
         float desired = Math.Clamp(driving + lean, FloorPercent, CeilingPercent);
+
+        // Taking the fans (start, resume, after a hand-back): ramp from their real speed, not a stale number.
+        if (!_engaged && controlled.Max(f => f.Percent) is float now)
+            _currentPercent = Math.Clamp(now, FloorPercent, CeilingPercent);
+
         _currentPercent = Slew(_currentPercent, desired, dt);
 
         foreach (FanChannel f in controlled)

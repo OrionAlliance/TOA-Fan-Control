@@ -35,7 +35,7 @@ public static class DotNetUpdate
             foreach (string sub in Directory.GetDirectories(dir))
             {
                 if (Version.TryParse(Path.GetFileName(sub), out Version? v) &&
-                    v.Major >= RequiredMajor && (best == null || v > best))
+                    v.Major == RequiredMajor && (best == null || v > best)) // the app runs on 10.x only, never 11
                     best = v;
             }
         }

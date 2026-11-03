@@ -70,7 +70,14 @@ public static class Watchdog
                 return link;
             }
 
-            DebugLog.Write("Watchdog did not take the fans in time - falling back to " +
+            // Still starting: keep it. The app writes nothing until it's ready, so the BIOS keeps the fans meanwhile.
+            if (link.SentinelAlive)
+            {
+                DebugLog.Write("Watchdog is slow to take the fans - keeping it; the BIOS keeps them until it does.");
+                return link;
+            }
+
+            DebugLog.Write("Watchdog exited before taking the fans - falling back to " +
                            "app-owned release. Graceful exits still restore the BIOS; " +
                            "a force-kill would leave the fans where they are.");
             link.Dispose();

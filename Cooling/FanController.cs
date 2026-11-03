@@ -111,6 +111,7 @@ public sealed partial class FanController : IDisposable
     // Session telemetry for the log, so it records what the app actually did.
     private int _tickCount;
     private bool _sentinelLost;
+    private bool _watchdogHeld; // the watchdog has taken the fans at least once
     private float _peakCpu = float.NaN;
     private float _peakGpu = float.NaN;
     private float _peakCpuLoad = float.NaN;
