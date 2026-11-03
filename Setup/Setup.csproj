@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Window icon must be an embedded resource to resolve at runtime. -->
+    <!-- Window icon must be a WPF Resource (not EmbeddedResource) for Icon="Icon.ico" to resolve. -->
     <Resource Include="..\Icon.ico" Link="Icon.ico" />
   </ItemGroup>
 

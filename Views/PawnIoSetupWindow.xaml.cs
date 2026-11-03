@@ -7,7 +7,7 @@ namespace FanControlApp;
 /// <summary>Download-verify-install popup for PawnIO (missing or outdated), app, and .NET updates.</summary>
 public partial class PawnIoSetupWindow : Window
 {
-    /// <summary>True once PawnIO is installed (a reboot may still be pending).</summary>
+    /// <summary>True once the install finished: PawnIO, the app update or .NET (a reboot may still be pending).</summary>
     public bool Installed { get; private set; }
 
     /// <summary>The installer asked for a reboot to finish.</summary>

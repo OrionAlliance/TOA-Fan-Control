@@ -20,12 +20,12 @@ public static class AppUpdate
     private static readonly string UpdatesDir = Path.Combine(AppPaths.ExeDir, "Updates");
     private static readonly string UnpackDir = Path.Combine(UpdatesDir, "Unpacked");
 
-    /// <summary>Deletes leftover update installers (about 74 MB each).</summary>
     // TOA-FanControl-Setup-<version>.exe, windowsdesktop-runtime-<pid>.exe, PawnIO_setup_<pid>.exe.
     private static readonly System.Text.RegularExpressions.Regex OurTempInstaller = new(
         @"^(TOA-FanControl-Setup-.+|windowsdesktop-runtime-\d+|PawnIO_setup_\d+)\.exe$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
+    /// <summary>Deletes leftover update installers (about 74 MB each).</summary>
     public static void CleanUpOldInstallers()
     {
         try

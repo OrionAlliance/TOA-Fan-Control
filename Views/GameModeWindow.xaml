@@ -12,7 +12,7 @@
         FontFamily="Segoe UI"
         Foreground="{DynamicResource Text}">
 
-    <!-- Card gradient and bevel, same as everything else, just small. -->
+    <!-- Title bar gradient with the card edge, just small. -->
     <Border Background="{DynamicResource TitleFace}"
             BorderBrush="{DynamicResource CardEdge}"
             BorderThickness="1"

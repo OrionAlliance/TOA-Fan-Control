@@ -11,11 +11,7 @@ namespace GaugePreview;
 /// <summary>
 /// Renders the real gauge cluster offscreen to a PNG so its layout can actually
 /// be looked at, instead of nudged blind and shipped to the user to check.
-///
-/// Note the needle renders at its rest position: UpdateMoving animates it with a
-/// 350ms DoubleAnimation and RenderTargetBitmap captures immediately, so the
-/// needle never gets there. Fine - this exists to check the static furniture
-/// (labels, value text, ticks), not the needle.
+/// It waits for the needle sweeps to finish, so needles show at their values.
 /// </summary>
 internal static class Program
 {
@@ -24,7 +20,7 @@ internal static class Program
     {
         _ = new Application();
 
-        // Same geometry as the real card: UniformGrid, 4 columns, 200 tall.
+        // Four dials in a row, 200 tall; the real dash shows fans as spinning tiles, not dials.
         const double w = 880;
         const double h = 200;
 

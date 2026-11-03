@@ -5,7 +5,7 @@ using System.Windows.Media;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>Colours the real title bar so snapping still works; Windows 11 only, older keeps the default.</summary>
+/// <summary>Sets the window frame colours; the app draws its own title bar, so only the Windows 11 border shows. Older Windows keeps the default.</summary>
 public static class TitleBarColor
 {
     private const int DwmwaBorderColor = 34;

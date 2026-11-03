@@ -144,7 +144,7 @@ public partial class App : Application
             Controller.UpdateSettings(s =>
             {
                 s.SelectedFans = chosen;
-                NewFans.RecordDecisions(s, picked); // unchecked here counts as decided, never ask again
+                NewFans.RecordDecisions(s, picked); // spinning fans count as decided; a stopped one can still ask later
             }, reresolve: true);
         }
 

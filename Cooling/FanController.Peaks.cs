@@ -93,15 +93,12 @@ public sealed partial class FanController
         return (held.Temp, held.Src);
     }
 
-    // NaN-safe max fold used by every peak.
-    private static void MaxInto(ref float peak, float v) => RaisedInto(ref peak, v);
-
     private void TrackPeaks(float? cpu, float? gpu, List<FanChannel> controlled)
     {
-        MaxInto(ref _peakCpu, cpu ?? float.NaN);
-        MaxInto(ref _peakGpu, gpu ?? float.NaN);
-        MaxInto(ref _peakCpuLoad, _susCpuLoad);
-        MaxInto(ref _peakGpuLoad, _susGpuLoad);
+        RaisedInto(ref _peakCpu, cpu ?? float.NaN);
+        RaisedInto(ref _peakGpu, gpu ?? float.NaN);
+        RaisedInto(ref _peakCpuLoad, _susCpuLoad);
+        RaisedInto(ref _peakGpuLoad, _susGpuLoad);
         if (_currentPercent > _peakOut) _peakOut = _currentPercent;
 
         foreach (FanChannel f in controlled)

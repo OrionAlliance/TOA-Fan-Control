@@ -2,7 +2,7 @@ using System.IO;
 
 namespace FanControlApp.Infrastructure;
 
-/// <summary>Every file the app writes lives next to the exe, never AppData, so it stays portable.</summary>
+/// <summary>Every file the app keeps lives next to the exe, so it stays portable; only an unlocked copy's installer downloads use Temp.</summary>
 public static class AppPaths
 {
     public static string ExeDir { get; } = AppContext.BaseDirectory;
