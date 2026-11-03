@@ -7,7 +7,6 @@ namespace FanControlApp.Infrastructure;
 public static class PeakCulprit
 {
     private const int SampleMs = 500;      // gap between the two time reads
-    private const long ReuseMs = 5_000;    // one lookup per surge
 
     private static readonly Lookup Cpu = new(SampleCpuAsync, "CPU");
     private static readonly Lookup Gpu = new(SampleGpuAsync, "GPU");
@@ -18,25 +17,17 @@ public static class PeakCulprit
     /// <summary>Same for the GPU, by GPU engine time.</summary>
     public static void IdentifyGpu(Action<string?> deliver) => Gpu.Identify(deliver);
 
-    /// <summary>Caches the name per surge, runs one sample at a time, answers every waiter.</summary>
+    /// <summary>New peak, what app, record it: every peak gets its own check; a peak during a running check shares that moment's answer.</summary>
     private sealed class Lookup(Func<Task<string?>> sample, string chip)
     {
         private readonly object _gate = new();
         private readonly List<Action<string?>> _waiters = new();
         private bool _running;
-        private long _lastDoneMs;
-        private string? _lastName;
-        private bool _hasResult;
 
         public void Identify(Action<string?> deliver)
         {
             lock (_gate)
             {
-                if (_hasResult && Environment.TickCount64 - _lastDoneMs < ReuseMs)
-                {
-                    deliver(_lastName);
-                    return;
-                }
                 _waiters.Add(deliver);
                 if (_running) return;
                 _running = true;
@@ -57,9 +48,6 @@ public static class PeakCulprit
             List<Action<string?>> waiters;
             lock (_gate)
             {
-                _lastName = name;
-                _lastDoneMs = Environment.TickCount64;
-                _hasResult = true;
                 _running = false;
                 waiters = new List<Action<string?>>(_waiters);
                 _waiters.Clear();
