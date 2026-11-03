@@ -7,6 +7,23 @@ namespace FanControlApp.Cooling;
 
 public sealed partial class FanController
 {
+    // Every 5 s while the hotter temp or fan % moves by 2+, once a minute while steady.
+    private bool SampleDue(float? hotter, float fanPercent)
+    {
+        long now = Environment.TickCount64, since = now - _lastSampleLogMs;
+        if (since < SampleEveryMs) return false;
+
+        float h = hotter ?? float.NaN;
+        bool moved = !(Math.Abs(h - _lastSampleHotter) < SampleMoveThreshold)   // NaN (first line, no reading) counts as moved
+                     || !(Math.Abs(fanPercent - _lastSampleOut) < SampleMoveThreshold);
+        if (!moved && since < SteadySampleMs) return false;
+
+        _lastSampleLogMs = now;
+        _lastSampleHotter = h;
+        _lastSampleOut = fanPercent;
+        return true;
+    }
+
     private void LogSample(float? cpu, float? gpu, float? hotter, List<FanChannel> controlled,
                            bool bios = false, float drivingTemp = float.NaN)
     {

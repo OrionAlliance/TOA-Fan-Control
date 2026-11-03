@@ -81,8 +81,11 @@ public sealed partial class FanController : IDisposable
     private const int ForeignTicksToConfirm = 3;
     private const long ConflictClearMs = 30_000;
 
-    // A SAMPLE log line every 5s, time-based since the tick rate varies.
+    // A SAMPLE log line at most every 5s, time-based since the tick rate varies.
     private const long SampleEveryMs = 5_000;
+    // Steady (temp and fan % within 2 of the last line): once a minute, so idle hours don't flood the log.
+    private const long SteadySampleMs = 60_000;
+    private const float SampleMoveThreshold = 2f;
 
     private readonly object _gate = new();
     private readonly HardwareMonitor _hw = new();
@@ -107,6 +110,7 @@ public sealed partial class FanController : IDisposable
     private bool _conflict;
     private long _lastForeignWriteMs;
     private long _lastSampleLogMs;
+    private float _lastSampleHotter = float.NaN, _lastSampleOut = float.NaN;
 
     // Session telemetry for the log, so it records what the app actually did.
     private int _tickCount;

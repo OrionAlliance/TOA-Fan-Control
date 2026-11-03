@@ -99,11 +99,8 @@ public sealed partial class FanController
             }
             // Keep logging what the BIOS does.
             TrackPeaks(cpu, gpu, controlled);
-            if (Environment.TickCount64 - _lastSampleLogMs >= SampleEveryMs)
-            {
-                _lastSampleLogMs = Environment.TickCount64;
+            if (SampleDue(source, controlled.Max(f => f.Percent) ?? 0f))
                 LogSample(cpu, gpu, source, controlled, bios: true);
-            }
 
             Publish(cpu, gpu, source, biosHasFans: true,
                     status: "Paused - the BIOS curve has your fans.");
@@ -174,11 +171,8 @@ public sealed partial class FanController
         TrackPeaks(cpu, gpu, controlled);
 
         _tickCount++;
-        if (Environment.TickCount64 - _lastSampleLogMs >= SampleEveryMs)
-        {
-            _lastSampleLogMs = Environment.TickCount64;
+        if (SampleDue(temp, _currentPercent))
             LogSample(cpu, gpu, temp, controlled, drivingTemp: driving);
-        }
 
         Publish(cpu, gpu, driving, status: status);
     }
