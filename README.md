@@ -29,44 +29,41 @@
 
 ## Why this exists
 
-Years ago I installed SpeedFan, the FanControl of its day, to cool my PC down. After installing it, I was overwhelmed with all the options, cryptic sensor names and settings I didn't understand. After about five or 10 minutes of asking myself, "What is this? What is that?," I uninstalled it. SpeedFan has been gone for a while now and its eventual successor, FanControl, is genuinely powerful… but still has the curve editors, sensor mixes and homework, that personally, I don't want.
+Years ago I installed SpeedFan to cool my PC down. After ten minutes of asking myself "What is this? What is that?", I uninstalled it. Its successor, FanControl, is genuinely powerful, but it still comes with curve editors and homework I don't want.
 
-I never wanted that type of control over my fans. I didn't want the confusion or possibility of changing a setting and cooking my PC. I wanted simplicity. Cooler parts, quiet fans, and nothing to configure. Basically, a "start it and forget it" type of app. Here it is, years later, and with the help of Claude AI, I built exactly what I wanted. Hopefully... it's what you've wanted, too.
+I wanted simplicity: cooler parts, quiet fans, nothing to configure. A "start it and forget it" app. With the help of Claude AI, I built exactly that. Hopefully... it's what you've wanted, too.
 
 ## What it does
 
-The app adjusts **only your PC case fans**, making them follow your hottest component, your CPU or your GPU. Every second it reads both temperatures, and the fans match the hottest reading of the last 15 seconds, one-to-one: **70°C means 70% fan speed.** Holding the recent peak keeps the fans steady when bursty loads (video encoding is the classic) make the temperature sawtooth. A real spike still raises them instantly; only the quieting-down waits. Past 70°C the fans lean up to 5 points ahead of the temperature (78°C → 83%), giving extra push exactly when things are hottest.
+Your **case fans follow your hottest part, CPU or GPU**, one-to-one: **70°C means 70% fan speed.**
 
-- A hard **30% floor** means no case fan ever stalls, and changes are **rate-limited** so fans glide to the needed speed instead of jerking up and down.
-- Your **AIO pumps, CPU coolers, and GPU fans are never touched.** They stay on your motherboard's BIOS control (and your GPU driver's), where they belong.
-- On first run, the app shows you the case fans it found and lets you confirm which ones it may drive. Fans it recognizes as pumps or CPU/GPU coolers are never even listed.
-- **No bloatware. Period.** You get one small app and nothing else. No background services, no launcher, no account to create, no ads, no "companion" software sneaking onto your PC like so many other apps love to do. Its only two requirements, Microsoft's .NET and the PawnIO driver, are official, signed, and installed with your OK.
+- Fans follow the hottest reading of the last 15 seconds, so bursty loads don't make them surge up and down. Past 70°C they run up to 5% ahead for extra push.
+- A **30% floor** means no fan ever stalls, and speed changes glide instead of jerk.
+- **AIO pumps, CPU coolers and GPU fans are never touched.** They stay on your BIOS and GPU driver.
+- **No bloatware.** One small app. No services, no account, no ads. Its only two requirements, Microsoft's .NET and the PawnIO driver, are official, signed, and installed with your OK.
 
-There are no curves, no profiles, no targets, no tuning. If that's what you want, this isn't your app, and [FanControl](https://github.com/Rem0o/FanControl.Releases) is excellent. This app is for everyone who bounced off tools like that and just wants their PC to run cooler and quieter.
+No curves, no profiles, no tuning. If you want those, [FanControl](https://github.com/Rem0o/FanControl.Releases) is excellent.
 
-## Everyday use
+## What you get
 
-There's nothing you *have* to do. It sits in the system tray and does its job on its own. But when you want to check in on things, you get:
+It sits in the system tray and runs itself. When you want to look:
 
-- **A dashboard:** CPU/GPU temperature dials or bars with peak markers (Peak Info shows when each peak hit and what app was running), plus a spinning fan tile per case fan showing the driven %, or BIOS while your BIOS has them (the blades spin faster or slower with the fan's real speed).
+- **Dashboard:** CPU/GPU dials or bars with peak markers, plus a spinning tile for each case fan. **Peak Info** shows when each peak hit and what app was running.
 
   <p align="center"><img src="Docs/images/dials-dark.png" width="300" alt="Temperature dials, dark theme" />&nbsp;&nbsp;<img src="Docs/images/dials-light.png" width="300" alt="Temperature dials, light theme" /></p>
 
-- **Game Mode:** a small, always-on-top, drag to place any where on your screen, temps/fans readout for gaming. Works over Borderless/Windowed Fullscreen. Nothing can draw over true exclusive fullscreen. That's a Windows rule.
+- **Game Mode:** a small, always-on-top readout you can drag anywhere. Works over borderless and windowed fullscreen games.
 
   <p align="center"><img src="Docs/images/game-mode-dark.png" width="300" alt="Game Mode overlay, dark theme" />&nbsp;&nbsp;<img src="Docs/images/game-mode-light.png" width="300" alt="Game Mode overlay, light theme" /></p>
 
-- **Settings (the ⚙ cog):** dark/light theme, dial or bar display, hand fans back to BIOS anytime, choose fans, start with Windows (boots silently into the tray), Check for updates, About, Donate and a full uninstall.
+- **Settings (the ⚙ cog):** theme, dials or bars, hand fans to BIOS, choose fans, start with Windows, check for updates, donate and uninstall.
 
   <p align="center"><img src="Docs/images/settings-menu.png" width="220" alt="Settings menu" /></p>
 
-- **The load telltale:** the cyan triangle sweeps with your GPU's load *right now*, and a cyan line parks at the highest load of the run, like a race tach's telltale pointer. On the GPU it's TRUE load: watts pulled versus your card's maximum, from a library of 185+ cards that's kept current twice a month. Card not listed? The app asks once: a one-click search finds your card's TDP, you type one number, done forever.
+- **True GPU load:** the cyan marker shows watts pulled versus your card's maximum, from a library of 185+ cards.
+- **Keeps itself updated:** the app, PawnIO and .NET, with signature checks. It never pops up mid-game.
 
-- **Self-maintaining:** the app keeps itself, PawnIO and .NET up to date. It checks at launch, every time you open its window, and daily if you leave your PC on. PawnIO and .NET only come as official signed installers, and the app verifies their signatures before running them; the app's own updates come straight from this repository's Releases. It never interrupts you mid-game with a popup.
-
-## If the app ever fails, your BIOS takes over. Every time.
-
-This is the design promise: **there is no failure that leaves your fans stranded.**
+## If anything fails, your BIOS takes over
 
 <table align="center">
   <tr><th>What happens</th><th>Result</th></tr>
@@ -78,85 +75,60 @@ This is the design promise: **there is no failure that leaves your fans stranded
   <tr><td>You uninstall</td><td>Fans back to BIOS control</td></tr>
 </table>
 
-Worst case, your PC behaves exactly as it did before you installed this. Every one of those paths has been tested on real hardware.
-
-## Requirements
-
-- **Windows 10 or 11, 64-bit.** That's the only requirement you need to meet yourself.
-- Administrator access. The app asks automatically (required to talk to the motherboard's fan hardware).
-- .NET 10 and the PawnIO driver. **The installer handles both** if they're missing, with your permission.
-
-Windows only, by design. No Linux/SteamOS version is planned, because that world already has native tools.
+Worst case, your PC behaves exactly as it did before you installed this. Every path is tested on real hardware.
 
 ## Installing
 
-1. Download **`TOA - Fan Control Setup.exe`** from the [Releases](../../releases) page. That's the only official download. Copies posted anywhere else aren't from me, so don't run them.
-2. Run it. **Windows will show a blue "Windows protected your PC" warning.** That's SmartScreen reacting to an unsigned open-source app with no download reputation yet, not a threat detection. Click **More info → Run anyway**. (Don't take my word for what the app does. The entire source code is this repository.)
-3. The installer checks for .NET 10 and PawnIO (installs them if needed, telling you first), asks where you want the app installed (drive letter, etc.), adds it to your Start menu, and offers a desktop shortcut.
-4. First launch shows you the fans it found. Uncheck anything that isn't a regular case fan, hit Save, and you're done.
+Needs Windows 10 or 11, 64-bit. The installer adds .NET 10 and PawnIO if they're missing, with your OK.
 
-**Rolling back:** every version stays downloadable on the Releases page. If an update ever misbehaves on your hardware, grab the previous installer and run it.
+1. Download **`TOA - Fan Control Setup.exe`** from [Releases](../../releases). That's the only official download.
+2. Run it. Windows shows a blue **"Windows protected your PC"** warning because the app is new and unsigned. Click **More info → Run anyway**. The full source code is right here.
+3. Pick where to install it, then choose your case fans on first launch. Done.
+
+Every past version stays on the Releases page if you ever need to roll back.
 
 ## FAQ
 
-**Why does it need administrator?**
-Fan speed lives on the motherboard's Super I/O chip, which Windows only exposes to elevated processes via a signed kernel driver (PawnIO, the same signed driver modern hardware tools use).
+**Why does it need admin?**
+Fan speeds live on a motherboard chip that Windows only lets admin apps reach, through the signed PawnIO driver.
 
-**So which PCs does it actually work on?**
-The dividing line is the motherboard:
-- **Retail motherboard** (ASUS, MSI, Gigabyte, ASRock…) → standard fan-control chip → the app works. That covers home builds, and also the gaming-shop prebuilts (iBuyPower, CyberPower, NZXT BLD, Micro Center builds), since they assemble from retail parts.
-- **Big-box machines** (Dell, HP, Lenovo) → custom board, fans on their own locked controller → temp dashboard only, fans stay on the factory's tuning.
+**Which PCs does it work on?**
+PCs with a retail motherboard (ASUS, MSI, Gigabyte, ASRock), including most gaming-shop prebuilts. Big-brand desktops (Dell, HP, Lenovo) and laptops lock their fans to their own controller, so there it's a temperature dashboard only.
 
-**Does it work on laptops?**
-It'll show your temps, but laptop fans are run by the laptop's own embedded controller, which is proprietary per model. The app leaves them alone. It's the same safety rule that never touches your CPU cooler on a desktop. This app is for desktop case fans.
+**Why not just use a BIOS fan curve?**
+Most BIOS curves only follow the CPU. They can't see your GPU, so in games your case fans just idle. This app watches both.
 
-**It says "no controllable fans found" on my Dell / HP / Lenovo desktop.**
-Same story as laptops: the big brands often skip the standard fan-control chip and run the fans from their own proprietary controller, which they've tuned at the factory and locked down. The app can't safely talk to those, so it leaves your fans on the manufacturer's control and runs as a temperature dashboard instead. It's happiest on a PC where you (or your builder) picked the motherboard.
+**Why doesn't it touch the CPU fan?**
+On purpose. Your CPU cooler, AIO pump and GPU fans stay on the BIOS, so nothing this app does can ever starve them.
 
-**Is this related to Rem0o's [Fan Control](https://github.com/Rem0o/FanControl.Releases)?**
-No, there's no affiliation. That's the powerful, fully-customizable one (and it's excellent). This is the zero-config one. Different apps, different philosophies, same love of quiet and cool PCs.
+**What do the dial colors mean?**
+Green: full speed. Yellow: still safe, but the chip starts slowing itself down. Red: the chip's emergency brake. Hover a zone in the app for more.
 
-**Why doesn't it have fan curves, profiles, or settings to tune?**
-Because that's the whole point. The app has one rule: match the case fans to whichever is hotter, your CPU or your GPU. Everything else is built in, with nothing to tune and nothing to get wrong: the 30% no-stall floor, the gentle ramps, the automatic BIOS hand-back, and the watchdog. If you enjoy building custom curves, [FanControl](https://github.com/Rem0o/FanControl.Releases) is fantastic. If you'd rather install it once and never think about it again, that's exactly what this app is for.
+**What's "load" versus "busy time"?**
+Busy time is revving in neutral. Load is towing a trailer up a grade. The GPU marker shows true load (watts versus the card's max). The CPU shows busy time, because CPUs have no honest power max to measure against.
 
-**Why not just use a BIOS fan curve that does what TOA - Fan Control does?**
-Because most BIOS curves can't. On most boards, case-fan curves follow the CPU only, because the BIOS can't see your GPU. So in games, when the GPU is the hottest thing in the case, BIOS-driven case fans just idle. This app watches both chips every second and matches the fans to the hotter one's recent peak. There are no reboots to tweak anything, and if the app ever closes, your BIOS curve takes right back over. (Already have a curve you love? Keep it. This is for everyone who doesn't want that homework.)
+**Will it wear out my fans?**
+No. Changes are small, electronic and gentle, and the 30% floor prevents stop/start cycling. [Full explanation](Docs/why_it_doesnt_wear_fans.md)
 
-**Why doesn't it control the CPU fan?**
-On purpose. Your CPU cooler stays on the BIOS so that no failure of this app can ever starve your CPU of cooling. The same rule protects AIO pumps (throttling a pump is the one genuine landmine in fan software) and your GPU's fans (the GPU's own driver runs those best). This app manages the case airflow *around* your components; their own coolers always keep the motherboard as their safety net.
+**Does it touch my RGB, or fight SignalRGB / iCUE / Armoury Crate?**
+Lighting is never touched. If another app also controls your fans, this app notices within seconds, holds your speeds, and tells you to turn off that app's fan control.
 
-**What do the color zones on the dials mean?**
-They're about speed first and safety second.<br>
-**Green** = cool enough that your chip runs at full speed.<br>
-**Yellow** = still safe, no damage, but hot chips quietly slow themselves down a little more with each degree.<br>
-**Red** = the chip hits its own emergency brake to protect itself.<br>
-Hover any zone in the app and it explains itself. The bonus that rides along free: cooler parts simply last longer. Cool is fast now and alive later.
-
-**What's the difference between "load" and "busy time" in the marker tooltips?**
-Busy time is revving your pickup in neutral. The engine never rests, but nothing's being asked of it. Load is towing a loaded trailer up a grade, and that's where the heat and the wear actually happen. Windows' usual "GPU utilization" number (Task Manager's too) only measures *busy*. This app shows the GPU's true **load** (watts pulled versus the card's maximum), because heat follows load, and heat is this app's whole business. The CPU's markers say "busy time" because no honest per-chip power ceiling exists to compute true load from, and this app never shows a number it can't back.
-
-**Won't adjusting fans every second wear them out?**
-No. It's a dimmer switch, not a gear shift. Speed changes are electronic (PWM), rate-limited to gentle ramps, and a degree moves the fans 1% (about 15 RPM, which you can't hear; at most 2% per degree in the 70 to 75°C hand-off band). The one thing that's actually semi-hard on a fan motor is stop/start cycling, which the 30% floor makes impossible. Full explanation: [Docs/why_it_doesnt_wear_fans.md](Docs/why_it_doesnt_wear_fans.md)
-
-**Does this touch my RGB lighting?**
-Never. The app writes fan *motor* speeds on the motherboard's fan-control chip. RGB runs on entirely separate hardware (ARGB headers / USB controllers) that this app can't even see. Your light show is untouched.
-
-**I run SignalRGB / iCUE / Armoury Crate. Will they fight?**
-Only if that software *also* has fan control enabled (RGB suites sometimes switch it on after updates). If something else starts overwriting fan speeds, this app detects it within seconds, temporarily re-asserts your chosen speeds faster than the other program writes them, and shows you a notification naming the fix: turn off fan control in the other app. Lighting features are never affected.
+**Is this related to Rem0o's FanControl?**
+No. That's the powerful, customizable one. This is the zero-config one.
 
 **Some sensors don't show on my brand-new hardware.**
-The sensor library is deliberately version-pinned. It never updates behind your back (silent sensor-library updates breaking PCs overnight is a recurring story with other tools). Brand-new chips can lag behind support; when that happens, the app runs read-only and your BIOS keeps running the fans, so nothing breaks. Support arrives via a normal, tested release. Open an [issue](../../issues) with your hardware details.
+The sensor library only updates through tested releases. Until support arrives, the app runs read-only and your BIOS keeps the fans. Open an [issue](../../issues) with your hardware details.
 
 ## Your data stays yours
 
-This app collects **nothing** and transmits **nothing**: no telemetry, no analytics, no accounts, no personal data. There isn't even a server to send anything to. Temperatures and fan speeds are read from your hardware, shown on screen, and written only to a local log file next to the app. The app's only internet use is checking for updates (PawnIO from its author's GitHub, .NET from Microsoft, and the app itself from this repository) and downloading the whole GPU power library from this repository (never a lookup about *your* card). Those requests send nothing about you or your PC.
+Nothing is collected or sent: no telemetry, no accounts. The app only goes online to check for updates and to download the GPU library, and those requests carry nothing about you or your PC.
 
 ## Found a bug?
 
-Open an [Issue](../../issues). Include the `fan_debug.log` file that lives next to the app's exe. It records exactly what the app was doing, and it contains no personal information: just temperatures, fan speeds, app events, and your hardware's model names and software versions. Read it yourself first if you like.
+Open an [Issue](../../issues) and attach `fan_debug.log` from the app's folder. It holds no personal info: just temperatures, fan speeds, app events, and hardware model names.
 
 ---
 
-**© 2026 TOA. Released under the [GNU GPLv3](LICENSE).** It's free forever, and every fork must stay free and open source too. (Versions up to v1.12.2 were released under MIT.)
+**© 2026 TOA. Released under the [GNU GPLv3](LICENSE).** Free forever, and every fork must stay open source too. (Versions up to v1.12.2 were released under MIT.)
 
 This software is provided "as is", without warranty of any kind, express or implied. It controls real hardware (your fans), and while it is designed to always return them to motherboard (BIOS) control and never drive them below a safe floor, you use it at your own risk. TOA is not liable for any damage to hardware, loss of data, or any other damages arising from the use of this software.
